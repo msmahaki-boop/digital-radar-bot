@@ -3,6 +3,12 @@ name: Digital Radar News
 
 on:
   workflow_dispatch:
+    inputs:
+      preview:
+        description: 'Test AI with latest news (does not update history)'
+        type: boolean
+        default: true
+        required: false
 
   schedule:
     - cron: '37 5,11,17 * * *'
@@ -24,13 +30,16 @@ jobs:
         with:
           ref: main
 
-      - name: Fetch and send new headlines
+      - name: Fetch, analyze and send news
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PREVIEW_MODE: ${{ inputs.preview }}
         run: python3 bot.py
 
       - name: Save sent-news history
+        if: ${{ github.event_name == 'schedule' || !inputs.preview }}
         run: |
           if [ -f sent_news.json ]; then
             git config user.name 'github-actions[bot]'
