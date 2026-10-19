@@ -15,7 +15,8 @@ jobs:
       - name: Download project
         uses: actions/checkout@v4
 
-      - name: Send test message
+      - name: Fetch and send news
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
         run: python3 bot.py
