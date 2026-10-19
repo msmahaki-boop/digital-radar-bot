@@ -1,179 +1,239 @@
 
 import os
+import json
 import html
 import re
-import json
-import urllib.request
 import urllib.parse
-import urllib.error
+import urllib.request
 import xml.etree.ElementTree as ET
 
-# منابع خبری
+STATE_FILE = 'sent_news.json'
+
 SOURCES = [
+    ('زومیت', 'فناوری', 'https://www.zoomit.ir/feed/'),
+    ('دیجیاتو', 'فناوری', 'https://digiato.com/feed/'),
     (
-        "زومیت",
-        "فناوری",
-        "https://www.zoomit.ir/feed/"
+        'The Verge',
+        'هوش مصنوعی',
+        'https://www.theverge.com/rss/ai-artificial-intelligence/index.xml'
     ),
     (
-        "دیجیاتو",
-        "فناوری",
-        "https://digiato.com/feed/"
+        'Search Engine Journal',
+        'دیجیتال مارکتینگ',
+        'https://www.searchenginejournal.com/feed/'
     ),
     (
-        "The Verge",
-        "هوش مصنوعی",
-        "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"
-    ),
-    (
-        "Search Engine Journal",
-        "بازاریابی دیجیتال",
-        "https://www.searchenginejournal.com/feed/"
-    ),
-    (
-        "Social Media Examiner",
-        "مدیریت سوشال مدیا",
-        "https://www.socialmediaexaminer.com/feed/"
+        'Social Media Examiner',
+        'مدیریت سوشال مدیا',
+        'https://www.socialmediaexaminer.com/feed/'
     ),
 ]
 
 
-def read_news(url):
+def fetch_news(feed_url):
     request = urllib.request.Request(
-        url,
+        feed_url,
         headers={
-            "User-Agent": "Mozilla/5.0 (DigitalRadarBot/1.0)"
+            'User-Agent': 'Mozilla/5.0 (DigitalRadarBot/1.0)'
         }
     )
 
-    with urllib.request.urlopen(request, timeout=20) as response:
-        content = response.read(1_000_000)
+    with urllib.request.urlopen(
+        request, timeout=20
+    ) as response:
+        data = response.read(1_500_000)
 
-    root = ET.fromstring(content)
-    entries = []
+    root = ET.fromstring(data)
+    atom = '{http://www.w3.org/2005/Atom}'
 
-    # Atom feeds
-    if root.tag.split("}")[-1] == "feed":
-        atom = "{http://www.w3.org/2005/Atom}"
+    if root.tag == atom + 'feed':
+        entries = []
 
-        for entry in root.findall(f"{atom}entry")[:3]:
-            title = entry.findtext(f"{atom}title") or ""
-            links = entry.findall(f"{atom}link")
+        for item in root.findall(atom + 'entry')[:25]:
+            title = item.findtext(atom + 'title') or ''
 
             link = next(
                 (
-                    x.get("href", "")
-                    for x in links
-                    if x.get("rel", "alternate") == "alternate"
+                    tag.get('href', '')
+                    for tag in item.findall(atom + 'link')
+                    if tag.get('rel', 'alternate') == 'alternate'
                 ),
-                ""
+                ''
             )
 
             entries.append((title, link))
 
-    # RSS feeds
     else:
-        for entry in root.findall(".//item")[:3]:
-            entries.append((
-                entry.findtext("title") or "",
-                entry.findtext("link") or ""
-            ))
+        entries = [
+            (
+                item.findtext('title') or '',
+                item.findtext('link') or ''
+            )
+            for item in root.findall('.//item')[:25]
+        ]
+
+    news = []
 
     for title, link in entries:
-        title = html.unescape(
-            re.sub(r"<[^>]*>", "", title)
+        title = re.sub(
+            r'\s+', ' ',
+            html.unescape(
+                re.sub(r'<[^>]+>', '', title)
+            )
         ).strip()
 
-        title = re.sub(r"\s+", " ", title)[:200]
+        link = link.strip()
 
-        if title and link.startswith(("https://", "http://")):
-            return title, link.strip()
+        if title and link.startswith(('https://', 'http://')):
+            news.append((title[:210], link))
 
-    return None
+    return news
 
 
-def send_message(message):
-    token = os.environ.get("BOT_TOKEN", "").strip()
-    chat_id = os.environ.get("CHAT_ID", "").strip()
+def send_to_telegram(message):
+    token = os.environ.get('BOT_TOKEN', '').strip()
+    chat_id = os.environ.get('CHAT_ID', '').strip()
 
     if not token or not chat_id:
-        raise SystemExit(
-            "BOT_TOKEN or CHAT_ID is missing."
+        raise RuntimeError(
+            'Missing BOT_TOKEN or CHAT_ID in Secrets'
         )
 
-    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    url = f'https://api.telegram.org/bot{token}/sendMessage'
 
-    data = urllib.parse.urlencode({
-        "chat_id": chat_id,
-        "text": message,
-        "disable_web_page_preview": "true"
-    }).encode("utf-8")
+    payload = urllib.parse.urlencode({
+        'chat_id': chat_id,
+        'text': message,
+        'disable_web_page_preview': 'true'
+    }).encode('utf-8')
 
-    try:
-        request = urllib.request.Request(url, data=data)
+    request = urllib.request.Request(
+        url, data=payload
+    )
 
-        with urllib.request.urlopen(
-            request, timeout=30
-        ) as response:
-            result = json.load(response)
+    with urllib.request.urlopen(
+        request, timeout=30
+    ) as response:
+        result = json.load(response)
 
-    except urllib.error.HTTPError as error:
-        raise SystemExit(
-            f"Telegram HTTP {error.code}. Check secrets."
-        ) from None
-
-    except urllib.error.URLError:
-        raise SystemExit(
-            "Unable to reach Telegram API."
-        ) from None
-
-    if not result.get("ok"):
-        raise SystemExit("Telegram rejected the message.")
+    if not result.get('ok'):
+        raise RuntimeError(
+            'Telegram rejected the message'
+        )
 
 
 def main():
+    first_run = not os.path.exists(STATE_FILE)
+
+    if first_run:
+        history = []
+    else:
+        with open(
+            STATE_FILE, 'r', encoding='utf-8'
+        ) as file:
+            history = json.load(file)['seen']
+
+    seen = set(history)
+    scanned = []
     sections = []
+    chosen_links = set()
+    successful_sources = 0
 
     for source, category, feed in SOURCES:
         try:
-            news = read_news(feed)
-
-            if news:
-                title, link = news
-
-                sections.append(
-                    f"🔹 {category} | {source}\n"
-                    f"{title}\n"
-                    f"{link}"
-                )
-
-                print(f"OK: {source}")
-
-            else:
-                print(f"No news found: {source}")
+            items = fetch_news(feed)
 
         except Exception as error:
             print(
-                f"Feed error ({source}): "
-                f"{type(error).__name__}"
+                f'Feed unavailable: {source}: '
+                f'{type(error).__name__}'
+            )
+            continue
+
+        if not items:
+            print(f'No items in {source}')
+            continue
+
+        successful_sources += 1
+
+        fresh = [
+            (title, link)
+            for title, link in items
+            if link not in seen
+            and link not in chosen_links
+        ]
+
+        limit = 1 if first_run else 2
+
+        for title, link in fresh[:limit]:
+            chosen_links.add(link)
+
+            sections.append(
+                f'🔹 {category} | {source}\n'
+                f'{title}\n{link}'
             )
 
-    if not sections:
-        raise SystemExit(
-            "No readable news feeds found. Try again later."
+        scanned.extend(
+            link for _, link in items
         )
 
-    message = (
-        "📰 Digital Radar | تست خبرهای واقعی\n\n"
-        + "\n\n".join(sections)
-    )
+        print(
+            f'{source}: '
+            f'{len(fresh[:limit])} selected'
+        )
 
-    send_message(message)
+    if successful_sources == 0:
+        raise RuntimeError(
+            'All RSS sources are unavailable. History unchanged.'
+        )
 
-    print(
-        f"SUCCESS: Sent {len(sections)} news items."
-    )
+    if sections:
+        prefix = (
+            '📰 Digital Radar | خبرهای جدید\n\n'
+        )
+
+        message = prefix
+
+        for section in sections:
+            block = section + '\n\n'
+
+            if len(message) + len(block) > 3500:
+                send_to_telegram(message.rstrip())
+                message = prefix
+
+            message += block
+
+        if message != prefix:
+            send_to_telegram(message.rstrip())
+
+        print(
+            f'SUCCESS: sent {len(sections)} articles'
+        )
+
+    else:
+        print(
+            'No new stories; no Telegram message sent'
+        )
+
+    for link in scanned:
+        if link not in seen:
+            seen.add(link)
+            history.append(link)
+
+    history = history[-1200:]
+
+    if first_run or scanned:
+        with open(
+            STATE_FILE, 'w', encoding='utf-8'
+        ) as file:
+            json.dump(
+                {'seen': history},
+                file,
+                ensure_ascii=False,
+                indent=2
+            )
+            file.write('\n')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
