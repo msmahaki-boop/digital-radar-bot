@@ -1,0 +1,21 @@
+
+name: Test Telegram Bot
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download project
+        uses: actions/checkout@v4
+
+      - name: Send test message
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+        run: python3 bot.py
