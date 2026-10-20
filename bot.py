@@ -1,4 +1,4 @@
-"""Digital Radar | Stage 8: balanced Persian news digest.
+"""Digital Radar | Stage 8: balanced Persian news digest with Gemini retries.
 
 No external packages. Requires GitHub Actions environment variables:
 BOT_TOKEN, CHAT_ID, GEMINI_API_KEY, optional PREVIEW_MODE.
@@ -10,6 +10,8 @@ import html
 import json
 import os
 import re
+import random
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -250,15 +252,35 @@ def ai_pick(candidates):
         headers={"Content-Type": "application/json", "x-goog-api-key": api_key},
         method="POST",
     )
-    try:
-        with urllib.request.urlopen(request, timeout=85) as response:
-            response_data = json.load(response)
-    except urllib.error.HTTPError as exc:
-        # Do not print response bodies; they may contain sensitive request details.
-        raise RuntimeError(f"Gemini HTTP {exc.code}") from None
+    # Retry only temporary problems. Keep API key and HTTP error bodies out of logs.
+    transient_codes = {408, 429, 500, 502, 503, 504}
+    response_data = None
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(request, timeout=85) as response:
+                response_data = json.load(response)
+            break
+        except urllib.error.HTTPError as exc:
+            if exc.code not in transient_codes or attempt == 2:
+                raise RuntimeError(f"Gemini HTTP {exc.code}") from None
+            delay = min(12, 2 ** (attempt + 1)) + random.uniform(0, 0.8)
+            print(f"Gemini HTTP {exc.code}; retry {attempt + 1}/2 in {delay:.1f}s")
+            time.sleep(delay)
+        except (urllib.error.URLError, TimeoutError) as exc:
+            if attempt == 2:
+                raise RuntimeError(f"Gemini network/timeout ({type(exc).__name__})") from None
+            delay = min(12, 2 ** (attempt + 1)) + random.uniform(0, 0.8)
+            print(f"Gemini network/timeout; retry {attempt + 1}/2 in {delay:.1f}s")
+            time.sleep(delay)
 
-    raw = "".join(p.get("text", "") for p in response_data["candidates"][0]["content"]["parts"])
-    parsed = json.loads(raw)
+    try:
+        raw = "".join(
+            p.get("text", "")
+            for p in response_data["candidates"][0]["content"]["parts"]
+        )
+        parsed = json.loads(raw)
+    except (KeyError, IndexError, TypeError, ValueError, AttributeError):
+        raise RuntimeError("Gemini response did not contain valid JSON") from None
     if not isinstance(parsed, dict) or not isinstance(parsed.get("items"), list):
         raise RuntimeError("Gemini returned an unexpected JSON structure")
 
@@ -372,7 +394,8 @@ def main():
         # Articles reviewed and rejected by Gemini should not be re-analysed every run.
         processed = [n["link"] for n in candidates]
     except Exception as error:
-        print(f"Gemini unavailable ({type(error).__name__}); fallback enabled")
+        detail = str(error) if isinstance(error, RuntimeError) else type(error).__name__
+        print(f"Gemini unavailable: {detail}; fallback enabled")
         selected = fallback_pick(candidates)
         used_ai = False
         # Keep non-sent articles for a later AI attempt.
