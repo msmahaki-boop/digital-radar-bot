@@ -1,0 +1,95 @@
+
+name: Test Buffer Connection
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Test Buffer API
+        env:
+          BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import json
+          import urllib.request
+          import urllib.error
+
+          key = os.environ.get("BUFFER_API_KEY", "").strip()
+
+          if not key:
+              raise SystemExit("Missing BUFFER_API_KEY")
+
+          def graphql(query):
+              data = json.dumps({"query": query}).encode()
+
+              request = urllib.request.Request(
+                  "https://api.buffer.com",
+                  data=data,
+                  headers={
+                      "Authorization": "Bearer " + key,
+                      "Content-Type": "application/json"
+                  },
+                  method="POST"
+              )
+
+              try:
+                  with urllib.request.urlopen(
+                      request, timeout=30
+                  ) as response:
+                      result = json.load(response)
+
+              except urllib.error.HTTPError as error:
+                  raise SystemExit(
+                      f"Buffer HTTP error: {error.code}"
+                  ) from None
+
+              except urllib.error.URLError:
+                  raise SystemExit(
+                      "Buffer connection failed"
+                  ) from None
+
+              if result.get("errors"):
+                  raise SystemExit(
+                      "Buffer GraphQL query failed: "
+                      + str(result["errors"][0].get(
+                          "message", "Unknown error"
+                      ))[:150]
+                  )
+
+              return result["data"]
+
+          account = graphql(
+              "query { account { organizations { id name } } }"
+          )
+
+          organizations = account["account"]["organizations"]
+
+          print("SUCCESS: Connected to Buffer!")
+
+          for org in organizations:
+              print("Organization:", org["name"])
+
+              query = (
+                  "query { channels(input: { organizationId: "
+                  + json.dumps(org["id"])
+                  + " }) { id name service } }"
+              )
+
+              result = graphql(query)
+
+              for channel in result["channels"]:
+                  print(
+                      "Channel:", channel["name"],
+                      "| Platform:", channel["service"],
+                      "| ID:", channel["id"]
+                  )
+
+          PY
