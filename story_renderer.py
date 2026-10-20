@@ -1,4 +1,4 @@
-"""Render Acolad V2.3 story templates: landscape / portrait / text-only.
+"""Render Acolad V2.4 story templates: landscape / portrait / text-only.
 
 No source label is ever drawn. Source links remain in manifest.json for checking.
 All coordinates are expressed on the original 941x1672 graphic and scaled to
@@ -9,7 +9,7 @@ import subprocess
 from pathlib import Path
 from functools import lru_cache
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps
+from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps, features
 
 CANVAS = (1080, 1920)
 REFERENCE = (941, 1672)
@@ -43,50 +43,50 @@ def to_rect(bounds):
 
 @lru_cache(maxsize=2)
 def font_path(bold=False):
-    """Prefer IRANSans placed in the repo; keep a safe system fallback.
+    """Resolve the user's IRANSans files. NEVER embed/distribute font bytes.
 
-    Supports both the renamed and original filenames. We never bundle fonts
-    in the Python patch; they stay in the user's own private repository.
+    First check GitHub assets/fonts. If missing/unreadable, make the reason explicit
+    in workflow logs; do not silently pretend the brand font was selected.
     """
-    folder = Path("assets/fonts")
+    folder = Path(__file__).resolve().parent / "assets" / "fonts"
     explicit = os.getenv("STORY_FONT_BOLD" if bold else "STORY_FONT", "").strip()
-    names = (
-        ["IRANSans-Black.ttf", "IRANSans_Black.ttf",
-         "IRANSans-Bold.ttf", "IRANSans_Bold.ttf"]
-        if bold else
-        ["IRANSans-Medium.ttf", "IRANSans_Medium.ttf",
-         "IRANSans-Regular.ttf", "IRANSans.ttf"]
-    )
-    candidates = ([explicit] if explicit else []) + [str(folder / name) for name in names]
-    candidates.append(
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold
-        else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
-    )
+    names = (["IRANSans-Bold.ttf", "IRANSans_Bold.ttf",
+              "IRANSans-Black.ttf", "IRANSans_Black.ttf"] if bold else
+             ["IRANSans-Regular.ttf", "IRANSans.ttf",
+              "IRANSans-Medium.ttf", "IRANSans_Medium.ttf"])
+    candidates = ([Path(explicit)] if explicit else []) + [folder / name for name in names]
+    if not features.check("raqm"):
+        raise RuntimeError("Pillow was installed without libraqm; Persian shaping is unavailable")
+    found = False
     for candidate in candidates:
-        if not candidate or not Path(candidate).is_file():
+        if not candidate or not candidate.is_file():
             continue
+        found = True
         try:
-            ImageFont.truetype(candidate, 24, layout_engine=ImageFont.Layout.RAQM)
-        except (OSError, ValueError):
-            print(f"FONT WARNING: unable to load {Path(candidate).name}; trying next")
+            # validate a real OpenType/TrueType header and load with RTL shaping
+            with candidate.open("rb") as fh:
+                signature = fh.read(4)
+            if signature not in (b"\x00\x01\x00\x00", b"OTTO", b"true", b"typ1", b"ttcf"):
+                raise OSError("invalid font signature")
+            face = ImageFont.truetype(str(candidate), 26, layout_engine=ImageFont.Layout.RAQM)
+            face.getbbox("فارسی و English", direction="rtl")
+        except (OSError, ValueError) as exc:
+            print(f"FONT ERROR: cannot load {candidate}: {type(exc).__name__}: {exc}", flush=True)
             continue
-        if folder in Path(candidate).parents:
-            print(f"FONT {'HEADLINE' if bold else 'BODY'}: {Path(candidate).name} (IRANSans)")
-        else:
-            print(f"FONT WARNING: {'headline' if bold else 'body'} using fallback font: {Path(candidate).name}")
-        return candidate
-
-    # Last resort for unusual Ubuntu images. Print diagnostic for visibility.
-    name = "Noto Sans Arabic:style=Bold" if bold else "Noto Sans Arabic"
-    try:
-        match = subprocess.check_output(["fc-match", "-f", "%{file}", name],
-                                        text=True, timeout=3).strip()
-        if match and os.path.isfile(match):
-            print("FONT WARNING: using fontconfig fallback")
-            return match
-    except (OSError, subprocess.SubprocessError):
-        pass
-    raise RuntimeError("No usable Persian font. Put valid .ttf files in assets/fonts/.")
+        print(f"FONT VERIFIED {'HEADLINE' if bold else 'BODY'}: {candidate.name} | family={face.getname()[0]}", flush=True)
+        return str(candidate)
+    message = (f"No valid IRANSans {'bold' if bold else 'regular'} font found in {folder}. "
+               "Upload valid original TTFs and confirm the GitHub file sizes. ")
+    if not found:
+        print(f"FONT ERROR: missing files in {folder}", flush=True)
+    else:
+        print("FONT ERROR: files exist but Pillow could not open them", flush=True)
+    if os.getenv("STORY_ALLOW_FONT_FALLBACK", "0") != "1":
+        raise RuntimeError(message + "Set STORY_ALLOW_FONT_FALLBACK=1 only for development.")
+    fallback = ("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")
+    print(f"FONT WARNING: using non-brand fallback {fallback}", flush=True)
+    return fallback
 
 
 def _text_width(draw, text, font):
@@ -94,7 +94,7 @@ def _text_width(draw, text, font):
 
 
 def _wrap(draw, text, font, width):
-    """Wrap natural paragraphs while preserving Persian glyph shaping via RAQM."""
+    """Wrap by whole words; preserve natural paragraphs and Persian shaping."""
     lines = []
     for paragraph in str(text).split("\n"):
         words = paragraph.split()
@@ -116,51 +116,55 @@ def _wrap(draw, text, font, width):
 
 
 def draw_fitted_text(canvas, text, bounds, *, headline=False):
-    """Never silently cut, truncate, or add ellipsis to a story.
+    """Center Persian text line by line and vertically in the free content box.
 
-    Returns False when the text cannot fit the safe region. Caller then chooses
-    text-only, or an explicit error to prevent misleading published previews.
+    No justification, no stretched glyph spacing, no truncation. If content
+    genuinely does not fit, return False so caller can use text-only template.
     """
     x1, y1, x2, y2 = to_rect(bounds)
-    left_pad, right_pad = 18, 19
-    top_pad, bottom_pad = (6, 7) if headline else (27, 26)
-    max_w = x2 - x1 - left_pad - right_pad
-    max_h = y2 - y1 - top_pad - bottom_pad
+    # Wider copy and modest padding: keep a visible safe margin from the
+    # decorative purple frame without losing a third of the content region.
+    pad_x = 10 if headline else 13
+    pad_top = 5 if headline else 12
+    pad_bottom = 5 if headline else 13
+    max_w = x2 - x1 - pad_x * 2
+    max_h = y2 - y1 - pad_top - pad_bottom
     draw = ImageDraw.Draw(canvas)
-    # Preserve paragraph breaks for conversational story layout.
     text = str(text or "").replace("\r", "\n").strip()
     text = "\n".join(" ".join(line.split()) for line in text.split("\n"))
     if not text:
         return False
-    if headline:
-        sizes = range(48, 27, -1)
-        max_lines = 2
-    else:
-        sizes = range(40, 27, -1)
-        max_lines = 19
+    sizes = (range(48, 27, -1) if headline else range(42, 26, -1))
+    max_lines = 2 if headline else 22
     chosen = None
     for size in sizes:
-        font = ImageFont.truetype(font_path(bold=headline), size)
+        font = ImageFont.truetype(font_path(bold=headline), size,
+                                  layout_engine=ImageFont.Layout.RAQM)
         lines = _wrap(draw, text, font, max_w)
-        leading = round(size * (1.48 if headline else 1.65))
-        if len(lines) <= max_lines and len(lines) * leading <= max_h and all(
-                not s or _text_width(draw, s, font) <= max_w + 2 for s in lines):
-            chosen = (font, lines, leading)
+        leading = round(size * (1.29 if headline else 1.43))
+        needed_h = len(lines) * leading
+        if (len(lines) <= max_lines and needed_h <= max_h and
+            all(not line or _text_width(draw, line, font) <= max_w + 2
+                for line in lines)):
+            chosen = font, lines, leading, needed_h
             break
-    if not chosen:
+    if chosen is None:
         return False
-    font, lines, leading = chosen
-    total = len(lines) * leading
-    y = y1 + top_pad + max(0, (max_h - total) // 2 if headline else 0)
+    font, lines, leading, needed_h = chosen
+    y = y1 + pad_top + max(0, (max_h - needed_h) // 2)
+    center_x = (x1 + x2) / 2
     for line in lines:
         if line:
-            # Position by actual glyph bounds instead of font baselines: works
-            # consistently for Noto Sans Arabic and mixed Persian/Latin text.
-            glyph = draw.textbbox((0, 0), line, font=font, anchor="ra", direction="rtl")
-            ink_h = glyph[3] - glyph[1]
-            target_top = y + max(0, (leading - ink_h) // 2)
-            draw.text((x2 - right_pad, target_top - glyph[1]), line,
-                      font=font, fill="#141416", anchor="ra", direction="rtl")
+            # Center by actual glyph bounding box, independent of mixed
+            # right-to-left and left-to-right segments in each line.
+            ink = draw.textbbox((0, 0), line, font=font, anchor="lt", direction="rtl")
+            ink_w = ink[2] - ink[0]
+            ink_h = ink[3] - ink[1]
+            # anchor lt makes ink bounds relative to the anchor; use that
+            # displacement to position visible ink exactly in the safe region.
+            draw.text((round(center_x - (ink[0] + ink[2]) / 2),
+                       round(y + (leading - ink_h) / 2 - ink[1])),
+                      line, font=font, fill="#141416", anchor="lt", direction="rtl")
         y += leading
     return True
 
@@ -244,11 +248,12 @@ def _layout_for_template(topic, mode, template):
     left, top, right, bottom = _detect_headline_bar(template)
     # Derive safe text bounds from the actual visible cyan strip.
     title = (max(95, left+25), top+4, min(845, right-23), bottom-3)
-    body_top = bottom + (58 if mode == "text_only" else 48)
-    body_end = 1353 if mode == "text_only" else 1390
+    body_top = bottom + (44 if mode == "text_only" else 38)
+    body_end = 1380 if mode == "text_only" else 1395
     # Text must be INSET from the visible frame. Previous bounds extended
     # beyond the left border and cramped the rightmost Persian line.
-    body = (149, body_top + 15, 791, body_end - 21) if mode == "text_only" else (132, body_top + 11, 805, body_end - 18)
+    body = ((126, body_top + 5, 811, body_end - 4) if mode == "text_only"
+            else (105, body_top + 5, 829, body_end - 4))
     if mode == "text_only":
         return {"title": title, "body": body}
     # Tall photo area appears in templates with lower headline strip.
