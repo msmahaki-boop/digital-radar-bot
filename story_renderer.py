@@ -1,4 +1,4 @@
-"""Render Acolad V2.4 story templates: landscape / portrait / text-only.
+"""Render Acolad V2.5 story templates: landscape / portrait / text-only.
 
 No source label is ever drawn. Source links remain in manifest.json for checking.
 All coordinates are expressed on the original 941x1672 graphic and scaled to
@@ -43,50 +43,92 @@ def to_rect(bounds):
 
 @lru_cache(maxsize=2)
 def font_path(bold=False):
-    """Resolve the user's IRANSans files. NEVER embed/distribute font bytes.
+    """Prefer a working IRANSans, otherwise fetch the official OFL Vazirmatn.
 
-    First check GitHub assets/fonts. If missing/unreadable, make the reason explicit
-    in workflow logs; do not silently pretend the brand font was selected.
+    The uploaded files supplied for this project contain only 0x00 bytes and are
+    not fonts. We never modify them, and never pretend they were loaded.
+    Downloaded third-party fonts live only in the runner's temporary directory
+    (outside stories_output and outside any uploaded artifact).
     """
+    from tempfile import gettempdir
+    from urllib.request import Request, urlopen
+
+    if not features.check("raqm"):
+        raise RuntimeError("Pillow requires libraqm for correct Persian/RTL layout")
+
     folder = Path(__file__).resolve().parent / "assets" / "fonts"
     explicit = os.getenv("STORY_FONT_BOLD" if bold else "STORY_FONT", "").strip()
     names = (["IRANSans-Bold.ttf", "IRANSans_Bold.ttf",
               "IRANSans-Black.ttf", "IRANSans_Black.ttf"] if bold else
              ["IRANSans-Regular.ttf", "IRANSans.ttf",
               "IRANSans-Medium.ttf", "IRANSans_Medium.ttf"])
-    candidates = ([Path(explicit)] if explicit else []) + [folder / name for name in names]
-    if not features.check("raqm"):
-        raise RuntimeError("Pillow was installed without libraqm; Persian shaping is unavailable")
-    found = False
-    for candidate in candidates:
-        if not candidate or not candidate.is_file():
-            continue
-        found = True
+
+    def valid_font(path):
         try:
-            # validate a real OpenType/TrueType header and load with RTL shaping
-            with candidate.open("rb") as fh:
-                signature = fh.read(4)
-            if signature not in (b"\x00\x01\x00\x00", b"OTTO", b"true", b"typ1", b"ttcf"):
-                raise OSError("invalid font signature")
-            face = ImageFont.truetype(str(candidate), 26, layout_engine=ImageFont.Layout.RAQM)
-            face.getbbox("فارسی و English", direction="rtl")
+            if path.stat().st_size < 10000 or path.stat().st_size > 3500000:
+                raise ValueError("unexpected font file size")
+            with path.open("rb") as fh:
+                sig = fh.read(4)
+            if sig not in (b"\x00\x01\x00\x00", b"OTTO", b"true", b"ttcf"):
+                raise ValueError("not a TrueType/OpenType font")
+            ft = ImageFont.truetype(str(path), 28, layout_engine=ImageFont.Layout.RAQM)
+            ft.getbbox("آکولاد / News 2026", direction="rtl")
+            return ft
         except (OSError, ValueError) as exc:
-            print(f"FONT ERROR: cannot load {candidate}: {type(exc).__name__}: {exc}", flush=True)
-            continue
-        print(f"FONT VERIFIED {'HEADLINE' if bold else 'BODY'}: {candidate.name} | family={face.getname()[0]}", flush=True)
-        return str(candidate)
-    message = (f"No valid IRANSans {'bold' if bold else 'regular'} font found in {folder}. "
-               "Upload valid original TTFs and confirm the GitHub file sizes. ")
-    if not found:
-        print(f"FONT ERROR: missing files in {folder}", flush=True)
-    else:
-        print("FONT ERROR: files exist but Pillow could not open them", flush=True)
-    if os.getenv("STORY_ALLOW_FONT_FALLBACK", "0") != "1":
-        raise RuntimeError(message + "Set STORY_ALLOW_FONT_FALLBACK=1 only for development.")
-    fallback = ("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else
-                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")
-    print(f"FONT WARNING: using non-brand fallback {fallback}", flush=True)
-    return fallback
+            print(f"FONT INVALID: {path.name} ({exc})", flush=True)
+            return None
+
+    for candidate in ([Path(explicit)] if explicit else []) + [folder / n for n in names]:
+        if candidate.is_file():
+            ft = valid_font(candidate)
+            if ft is not None:
+                print(f"FONT ACTIVE: {candidate.name} | {ft.getname()[0]}", flush=True)
+                return str(candidate)
+
+    # Open-source Persian font. Repo release/tag and filenames are pinned.
+    weight = "Bold" if bold else "Regular"
+    filename = f"Vazirmatn-{weight}.ttf"
+    cache = Path(gettempdir()) / "acolad_story_font_cache"
+    cache.mkdir(parents=True, exist_ok=True)
+    destination = cache / filename
+    if destination.is_file():
+        ft = valid_font(destination)
+        if ft is not None:
+            print(f"FONT ACTIVE: {filename} (Vazirmatn fallback)", flush=True)
+            return str(destination)
+
+    url = ("https://raw.githubusercontent.com/rastikerdar/vazirmatn/"
+           "v33.003/fonts/ttf/" + filename)
+    print(f"FONT FALLBACK: local IRANSans files are invalid or missing; "
+          f"retrieving open-source {filename}", flush=True)
+    try:
+        req = Request(url, headers={"User-Agent": "AcoladStoryGenerator/2.5"})
+        with urlopen(req, timeout=30) as response:
+            content = response.read(3500001)
+        if not 10000 <= len(content) <= 3500000 or content[:4] not in (
+            b"\x00\x01\x00\x00", b"OTTO", b"true", b"ttcf"
+        ):
+            raise ValueError("Downloaded data is not a valid font file")
+        temp = destination.with_suffix(".partial")
+        temp.write_bytes(content)
+        temp.replace(destination)
+        ft = valid_font(destination)
+        if ft is None:
+            raise ValueError("Downloaded font was rejected by Pillow")
+        print(f"FONT ACTIVE: {filename} | {ft.getname()[0]}", flush=True)
+        return str(destination)
+    except Exception as exc:
+        # Keep PREVIEW working even if raw.githubusercontent.com is blocked.
+        print(f"FONT DOWNLOAD WARNING: {type(exc).__name__}: {exc}", flush=True)
+        for candidate in (Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf")
+                          if bold else Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+                          Path("/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf")):
+            if candidate.is_file():
+                ft = valid_font(candidate)
+                if ft is not None:
+                    print(f"FONT ACTIVE: {candidate.name} (emergency system fallback)", flush=True)
+                    return str(candidate)
+        raise RuntimeError("No readable font available; check GitHub network access") from exc
 
 
 def _text_width(draw, text, font):
