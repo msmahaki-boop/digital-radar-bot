@@ -1,44 +1,54 @@
-"""Safe GitHub Actions preview. No Instagram/Telegram/Buffer post is published."""
+"""Acolad Story Generator v2: GitHub Actions preview, NEVER PUBLICATION."""
 import json
-from dataclasses import asdict
 from datetime import datetime, timezone
-from pathlib import Path
 
-from story_data_builder import collect_candidates, build_story_texts, populate_images
+from story_data_builder import (
+    collect_candidates, enrich_candidates, build_story_texts, populate_images,
+)
 from story_renderer import OUTPUT_DIR, render_intro, render_story
 
 
 def main():
-    OUTPUT_DIR.mkdir(exist_ok=True)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     candidates = collect_candidates()
     if not candidates:
-        raise SystemExit("No article candidates available from RSS right now")
-    stories, ai_used = build_story_texts(candidates)
+        raise SystemExit("No suitable RSS news at this moment")
+    enriched = enrich_candidates(candidates)
+    stories, ai_used = build_story_texts(enriched)
     if not stories:
-        raise SystemExit("No suitable stories were chosen")
+        raise SystemExit("Gemini found no stories worthy of publication. Try again later.")
     populate_images(stories)
     render_intro()
     manifest = {
         "generated_utc": datetime.now(timezone.utc).isoformat(),
+        "publication_status": "PREVIEW ONLY - NOTHING PUBLISHED",
         "ai_used": ai_used,
-        "publication_status": "PREVIEW ONLY - NOT PUBLISHED",
         "articles": [],
     }
     for index, story in enumerate(stories, 2):
-        path, mode = render_story(story, index)
+        try:
+            path, mode = render_story(story, index)
+        except Exception as exc:
+            # A failed image generation must not silently become a published post.
+            print(f"WARNING: Unable to render {story.topic}: {type(exc).__name__}: {exc}")
+            continue
         manifest["articles"].append({
-            "category": story.topic, "source": story.source,
-            "source_url": story.link, "original_title": story.original_title,
-            "headline": story.title_fa, "summary": story.summary_fa,
-            "image_mode": mode, "image_status": story.image_status,
+            "topic": story.topic,
+            "headline": story.title_fa,
+            "story_text": story.summary_photo_fa if mode != "text_only" else story.summary_fa,
+            "source_for_editor_only": story.source,
+            "article_url_for_editor_only": story.link,
+            "original_title": story.original_title,
+            "mode": mode,
+            "image_review_status": story.image_status,
             "file": str(path),
         })
     with (OUTPUT_DIR / "manifest.json").open("w", encoding="utf-8") as f:
-        json.dump(manifest, f, ensure_ascii=False, indent=2)
-    print("\nSUCCESS: Story preview generated.")
-    print("Stories created:", 1 + len(stories))
-    print("Gemini used:", ai_used)
-    print("No content was published and sent_news.json was NOT changed.")
+        json.dump(manifest, f, indent=2, ensure_ascii=False)
+    if not manifest["articles"]:
+        raise SystemExit("No readable stories generated; inspect text layout errors")
+    print(f"SUCCESS: {1 + len(manifest['articles'])} preview images created")
+    print("NO PUBLISHING, NO CHANGE TO sent_news.json, NO BUFFER WRITE")
 
 
 if __name__ == "__main__":
