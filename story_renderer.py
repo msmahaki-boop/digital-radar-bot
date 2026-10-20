@@ -1,4 +1,4 @@
-"""Render Acolad V2.2 story templates: landscape / portrait / text-only.
+"""Render Acolad V2.3 story templates: landscape / portrait / text-only.
 
 No source label is ever drawn. Source links remain in manifest.json for checking.
 All coordinates are expressed on the original 941x1672 graphic and scaled to
@@ -7,6 +7,7 @@ All coordinates are expressed on the original 941x1672 graphic and scaled to
 import os
 import subprocess
 from pathlib import Path
+from functools import lru_cache
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps
 
@@ -40,26 +41,52 @@ def to_rect(bounds):
     return tuple(round(z * (sx if i % 2 == 0 else sy)) for i, z in enumerate(bounds))
 
 
+@lru_cache(maxsize=2)
 def font_path(bold=False):
+    """Prefer IRANSans placed in the repo; keep a safe system fallback.
+
+    Supports both the renamed and original filenames. We never bundle fonts
+    in the Python patch; they stay in the user's own private repository.
+    """
+    folder = Path("assets/fonts")
     explicit = os.getenv("STORY_FONT_BOLD" if bold else "STORY_FONT", "").strip()
-    # Noto Sans Arabic lacks Latin letters: mixed Persian + English such as
-    # "Shorts" was rendered as □□□□□□. DejaVu Sans covers BOTH scripts.
-    # A user-supplied font may override this only if it covers both scripts.
-    candidates = [explicit,
-                  "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else
-                  "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"]
+    names = (
+        ["IRANSans-Black.ttf", "IRANSans_Black.ttf",
+         "IRANSans-Bold.ttf", "IRANSans_Bold.ttf"]
+        if bold else
+        ["IRANSans-Medium.ttf", "IRANSans_Medium.ttf",
+         "IRANSans-Regular.ttf", "IRANSans.ttf"]
+    )
+    candidates = ([explicit] if explicit else []) + [str(folder / name) for name in names]
+    candidates.append(
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold
+        else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+    )
     for candidate in candidates:
-        if candidate and os.path.isfile(candidate):
-            return candidate
+        if not candidate or not Path(candidate).is_file():
+            continue
+        try:
+            ImageFont.truetype(candidate, 24, layout_engine=ImageFont.Layout.RAQM)
+        except (OSError, ValueError):
+            print(f"FONT WARNING: unable to load {Path(candidate).name}; trying next")
+            continue
+        if folder in Path(candidate).parents:
+            print(f"FONT {'HEADLINE' if bold else 'BODY'}: {Path(candidate).name} (IRANSans)")
+        else:
+            print(f"FONT WARNING: {'headline' if bold else 'body'} using fallback font: {Path(candidate).name}")
+        return candidate
+
+    # Last resort for unusual Ubuntu images. Print diagnostic for visibility.
     name = "Noto Sans Arabic:style=Bold" if bold else "Noto Sans Arabic"
     try:
         match = subprocess.check_output(["fc-match", "-f", "%{file}", name],
                                         text=True, timeout=3).strip()
         if match and os.path.isfile(match):
+            print("FONT WARNING: using fontconfig fallback")
             return match
     except (OSError, subprocess.SubprocessError):
         pass
-    raise RuntimeError("Persian font unavailable. Install fonts-noto-core.")
+    raise RuntimeError("No usable Persian font. Put valid .ttf files in assets/fonts/.")
 
 
 def _text_width(draw, text, font):
