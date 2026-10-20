@@ -15,6 +15,10 @@ def main():
         raise SystemExit("No suitable RSS news at this moment")
     enriched = enrich_candidates(candidates)
     stories, ai_used = build_story_texts(enriched)
+    present_topics = {story.topic for story in stories}
+    for topic in ("tech", "ai", "marketing", "social"):
+        if topic not in present_topics:
+            print(f"NOTICE: no validated news story for category {topic}")
     if not stories:
         raise SystemExit("Gemini found no stories worthy of publication. Try again later.")
     populate_images(stories)
@@ -24,6 +28,9 @@ def main():
         "publication_status": "PREVIEW ONLY - NOTHING PUBLISHED",
         "ai_used": ai_used,
         "articles": [],
+        "coverage": {topic: {"rss_candidates": sum(x["topic"] == topic for x in candidates),
+                             "selected_by_editor": topic in present_topics}
+                     for topic in ("tech", "ai", "marketing", "social")},
     }
     for index, story in enumerate(stories, 2):
         try:

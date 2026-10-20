@@ -1,4 +1,4 @@
-"""Render Acolad V2 story templates: landscape / portrait / text-only.
+"""Render Acolad V2.2 story templates: landscape / portrait / text-only.
 
 No source label is ever drawn. Source links remain in manifest.json for checking.
 All coordinates are expressed on the original 941x1672 graphic and scaled to
@@ -42,9 +42,10 @@ def to_rect(bounds):
 
 def font_path(bold=False):
     explicit = os.getenv("STORY_FONT_BOLD" if bold else "STORY_FONT", "").strip()
+    # Noto Sans Arabic lacks Latin letters: mixed Persian + English such as
+    # "Shorts" was rendered as □□□□□□. DejaVu Sans covers BOTH scripts.
+    # A user-supplied font may override this only if it covers both scripts.
     candidates = [explicit,
-                  "/usr/share/fonts/truetype/noto/NotoSansArabic-Bold.ttf" if bold else
-                  "/usr/share/fonts/truetype/noto/NotoSansArabic-Regular.ttf",
                   "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else
                   "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"]
     for candidate in candidates:
@@ -99,20 +100,22 @@ def draw_fitted_text(canvas, text, bounds, *, headline=False):
     max_w = x2 - x1 - left_pad - right_pad
     max_h = y2 - y1 - top_pad - bottom_pad
     draw = ImageDraw.Draw(canvas)
-    text = " ".join(str(text or "").split())
+    # Preserve paragraph breaks for conversational story layout.
+    text = str(text or "").replace("\r", "\n").strip()
+    text = "\n".join(" ".join(line.split()) for line in text.split("\n"))
     if not text:
         return False
     if headline:
         sizes = range(48, 27, -1)
         max_lines = 2
     else:
-        sizes = range(41, 25, -1)
+        sizes = range(40, 27, -1)
         max_lines = 19
     chosen = None
     for size in sizes:
         font = ImageFont.truetype(font_path(bold=headline), size)
         lines = _wrap(draw, text, font, max_w)
-        leading = round(size * (1.48 if headline else 1.72))
+        leading = round(size * (1.48 if headline else 1.65))
         if len(lines) <= max_lines and len(lines) * leading <= max_h and all(
                 not s or _text_width(draw, s, font) <= max_w + 2 for s in lines):
             chosen = (font, lines, leading)
@@ -216,7 +219,9 @@ def _layout_for_template(topic, mode, template):
     title = (max(95, left+25), top+4, min(845, right-23), bottom-3)
     body_top = bottom + (58 if mode == "text_only" else 48)
     body_end = 1353 if mode == "text_only" else 1390
-    body = (101, body_top, 834, body_end)
+    # Text must be INSET from the visible frame. Previous bounds extended
+    # beyond the left border and cramped the rightmost Persian line.
+    body = (149, body_top + 15, 791, body_end - 21) if mode == "text_only" else (132, body_top + 11, 805, body_end - 18)
     if mode == "text_only":
         return {"title": title, "body": body}
     # Tall photo area appears in templates with lower headline strip.
