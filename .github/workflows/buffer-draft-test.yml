@@ -1,0 +1,63 @@
+name: Acolad Buffer Story Draft Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: 'Run ID of a successful Acolad Story Generator Test'
+        type: string
+        required: true
+      story_file:
+        description: 'Exact PNG file name in that run artifact'
+        type: string
+        required: true
+        default: '01_intro.png'
+      create_draft:
+        description: 'Start with no (connection-only). Choose yes only to create ONE draft.'
+        type: choice
+        options:
+          - 'no'
+          - 'yes'
+        default: 'no'
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  buffer-draft-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install lightweight dependencies
+        run: python -m pip install --disable-pip-version-check requests Pillow
+      - name: Download PREVIOUS story preview artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+        run: |
+          if ! [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]; then
+            echo 'source_run_id must be a GitHub Actions numeric Run ID'
+            exit 1
+          fi
+          mkdir -p downloaded_stories
+          gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name acolad-story-previews --dir downloaded_stories
+          ls -lh downloaded_stories/*.png
+      - name: Check connection, optionally make ONE Buffer draft
+        env:
+          BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+          STORY_FILE: ${{ inputs.story_file }}
+          CREATE_DRAFT: ${{ inputs.create_draft }}
+        run: |
+          python buffer_story_draft.py --story "$STORY_FILE" --create-draft "$CREATE_DRAFT"
