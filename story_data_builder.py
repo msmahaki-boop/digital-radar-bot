@@ -57,8 +57,12 @@ def collect_candidates():
             try:
                 items = read_feed(url)[:12]
                 now = datetime.now(timezone.utc).timestamp()
-                items = [a for a in items if not a.get("published") or
-                         -86400 < now - a["published"] <= 4 * 86400][:4]
+                max_age_hours = float(os.getenv("ACOLAD_MAX_AGE_HOURS", "96"))
+                require_dated = os.getenv("ACOLAD_REQUIRE_DATED_NEWS", "0") == "1"
+                items = [a for a in items if
+                         ((not a.get("published") and not require_dated) or
+                          (a.get("published") and
+                           -300 < now - a["published"] <= max_age_hours * 3600))][:4]
                 by_source.append([{**entry, "topic": topic, "source": name} for entry in items])
                 print(f"RSS OK: {name} ({len(items)} recent articles)")
             except Exception as exc:
