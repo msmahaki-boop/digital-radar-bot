@@ -1,14 +1,27 @@
-"""Acolad Story Generator v2: GitHub Actions preview, NEVER PUBLICATION."""
+"""Acolad Story Generator v2.6: GitHub Actions preview, NEVER PUBLICATION."""
 import json
 from datetime import datetime, timezone
 
 from story_data_builder import (
     collect_candidates, enrich_candidates, build_story_texts, populate_images,
 )
-from story_renderer import OUTPUT_DIR, render_intro, render_story
+from story_renderer import OUTPUT_DIR, TEMPLATE_DIR, TOPICS, template_name, render_intro, render_story
+
+
+def verify_minimal_templates():
+    """Fail early and clearly, before making expensive calls to Gemini."""
+    required = [TEMPLATE_DIR / "intro_story.png"]
+    required += [TEMPLATE_DIR / template_name(topic, mode)
+                 for topic in TOPICS for mode in ("text_only", "photo")]
+    missing = [str(path) for path in required if not path.is_file()]
+    if missing:
+        raise SystemExit("MISSING MINIMALIST TEMPLATES: " + ", ".join(missing) +
+                         ". Keep the original intro and upload the eight final V2.6 images.")
+    print("TEMPLATES VERIFIED: 8 minimalist + unchanged intro", flush=True)
 
 
 def main():
+    verify_minimal_templates()
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     candidates = collect_candidates()
     if not candidates:
@@ -48,6 +61,7 @@ def main():
             "original_title": story.original_title,
             "mode": mode,
             "image_review_status": story.image_status,
+            "emphasis_terms_for_editor_only": getattr(story, "emphasis_terms", []),
             "file": str(path),
         })
     with (OUTPUT_DIR / "manifest.json").open("w", encoding="utf-8") as f:

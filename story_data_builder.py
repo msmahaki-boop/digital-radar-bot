@@ -1,4 +1,4 @@
-"""Acolad Story Generator v2.4: Acolad voice, grounded stories and 4-topic audit.
+"""Acolad Story Generator v2.6: Acolad voice, grounded stories and 4-topic audit.
 
 Imports the existing bot's RSS definitions, but never calls bot.main and never
 changes sent_news.json. Intended for PREVIEW, not for unattended publishing.
@@ -45,6 +45,7 @@ class Story:
     image_alt: str = ""
     image: Image.Image | None = field(default=None, repr=False)
     image_status: str = "not checked"
+    emphasis_terms: list[str] = field(default_factory=list)
 
 
 def collect_candidates():
@@ -168,7 +169,7 @@ A. HOOK (title_fa): 6–13 words. A specific human consequence or delightful
    ACOLAD: «تو عکس دسته‌جمعی پلک زدی؟ لایت‌روم ناجی عکس شده!»
    DRY: «یوتیوب مشوق‌هایی را برای شورتس آزمایش می‌کند»
    ACOLAD: «یوتیوب داره برای شورتس‌سازهای منتخب پول کنار می‌ذاره!»
-B. STORY (body_fa): 380–650 characters when source provides enough facts.
+B. STORY (body_fa): 330–590 characters when source provides enough facts.
    Three short paragraphs, each 1–3 short sentences, separated by \n\n:
    1. The hook is paid off right away: WHO did WHAT; one concrete verified detail.
    2. The crucial condition / date / scope / eligibility / numeric requirement.
@@ -176,7 +177,7 @@ B. STORY (body_fa): 380–650 characters when source provides enough facts.
       grounded in the consequence. Make it easy to picture in everyday life,
       creating a tiny Aha moment. A playful final wink is welcome IF fitting.
    Do NOT begin the body with "شرکت ... اعلام کرد"; write naturally.
-C. PHOTO BODY (short_body_fa): 240–390 chars when facts allow, two short
+C. PHOTO BODY (short_body_fa): 160–245 chars when facts allow, two short
    paragraphs, still including a specific example or vivid consequence and
    an essential condition. Don't simply cut the long version mid-sentence.
 
@@ -212,8 +213,20 @@ SILENT QUALITY GATE, for each selected story:
 [ ] Is it interesting without clickbait or manufactured punchlines?
 If any answer is NO, rewrite that story privately BEFORE returning JSON.
 
+VISUAL TYPOGRAPHY / EMPHASIS:
+- Return a separate optional emphasis_terms list with 1–3 short, meaningful exact
+  phrases from body_fa and/or short_body_fa, not arbitrary buzzwords.
+- Suitable phrases: a verified number, named product, exact practical condition.
+- We use a restrained half-height lavender highlight and bold purple font on
+  these phrases, so select sparingly, never an entire paragraph.
+- Do NOT put ** or HTML tags in the prose. The rendering code handles emphasis.
+- Avoid long comma-heavy sentences. The writing must sound like a real Persian
+  creator speaking to a friend, with a tangible example and an optional small
+  natural smile—not a press release or a forced joke.
+- For PHOTO BODY, keep it concise; the design has a compact white text box.
+
 Return only JSON with exactly this schema:
-{"stories":[{"id":0,"title_fa":"...","body_fa":"...","short_body_fa":"..."}]}
+{"stories":[{"id":0,"title_fa":"...","body_fa":"...","short_body_fa":"...","emphasis_terms":["...","..."]}]}
 Do not use markdown, explanatory text, extra ids or keys.
 AVAILABLE CATEGORIES: """ + ", ".join(available_topics) + "\nMATERIAL:\n" + json.dumps(material, ensure_ascii=False)
 
@@ -346,6 +359,17 @@ def build_story_texts(candidates):
             if not headline or len(body) < 130 or len(short_body) < 90:
                 print(f"EDITOR rejected {topic}: incomplete headline or explanation")
                 continue
+            terms_raw = piece.get("emphasis_terms") or []
+            if not isinstance(terms_raw, list):
+                terms_raw = []
+            terms = []
+            for t in terms_raw:
+                if isinstance(t, str):
+                    t = " ".join(t.split()).strip()
+                    if 2 <= len(t) <= 34 and (t in body or t in short_body) and t not in terms:
+                        terms.append(t)
+                    if len(terms) >= 3:
+                        break
             if any(x in (headline + body + short_body) for x in ("\ufffd", "\u25a1", "\u25a0")):
                 print(f"EDITOR rejected {topic}: corrupt text characters")
                 continue
@@ -361,7 +385,8 @@ def build_story_texts(candidates):
                 title_fa=headline, summary_fa=body,
                 summary_photo_fa=short_body,
                 image_url=original.get("image_url", ""),
-                image_alt=original.get("image_alt", ""))
+                image_alt=original.get("image_alt", ""),
+                emphasis_terms=terms)
             print(f"EDITOR accepted {topic}: {len(body)} chars; {original['source']}")
 
     generated = {}

@@ -1,45 +1,25 @@
-"""Render Acolad V2.5 story templates: landscape / portrait / text-only.
+"""Acolad Minimal Story Generator V2.6.
 
-No source label is ever drawn. Source links remain in manifest.json for checking.
-All coordinates are expressed on the original 941x1672 graphic and scaled to
-1080x1920, so template resolution may vary without changing layout rules.
+Preview-only: no posting. Eight photo/text templates share one open photo zone.
+Original aspect ratios are preserved; no blurred/photo frames or cropping.
+The rendered emphasis terms are grounded phrases returned by the editor.
 """
-import os
-import subprocess
-from pathlib import Path
+import re
 from functools import lru_cache
-
-from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps, features
+from pathlib import Path
+from PIL import Image, ImageDraw, ImageFont, ImageOps, features
+import os
 
 CANVAS = (1080, 1920)
 REFERENCE = (941, 1672)
 TEMPLATE_DIR = Path("assets/templates")
 OUTPUT_DIR = Path("stories_output")
-
-# Distinct, wide body-text regions for each format; no source overlay.
-# Coordinates intentionally inset from decorations and the Instagram footer.
-ZONES = {
-    "landscape": {
-        "photo": (184, 301, 757, 724),
-        "title": (96, 712, 840, 806),
-        "body": (91, 903, 846, 1377),
-    },
-    "portrait": {
-        "photo": (237, 208, 705, 883),
-        "title": (95, 913, 842, 1008),
-        "body": (98, 1060, 837, 1411),
-    },
-    "text_only": {
-        "title": (95, 324, 838, 424),
-        "body": (106, 598, 830, 1350),
-    },
-}
+TOPICS = ("tech", "ai", "marketing", "social")
 
 
-def to_rect(bounds):
+def scale_box(box):
     sx, sy = CANVAS[0] / REFERENCE[0], CANVAS[1] / REFERENCE[1]
-    return tuple(round(z * (sx if i % 2 == 0 else sy)) for i, z in enumerate(bounds))
-
+    return tuple(round(v * (sx if i % 2 == 0 else sy)) for i, v in enumerate(box))
 
 @lru_cache(maxsize=2)
 def font_path(bold=False):
@@ -131,228 +111,258 @@ def font_path(bold=False):
         raise RuntimeError("No readable font available; check GitHub network access") from exc
 
 
-def _text_width(draw, text, font):
-    return draw.textlength(text, font=font, direction="rtl")
+
+@lru_cache(maxsize=60)
+def get_font(size, bold=False):
+    return ImageFont.truetype(font_path(bold), size, layout_engine=ImageFont.Layout.RAQM)
+
+
+def _measure(draw, text, font):
+    return draw.textlength(str(text), font=font, direction="rtl")
 
 
 def _wrap(draw, text, font, width):
-    """Wrap by whole words; preserve natural paragraphs and Persian shaping."""
+    """Wrap logical Persian text without destroying paragraphs or bidi shaping."""
     lines = []
-    for paragraph in str(text).split("\n"):
-        words = paragraph.split()
+    for para in str(text).split("\n"):
+        words = para.split()
         if not words:
-            if lines and lines[-1] != "":
+            if lines and lines[-1]:
                 lines.append("")
             continue
-        current = ""
+        cur = ""
         for word in words:
-            candidate = f"{current} {word}".strip()
-            if current and _text_width(draw, candidate, font) > width:
-                lines.append(current)
-                current = word
+            test = (cur + " " + word).strip()
+            if cur and _measure(draw, test, font) > width:
+                lines.append(cur)
+                cur = word
             else:
-                current = candidate
-        if current:
-            lines.append(current)
+                cur = test
+        if cur:
+            lines.append(cur)
     return lines
 
 
-def draw_fitted_text(canvas, text, bounds, *, headline=False):
-    """Center Persian text line by line and vertically in the free content box.
+def _styled_runs(line, phrases):
+    """Select non-overlapping, literal editorial phrases; never highlight invented text."""
+    runs = []
+    matches = []
+    for term in sorted({x.strip() for x in phrases if x and x.strip()}, key=len, reverse=True):
+        for m in re.finditer(re.escape(term), line, flags=re.IGNORECASE):
+            # Restrict emphasis to distinct words/phrases, not partial Persian words.
+            i, j = m.span()
+            if (i and line[i-1].isalnum()) or (j < len(line) and line[j].isalnum()):
+                continue
+            if not any(i < e and j > s for s, e in matches):
+                matches.append((i, j))
+    matches.sort()
+    cur = 0
+    for i, j in matches:
+        if i > cur:
+            runs.append((line[cur:i], False))
+        runs.append((line[i:j], True))
+        cur = j
+    if cur < len(line):
+        runs.append((line[cur:], False))
+    return runs or [(line, False)]
 
-    No justification, no stretched glyph spacing, no truncation. If content
-    genuinely does not fit, return False so caller can use text-only template.
-    """
-    x1, y1, x2, y2 = to_rect(bounds)
-    # Wider copy and modest padding: keep a visible safe margin from the
-    # decorative purple frame without losing a third of the content region.
-    pad_x = 10 if headline else 13
-    pad_top = 5 if headline else 12
-    pad_bottom = 5 if headline else 13
-    max_w = x2 - x1 - pad_x * 2
-    max_h = y2 - y1 - pad_top - pad_bottom
-    draw = ImageDraw.Draw(canvas)
+
+def draw_story_text(canvas, text, bounds, *, headline=False, phrases=()):
+    """Adaptive centered Persian text with optional subtle bold/color/marker accents."""
+    x1, y1, x2, y2 = scale_box(bounds)
+    safe_x = 16 if headline else 20
+    safe_y = 5 if headline else 13
+    max_w, max_h = (x2-x1-2*safe_x), (y2-y1-2*safe_y)
     text = str(text or "").replace("\r", "\n").strip()
-    text = "\n".join(" ".join(line.split()) for line in text.split("\n"))
     if not text:
         return False
-    sizes = (range(48, 27, -1) if headline else range(42, 26, -1))
-    max_lines = 2 if headline else 22
+    # Remove stray markdown markup: emphasis is carried separately in manifest fields.
+    text = re.sub(r"(\*\*|==)(.*?)(\*\*|==)", lambda m: m.group(2), text)
+    text = "\n".join(" ".join(row.split()) for row in text.split("\n"))
+    d = ImageDraw.Draw(canvas)
+    sizes = range(49, 28, -1) if headline else range(42, 24, -1)
     chosen = None
     for size in sizes:
-        font = ImageFont.truetype(font_path(bold=headline), size,
-                                  layout_engine=ImageFont.Layout.RAQM)
-        lines = _wrap(draw, text, font, max_w)
-        leading = round(size * (1.29 if headline else 1.43))
-        needed_h = len(lines) * leading
-        if (len(lines) <= max_lines and needed_h <= max_h and
-            all(not line or _text_width(draw, line, font) <= max_w + 2
-                for line in lines)):
-            chosen = font, lines, leading, needed_h
+        normal = get_font(size, bold=headline)
+        lines = _wrap(d, text, normal, max_w * 0.96)
+        step = round(size * (1.32 if headline else 1.49))
+        # Paragraph breaks are half a line, not huge empty gaps.
+        effective = sum(step * (0.58 if not ln else 1) for ln in lines)
+        if (len(lines) <= (2 if headline else 26) and effective <= max_h and
+                all((not ln or _measure(d, ln, normal) <= max_w) for ln in lines)):
+            chosen = size, lines, step, effective
             break
     if chosen is None:
         return False
-    font, lines, leading, needed_h = chosen
-    y = y1 + pad_top + max(0, (max_h - needed_h) // 2)
-    center_x = (x1 + x2) / 2
-    for line in lines:
-        if line:
-            # Center by actual glyph bounding box, independent of mixed
-            # right-to-left and left-to-right segments in each line.
-            ink = draw.textbbox((0, 0), line, font=font, anchor="lt", direction="rtl")
-            ink_w = ink[2] - ink[0]
-            ink_h = ink[3] - ink[1]
-            # anchor lt makes ink bounds relative to the anchor; use that
-            # displacement to position visible ink exactly in the safe region.
-            draw.text((round(center_x - (ink[0] + ink[2]) / 2),
-                       round(y + (leading - ink_h) / 2 - ink[1])),
-                      line, font=font, fill="#141416", anchor="lt", direction="rtl")
-        y += leading
+    size, lines, step, effective = chosen
+    normal, strong = get_font(size, bold=headline), get_font(size, bold=True)
+    # Vertical centering without excessive top padding.
+    y = y1 + safe_y + max(0, (max_h - effective) / 2)
+    cx = (x1 + x2) / 2
+    for ln in lines:
+        if not ln:
+            y += step * 0.58
+            continue
+        runs = [(ln, False)] if headline else _styled_runs(ln, phrases)
+        advance = sum(_measure(d, value, strong if highlight else normal)
+                      for value, highlight in runs)
+        cursor = cx + advance/2
+        for value, highlight in runs:
+            font = strong if highlight else normal
+            width = _measure(d, value, font)
+            left = cursor - width
+            color = "#5730A8" if highlight else "#141416"
+            if highlight:
+                # Half-height pastel marker; deliberately understated.
+                mark_y = y + step * 0.49
+                d.rounded_rectangle((round(left-2), round(mark_y), round(cursor+2),
+                                     round(mark_y+size*0.48)), radius=7,
+                                    fill="#E4DDFC")
+            box = d.textbbox((0,0), value, font=font, anchor="lt", direction="rtl")
+            ink_h = box[3]-box[1]
+            d.text((round(left-box[0]), round(y+(step-ink_h)/2-box[1])),
+                   value, font=font, fill=color, direction="rtl", anchor="lt")
+            cursor = left
+        y += step
     return True
 
 
-def insert_photo(canvas, original_image, bounds):
-    """Display entire source picture; use a tinted blurred extension as side padding."""
-    x1, y1, x2, y2 = to_rect(bounds)
-    width, height = x2 - x1, y2 - y1
-    img = ImageOps.exif_transpose(original_image).convert("RGB")
-    blurred = ImageOps.fit(img, (width, height), method=Image.Resampling.LANCZOS)
-    blurred = blurred.filter(ImageFilter.GaussianBlur(radius=38))
-    blurred = Image.blend(blurred, Image.new("RGB", (width, height), "#EEE7FA"), 0.32)
-    inset = 9
-    main = ImageOps.contain(img, (width - 2 * inset, height - 2 * inset),
-                            method=Image.Resampling.LANCZOS)
-    blurred.paste(main, ((width - main.width) // 2, (height - main.height) // 2))
-    mask = Image.new("L", (width, height), 0)
-    ImageDraw.Draw(mask).rounded_rectangle((0, 0, width-1, height-1), 22, fill=255)
-    canvas.paste(blurred, (x1, y1), mask)
-
-
 def template_name(topic, mode):
-    if topic not in ("tech", "ai", "marketing", "social"):
-        raise ValueError("Unknown topic: " + str(topic))
-    if mode == "text_only":
-        return f"{topic}_text_only.png"
-    if mode in ("landscape", "portrait"):
-        return f"{topic}_photo_{mode}.png"
-    raise ValueError("Unknown mode: " + str(mode))
+    if topic not in TOPICS:
+        raise ValueError(f"Unknown category: {topic}")
+    if mode not in ("text_only", "photo"):
+        raise ValueError(f"Unknown mode: {mode}")
+    return f"{topic}_{'text' if mode == 'text_only' else 'photo'}.png"
 
 
-def new_canvas(topic, mode):
-    f = TEMPLATE_DIR / template_name(topic, mode)
-    if not f.is_file():
-        raise FileNotFoundError(f"Missing uploaded story template: {f}")
-    return Image.open(f).convert("RGB").resize(CANVAS, Image.Resampling.LANCZOS)
+def load_template(topic, mode):
+    path = TEMPLATE_DIR / template_name(topic, mode)
+    if not path.is_file():
+        raise FileNotFoundError(f"V2.6 template missing: {path}. Upload the minimalist template with this exact name")
+    return Image.open(path).convert("RGB").resize(CANVAS, Image.Resampling.LANCZOS)
 
 
-def _cyan(rgb):
-    r, g, b = rgb[:3]
-    return r < 175 and g > 140 and b > 196 and (b - r) > 45
+def _cyan(pixel):
+    r,g,b = pixel[:3]
+    return r<175 and g>140 and b>196 and b-r>45
 
 
-def _detect_headline_bar(template):
-    """Infer the cyan headline strip from the *actual* uploaded template.
-
-    Earlier generated templates do not use identical vertical coordinates;
-    we therefore detect the colored title band instead of hard-coding one.
-    """
-    im = template.resize(REFERENCE, Image.Resampling.NEAREST).convert("RGB")
-    x = REFERENCE[0] // 2
-    marked = []
-    for y in range(260, 1190):
-        if _cyan(im.getpixel((x, y))):
-            marked.append(y)
-    runs = []
-    for y in marked:
-        if not runs or y > runs[-1][-1] + 1:
-            runs.append([y])
-        else:
-            runs[-1].append(y)
-    choices = []
-    for run in runs:
-        if len(run) < 42:
-            continue
-        mid = (run[0] + run[-1]) // 2
-        left, right = x, x
-        while left > 0 and _cyan(im.getpixel((left-1, mid))):
-            left -= 1
-        while right < REFERENCE[0]-1 and _cyan(im.getpixel((right+1, mid))):
-            right += 1
-        if right - left >= 360:
-            choices.append((right-left, len(run), left, run[0], right, run[-1]))
-    if not choices:
-        raise RuntimeError("Could not locate cyan title bar in template")
-    _, _, left, top, right, bottom = max(choices)
-    return left, top, right, bottom
+def _headline_zone(template):
+    """Find the actual cyan rounded bar; 8 generated templates have different Y positions."""
+    ref=template.resize(REFERENCE, Image.Resampling.NEAREST).convert("RGB")
+    x=REFERENCE[0]//2
+    intervals=[]; start=None
+    for y in range(260, 1150):
+        found=_cyan(ref.getpixel((x,y)))
+        if found and start is None:
+            start=y
+        elif not found and start is not None:
+            if y-start>44:
+                intervals.append((start,y-1))
+            start=None
+    if start is not None:
+        intervals.append((start,1149))
+    candidates=[]
+    for top,bottom in intervals:
+        mid=(top+bottom)//2
+        l=x; r=x
+        while l>0 and _cyan(ref.getpixel((l-1,mid))):l-=1
+        while r<REFERENCE[0]-1 and _cyan(ref.getpixel((r+1,mid))):r+=1
+        if r-l>350:
+            candidates.append((r-l,l,top,r,bottom))
+    if not candidates:
+        raise RuntimeError('No cyan headline bar found. Confirm the new minimalist image was uploaded.')
+    _,l,t,r,b=max(candidates)
+    return (l+17, t+6, r-17, b-6)
 
 
-def _layout_for_template(topic, mode, template):
-    left, top, right, bottom = _detect_headline_bar(template)
-    # Derive safe text bounds from the actual visible cyan strip.
-    title = (max(95, left+25), top+4, min(845, right-23), bottom-3)
-    body_top = bottom + (44 if mode == "text_only" else 38)
-    body_end = 1380 if mode == "text_only" else 1395
-    # Text must be INSET from the visible frame. Previous bounds extended
-    # beyond the left border and cramped the rightmost Persian line.
-    body = ((126, body_top + 5, 811, body_end - 4) if mode == "text_only"
-            else (105, body_top + 5, 829, body_end - 4))
-    if mode == "text_only":
-        return {"title": title, "body": body}
-    # Tall photo area appears in templates with lower headline strip.
-    if top >= 860:
-        photo = (219, 219, 720, min(top-56, 864))
-    else:
-        photo = (189, 298, 753, min(top-54, 735))
-    if photo[3] <= photo[1]+110:
-        photo = ZONES[mode]["photo"]
-    return {"title": title, "body": body, "photo": photo}
+def _category_start(template, title_bottom):
+    """Detect tiny purple category chip below the text panel to protect the footer."""
+    im=template.resize(REFERENCE, Image.Resampling.NEAREST).convert("RGB")
+    for y in range(max(title_bottom+125, 1240), 1480, 2):
+        count=0
+        for x in range(310,631,4):
+            r,g,b=im.getpixel((x,y))
+            if r<170 and g<130 and b>115 and b>r+20:
+                count+=1
+        if count>=5:
+            return y
+    return 1340 if title_bottom<650 else 1400
 
 
-def _draw_mode(story, mode):
-    canvas = new_canvas(story.topic, mode)
-    zone = _layout_for_template(story.topic, mode, canvas)
-    if mode != "text_only":
+def _zones(template, mode):
+    l,top,r,bottom=_headline_zone(template)
+    chip=_category_start(template,bottom)
+    zones={
+        'title':(l,top,r,bottom),
+        'body':(82, bottom+44, 859, min(chip-46, 1390))
+    }
+    if mode=='photo':
+        # Intentionally open, *unframed* space above the title for any image ratio.
+        zones['photo']=(98, 155, 843, top-33)
+    return zones
+
+
+def insert_unframed_photo(canvas, image, bounds):
+    """Contain the full image in the available open area, with no frame/crop/blur."""
+    x1,y1,x2,y2=scale_box(bounds)
+    max_w,max_h=x2-x1,y2-y1
+    if max_h<150:
+        raise RuntimeError('Photo slot too short; check template geometry')
+    img=ImageOps.exif_transpose(image).convert('RGB')
+    img=ImageOps.contain(img, (max_w,max_h), method=Image.Resampling.LANCZOS)
+    # Very wide images appear naturally shorter, portraits naturally narrower.
+    px=x1+(max_w-img.width)//2
+    py=y1+(max_h-img.height)//2
+    canvas.paste(img,(px,py))
+    print(f"PHOTO FIT: original {image.width}x{image.height} -> {img.width}x{img.height}; crop=none, frame=none")
+
+
+def _draw_variant(story, mode):
+    canvas=load_template(story.topic, mode)
+    zones=_zones(canvas,mode)
+    if mode=='photo':
         if story.image is None:
-            raise ValueError("Photo mode requires an image")
-        insert_photo(canvas, story.image, zone["photo"])
-    short = mode != "text_only"
-    body = story.summary_photo_fa if short else story.summary_fa
-    if not draw_fitted_text(canvas, story.title_fa, zone["title"], headline=True):
-        return None, "headline too long for layout"
-    if not draw_fitted_text(canvas, body, zone["body"]):
-        return None, "body too long for layout"
-    return canvas, ""
+            raise RuntimeError('No image provided')
+        insert_unframed_photo(canvas,story.image,zones['photo'])
+    text=story.summary_photo_fa if mode=='photo' else story.summary_fa
+    emphasis=getattr(story, 'emphasis_terms', ()) or ()
+    if not draw_story_text(canvas,story.title_fa,zones['title'],headline=True):
+        return None, 'headline too long'
+    if not draw_story_text(canvas,text,zones['body'],phrases=emphasis):
+        return None, 'body does not fit'
+    return canvas, ''
 
 
-def render_story(story, index):
-    # Every article has an explicit text-only escape route so weak images don't
-    # cost valuable news coverage. Landscape/portrait choice uses aspect ratio.
-    preferred = "text_only"
-    if story.image is not None:
-        preferred = "landscape" if story.image.width / story.image.height >= 1.1 else "portrait"
-    options = [preferred] if preferred == "text_only" else [preferred, "text_only"]
-    failures = []
-    for mode in options:
-        canvas, reason = _draw_mode(story, mode)
-        if canvas is None:
-            failures.append(f"{mode}: {reason}")
+def render_story(story,index):
+    preferred='photo' if story.image is not None else 'text_only'
+    attempts=[preferred] if preferred=='text_only' else ['photo','text_only']
+    errors=[]
+    for mode in attempts:
+        try:
+            canvas,reason=_draw_variant(story,mode)
+        except Exception as exc:
+            errors.append(f'{mode}: {type(exc).__name__}: {exc}')
             continue
-        OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-        filename = OUTPUT_DIR / f"{index:02d}_{story.topic}_{mode}.png"
-        canvas.save(filename, "PNG", optimize=True)
-        if mode != preferred:
-            print(f"FALLBACK: {story.topic}: photo layout could not fit copy")
-        print(f"RENDER OK: {filename}")
-        return filename, mode
-    raise RuntimeError(f"Unable to fit {story.topic} copy in story template: " + "; ".join(failures))
+        if canvas is None:
+            errors.append(f'{mode}: {reason}')
+            continue
+        OUTPUT_DIR.mkdir(parents=True,exist_ok=True)
+        path=OUTPUT_DIR/f'{index:02d}_{story.topic}_{mode}.png'
+        canvas.save(path,'PNG',optimize=True)
+        print(f'RENDER OK: {path} | V2.6 | {mode}')
+        if mode!=preferred:
+            print(f'LAYOUT FALLBACK: {story.topic}: full story shown in text-only template')
+        return path,mode
+    raise RuntimeError('All layouts failed for '+story.topic+': '+'; '.join(errors))
 
 
 def render_intro():
-    p = TEMPLATE_DIR / "intro_story.png"
-    if not p.is_file():
-        raise FileNotFoundError(f"Missing {p}")
+    path=TEMPLATE_DIR/'intro_story.png'
+    if not path.is_file():
+        raise FileNotFoundError(f'Missing unchanged intro template: {path}')
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    out = OUTPUT_DIR / "01_intro.png"
-    Image.open(p).convert("RGB").resize(CANVAS, Image.Resampling.LANCZOS).save(out)
-    print(f"RENDER OK: {out}")
+    out=OUTPUT_DIR/'01_intro.png'
+    Image.open(path).convert('RGB').resize(CANVAS,Image.Resampling.LANCZOS).save(out)
+    print('RENDER OK:',out)
     return out
