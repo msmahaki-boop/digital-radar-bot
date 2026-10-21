@@ -1,0 +1,60 @@
+name: Acolad Buffer Story BATCH Draft Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: 'Run ID of a successful Acolad Story Generator Test'
+        type: string
+        required: true
+      create_draft:
+        description: 'no=check only; yes=upload all images and make ONE draft, never publish'
+        type: choice
+        options:
+          - 'no'
+          - 'yes'
+        default: 'no'
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: acolad-story-batch-draft
+  cancel-in-progress: false
+
+jobs:
+  buffer-batch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install packages
+        run: python -m pip install --disable-pip-version-check requests Pillow
+      - name: Download story preview artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+        run: |
+          if ! [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]; then
+            echo 'source_run_id must be numeric'
+            exit 1
+          fi
+          mkdir -p downloaded_stories
+          gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name acolad-story-previews --dir downloaded_stories
+          ls -lh downloaded_stories
+      - name: Validate all images and optionally create ONE Buffer Draft
+        env:
+          BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+          CREATE_DRAFT: ${{ inputs.create_draft }}
+        run: python buffer_story_batch.py --create-draft "$CREATE_DRAFT"
