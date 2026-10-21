@@ -4,9 +4,6 @@ name: Acolad Daily Story Pipeline V2.8
 # IMPORTANT: scheduled publishing remains off until repository variable
 # ACOLAD_AUTOPUBLISH_ENABLED is set to true by the account owner.
 on:
-    branches: [main]
-    paths:
-      - '.github/workflows/acolad-daily-pipeline.yml'
   schedule:
     - cron: '30 16 * * *'
       timezone: 'Asia/Tehran'
