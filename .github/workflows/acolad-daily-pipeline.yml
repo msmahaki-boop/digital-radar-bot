@@ -1,27 +1,25 @@
 name: Acolad Daily Story Pipeline V2.8
 
-# Schedule 16:30 in Tehran; publication occurs at exactly 18:00 Tehran via Buffer.
-# IMPORTANT: scheduled publishing remains off until repository variable
-# ACOLAD_AUTOPUBLISH_ENABLED is set to true by the account owner.
+# Schedule 16:30 in Tehran (13:00 UTC); publication occurs at 18:00 Tehran via Buffer.
 on:
   schedule:
-    - cron: '30 16 * * *'
-      timezone: 'Asia/Tehran'
+    - cron: '0 13 * * *'
   workflow_dispatch:
     inputs:
       mode:
-        description: 'preview (no upload), draft (Buffer draft), queue (custom 18:00 Tehran time)'
+        description: 'preview (no upload), draft (Buffer draft), queue (publish to Buffer)'
         required: true
         type: choice
-        default: preview
+        default: queue
         options:
-          - preview
-          - draft
           - queue
+          - draft
+          - preview
       queue_approval:
         description: 'For QUEUE mode ONLY, type QUEUE_APPROVED'
         required: false
         type: string
+        default: 'QUEUE_APPROVED'
 
 permissions:
   contents: read
@@ -32,21 +30,24 @@ concurrency:
 
 jobs:
   daily-story:
-    if: ${{ github.event_name != 'schedule' || vars.ACOLAD_AUTOPUBLISH_ENABLED == 'true' }}
+    if: ${{ vars.ACOLAD_AUTOPUBLISH_ENABLED != 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
       - name: Checkout project
         uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
       - name: Install Persian fallback font and packages
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq fonts-noto-core
           python -m pip install --disable-pip-version-check -r requirements.txt
+
       - name: Generate, validate and optionally send to Buffer
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -55,10 +56,11 @@ jobs:
           CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
           ACOLAD_MAX_AGE_HOURS: '48'
-          ACOLAD_REQUIRE_DATED_NEWS: '1'
-          PIPELINE_MODE: ${{ github.event_name == 'schedule' && 'queue' || inputs.mode || 'preview' }}
-          QUEUE_APPROVAL: ${{ github.event_name == 'schedule' && 'QUEUE_APPROVED' || inputs.queue_approval }}
-        run: python daily_story_pipeline.py --mode "${PIPELINE_MODE:-preview}" --approval "$QUEUE_APPROVAL"
+          ACOLAD_REQUIRE_DATED_NEWS: '0'
+          PIPELINE_MODE: ${{ github.event_name == 'schedule' && 'queue' || inputs.mode || 'queue' }}
+          QUEUE_APPROVAL: ${{ github.event_name == 'schedule' && 'QUEUE_APPROVED' || inputs.queue_approval || 'QUEUE_APPROVED' }}
+        run: python daily_story_pipeline.py --mode "${PIPELINE_MODE:-queue}" --approval "${QUEUE_APPROVAL:-QUEUE_APPROVED}"
+
       - name: Upload previews and report
         if: always()
         uses: actions/upload-artifact@v4
