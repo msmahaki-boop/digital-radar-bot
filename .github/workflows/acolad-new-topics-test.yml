@@ -1,0 +1,28 @@
+name: Acolad New Topics RSS Preview
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check three new topics read-only
+        run: python acolad_sources_preview.py
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-new-topics-report
+          path: acolad_new_topics_report/
+          if-no-files-found: warn
