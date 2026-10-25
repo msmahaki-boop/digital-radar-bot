@@ -1,0 +1,68 @@
+name: Acolad Telegram Channel Test Stage 2
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: 'Successful Stage 1 Telegram Preview run ID containing acolad-telegram-previews artifact'
+        required: true
+        type: string
+      mode:
+        description: 'check = no posting, send_one = post ONE public news item'
+        required: true
+        type: choice
+        default: check
+        options:
+          - check
+          - send_one
+      approval:
+        description: 'For send_one ONLY: type SEND_ONE_TO_CHANNEL'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  channel-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Download repository
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install requests
+        run: python -m pip install --disable-pip-version-check requests
+      - name: Download Telegram Stage 1 preview files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+        run: |
+          if ! [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]; then
+            echo 'ERROR: source_run_id must be the numeric ID of Telegram Preview Stage 1 run'
+            exit 1
+          fi
+          mkdir -p downloaded_telegram
+          gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name acolad-telegram-previews --dir downloaded_telegram
+          test -s downloaded_telegram/preview_manifest.json
+      - name: Check bot permissions / optionally send one public post
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          TELEGRAM_CHANNEL_ID: ${{ vars.TELEGRAM_CHANNEL_ID }}
+          MODE: ${{ inputs.mode }}
+          APPROVAL: ${{ inputs.approval }}
+        run: |
+          python telegram_send.py --input downloaded_telegram --mode "${MODE:-check}" --approval "${APPROVAL:-}"
+      - name: Upload send receipt if created
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-telegram-send-receipt
+          path: telegram_stage2_receipt.json
+          if-no-files-found: ignore
+          retention-days: 7
