@@ -1,0 +1,51 @@
+name: Acolad 7 Topics Instagram PREVIEW
+
+# Schedule 16:30 in Tehran; publication occurs at exactly 18:00 Tehran via Buffer.
+# IMPORTANT: scheduled publishing remains off until repository variable
+# ACOLAD_AUTOPUBLISH_ENABLED is set to true by the account owner.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: acolad-7topics-ig-preview
+  cancel-in-progress: false
+
+jobs:
+  daily-story:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Persian fallback font and packages
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-core
+          python -m pip install --disable-pip-version-check -r requirements.txt
+      - name: Generate, validate and optionally send to Buffer
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+          ACOLAD_MAX_AGE_HOURS: '48'
+          ACOLAD_REQUIRE_DATED_NEWS: '1'
+          PIPELINE_MODE: preview
+          QUEUE_APPROVAL: ''
+        run: python daily_story_pipeline.py --mode preview
+      - name: Upload previews and report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-daily-preview-${{ github.run_number }}
+          path: stories_output/
+          if-no-files-found: warn
+          retention-days: 7
