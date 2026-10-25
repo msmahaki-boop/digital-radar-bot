@@ -1,0 +1,54 @@
+name: Acolad Telegram Preview Stage 1
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: 'Run ID from successful Acolad Story Generator Test (contains acolad-story-previews artifact)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  telegram-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install image packages
+        run: python -m pip install --disable-pip-version-check Pillow requests beautifulsoup4
+      - name: Download approved story news manifest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+        run: |
+          if ! [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]; then
+            echo 'source_run_id must be numeric'
+            exit 1
+          fi
+          mkdir -p downloaded_stories
+          gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name acolad-story-previews --dir downloaded_stories
+          test -s downloaded_stories/manifest.json
+      - name: Create previews only (never send)
+        run: |
+          python telegram_preview.py \
+            --manifest downloaded_stories/manifest.json \
+            --logo assets/brand/logo_acolad.png \
+            --count 2
+      - name: Downloadable preview pack
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-telegram-previews
+          path: telegram_previews/
+          if-no-files-found: error
+          retention-days: 7
