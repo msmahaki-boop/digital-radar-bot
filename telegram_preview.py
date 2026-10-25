@@ -1,5 +1,7 @@
 """Acolad Telegram news preview -- read-only, NEVER SENDS MESSAGES.
 
+Revision: smaller bottom-left logo and acolad.ir / @acoladagency beside it.
+
 Input:  stories_output/manifest.json from an existing Acolad Story Generator run.
 Output: telegram_previews/*.txt, *.html, optional *.jpg, preview_manifest.json
 This program does not import the Telegram API and does not require BOT_TOKEN.
@@ -20,7 +22,7 @@ from urllib.parse import urljoin, urlsplit
 
 import requests
 from bs4 import BeautifulSoup
-from PIL import Image, ImageOps, UnidentifiedImageError
+from PIL import Image, ImageDraw, ImageFont, ImageOps, UnidentifiedImageError
 
 DEFAULT_LOGO = Path("assets/brand/logo_acolad.png")
 OUTPUT = Path("telegram_previews")
@@ -134,29 +136,50 @@ def fetch_relevant_photo(article_url: str, review_status: str) -> tuple[Image.Im
 
 
 def branded_photo(photo: Image.Image, logo: Image.Image) -> Image.Image:
-    """Add an unobtrusive, soft white gradient ONLY near bottom-left and the original logo."""
+    """Small faithful logo + adjacent Latin handles over a soft WHITE corner fade."""
     photo = ImageOps.exif_transpose(photo).convert("RGBA")
     if max(photo.size) > 1800:
         photo.thumbnail((1800, 1800), Image.Resampling.LANCZOS)
     w, h = photo.size
-    low_w, low_h = 180, 120
+
+    # Limit the gradient to the lower-left; ensure readable dark handles even on dark photos.
+    low_w, low_h = 240, 90
     mask = Image.new("L", (low_w, low_h))
     pix = mask.load()
     for y in range(low_h):
         yy = y / (low_h - 1)
-        vertical = max(0.0, min(1.0, (yy - .48) / .52)) ** 1.3
+        vertical = max(0.0, min(1.0, (yy - .37) / .63)) ** .85
         for x in range(low_w):
             xx = x / (low_w - 1)
-            horizontal = max(0.0, 1 - xx / .7) ** .85
-            pix[x, y] = round(240 * vertical * horizontal)
+            horizontal = max(0.0, 1.0 - xx / .80) ** .65
+            pix[x, y] = round(246 * vertical * horizontal)
     gradient = Image.new("RGBA", photo.size, (255, 255, 255, 0))
     gradient.putalpha(mask.resize(photo.size, Image.Resampling.BICUBIC))
     photo = Image.alpha_composite(photo, gradient)
+
+    # Logo width ~13% of image; smaller and less dominant than the old 22%.
     logo = logo.convert("RGBA")
-    logo.thumbnail((max(150, int(w * .22)), max(90, int(h * .22))), Image.Resampling.LANCZOS)
-    pad = max(20, round(min(w, h) * .035))
-    x, y = pad, h - logo.height - pad
-    photo.alpha_composite(logo, (x, y))
+    logo.thumbnail((max(58, int(w * .13)), max(38, int(h * .155))), Image.Resampling.LANCZOS)
+    pad = max(12, round(min(w, h) * .03))
+    lx, ly = pad, h - logo.height - pad
+    photo.alpha_composite(logo, (lx, ly))
+
+    text_x = lx + logo.width + max(14, round(w * .018))
+    labels = ["acolad.ir", "@acoladagency"]
+    # Latin-only handles; font fallback available on standard GitHub Ubuntu runners.
+    font_path_candidates = (
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
+    )
+    font_size = max(17, min(32, round(w * .023)))
+    font = next((ImageFont.truetype(str(fp), font_size) for fp in font_path_candidates if Path(fp).is_file()),
+                ImageFont.load_default())
+    draw = ImageDraw.Draw(photo)
+    line_gap = round(font_size * 1.55)
+    first_y = h - pad - round(font_size * 2.9)
+    for index, label in enumerate(labels):
+        draw.text((text_x, first_y + index * line_gap), label,
+                  font=font, fill=(25, 30, 57, 255), stroke_width=0)
     return photo.convert("RGB")
 
 
