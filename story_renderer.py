@@ -14,7 +14,8 @@ CANVAS = (1080, 1920)
 REFERENCE = (941, 1672)
 TEMPLATE_DIR = Path("assets/templates")
 OUTPUT_DIR = Path("stories_output")
-TOPICS = ("tech", "ai", "marketing", "social")
+TOPICS = ("tech", "ai", "marketing", "social", "iran_economy", "small_business_growth", "iran_platforms")
+NEW_ZONE_DATA = __import__('json').loads((TEMPLATE_DIR / 'acolad_new_template_manifest.json').read_text(encoding='utf-8'))['topics']
 
 
 def scale_box(box):
@@ -320,7 +321,13 @@ def insert_unframed_photo(canvas, image, bounds):
 
 def _draw_variant(story, mode):
     canvas=load_template(story.topic, mode)
-    zones=_zones(canvas,mode)
+    if story.topic in NEW_ZONE_DATA:
+        item = NEW_ZONE_DATA[story.topic]['modes']['text' if mode=='text_only' else 'photo']['geometry_1080x1920']
+        # Existing text renderer accepts boxes in 941x1672 reference geometry.
+        zones = {key: tuple(round(v*(REFERENCE[i%2]/CANVAS[i%2])) for i,v in enumerate(box))
+                 for key,box in item.items() if key in ('title','body','photo') and box is not None}
+    else:
+        zones=_zones(canvas,mode)
     if mode=='photo':
         if story.image is None:
             raise RuntimeError('No image provided')
