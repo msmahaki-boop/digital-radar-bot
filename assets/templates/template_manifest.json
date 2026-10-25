@@ -1,0 +1,181 @@
+{
+  "canvas": "1080x1920",
+  "version": "1.0",
+  "existing_renderer_note": "These are *new* topic templates. Current 4-topic story generator needs category and selection integration before automatic use. Template detector was considered in placement.",
+  "topics": {
+    "iran_economy": {
+      "label_fa": "اقتصاد ایران",
+      "modes": {
+        "text": {
+          "filename": "iran_economy_text.png",
+          "geometry_1080x1920": {
+            "title": [
+              74,
+              540,
+              1006,
+              675
+            ],
+            "body": [
+              80,
+              720,
+              1000,
+              1470
+            ],
+            "photo": null,
+            "tag": [
+              350,
+              1543,
+              730,
+              1615
+            ]
+          }
+        },
+        "photo": {
+          "filename": "iran_economy_photo.png",
+          "geometry_1080x1920": {
+            "title": [
+              74,
+              815,
+              1006,
+              950
+            ],
+            "body": [
+              80,
+              990,
+              1000,
+              1470
+            ],
+            "photo": [
+              114,
+              178,
+              968,
+              776
+            ],
+            "tag": [
+              350,
+              1543,
+              730,
+              1615
+            ]
+          }
+        }
+      }
+    },
+    "small_business_growth": {
+      "label_fa": "رشد کسب‌وکار",
+      "modes": {
+        "text": {
+          "filename": "small_business_growth_text.png",
+          "geometry_1080x1920": {
+            "title": [
+              74,
+              540,
+              1006,
+              675
+            ],
+            "body": [
+              80,
+              720,
+              1000,
+              1470
+            ],
+            "photo": null,
+            "tag": [
+              350,
+              1543,
+              730,
+              1615
+            ]
+          }
+        },
+        "photo": {
+          "filename": "small_business_growth_photo.png",
+          "geometry_1080x1920": {
+            "title": [
+              74,
+              815,
+              1006,
+              950
+            ],
+            "body": [
+              80,
+              990,
+              1000,
+              1470
+            ],
+            "photo": [
+              114,
+              178,
+              968,
+              776
+            ],
+            "tag": [
+              350,
+              1543,
+              730,
+              1615
+            ]
+          }
+        }
+      }
+    },
+    "iran_platforms": {
+      "label_fa": "پلتفرم‌های ایرانی",
+      "modes": {
+        "text": {
+          "filename": "iran_platforms_text.png",
+          "geometry_1080x1920": {
+            "title": [
+              74,
+              540,
+              1006,
+              675
+            ],
+            "body": [
+              80,
+              720,
+              1000,
+              1470
+            ],
+            "photo": null,
+            "tag": [
+              350,
+              1543,
+              730,
+              1615
+            ]
+          }
+        },
+        "photo": {
+          "filename": "iran_platforms_photo.png",
+          "geometry_1080x1920": {
+            "title": [
+              74,
+              815,
+              1006,
+              950
+            ],
+            "body": [
+              80,
+              990,
+              1000,
+              1470
+            ],
+            "photo": [
+              114,
+              178,
+              968,
+              776
+            ],
+            "tag": [
+              350,
+              1543,
+              730,
+              1615
+            ]
+          }
+        }
+      }
+    }
+  }
+}
