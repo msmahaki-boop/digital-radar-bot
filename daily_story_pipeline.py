@@ -12,19 +12,20 @@ from datetime import datetime, timedelta, timezone, time
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
 import sys
 from zoneinfo import ZoneInfo
 
-from buffer_story_batch import (BatchError, collect_images, buffer_graphql,
-                                upload_image)
+from buffer_story_batch import BatchError, buffer_graphql, upload_image
+from PIL import Image
 
 OUTPUT = Path("stories_output")
 ARTIFACTS = Path("downloaded_stories")
 TZ = ZoneInfo("Asia/Tehran")
-from story_data_builder import ACTIVE_TOPICS as CATEGORIES
+from story_data_builder import ALL_OLD_KEYS, NEW_TOPIC_KEYS
 CAPTION_START = "خبرهای داغ امروز | آکولاد"
 PUBLISH_HOUR = 18
 PUBLISH_MINUTE = 0
@@ -107,8 +108,12 @@ def validate_manifest():
         raise BatchError("Gemini not used successfully; no automatic scheduling")
     articles = manifest.get('articles') or []
     categories = [a.get('topic') for a in articles]
-    if len(articles) != 4 or categories != list(CATEGORIES):
-        raise BatchError(f"For unattended scheduling exactly 4 validated stories are required; got {categories!r}")
+    old = sum(t in ALL_OLD_KEYS for t in categories)
+    new = sum(t in NEW_TOPIC_KEYS for t in categories)
+    valid = (len(articles) == 4 and len(set(categories)) == 4
+             and old == 2 and new == 2)
+    if not valid:
+        raise BatchError(f"Expected four DISTINCT categories (2 existing + 2 new); got {categories!r}")
     hashes = []
     for a in articles:
         link = a.get('article_url_for_editor_only', '')
@@ -120,6 +125,45 @@ def validate_manifest():
     if len(set(hashes)) != 4:
         raise BatchError("Article reused across topics")
     return manifest, hashes
+
+
+def collect_verified_images():
+    """Verify five rendered PNGs for all seven topics.
+
+    Keep Buffer's proven upload/network code; do not depend on old four-topic
+    collect_images allowlists or publication-status switches.
+    """
+    manifest = json.loads((ARTIFACTS / "manifest.json").read_text(encoding="utf-8"))
+    if manifest.get("publication_status") != "PREVIEW ONLY - NOTHING PUBLISHED":
+        raise BatchError("Unexpected story generator status")
+    articles = manifest.get("articles") or []
+    allowed_topics = (*ALL_OLD_KEYS, *NEW_TOPIC_KEYS)
+    output = [ARTIFACTS / "01_intro.png"]
+    if len(articles) != 4:
+        raise BatchError("Expected four articles for five Instagram slides")
+    for index, article in enumerate(articles, 2):
+        topic = article.get("topic")
+        if topic not in allowed_topics:
+            raise BatchError(f"Unknown topic: {topic!r}")
+        original = str(article.get("file", ""))
+        expected = re.fullmatch(
+            rf"{index:02d}_{re.escape(topic)}_(photo|text_only)\.png", Path(original).name
+        )
+        if not original.startswith("stories_output/") or not expected:
+            raise BatchError(f"Unexpected story image path: {original!r}")
+        output.append(ARTIFACTS / Path(original).name)
+    for path in output:
+        if not path.is_file() or path.stat().st_size > 20 * 1024 * 1024:
+            raise BatchError(f"Missing or oversized PNG: {path.name}")
+        try:
+            with Image.open(path) as im:
+                if im.format != "PNG" or im.size != (1080, 1920):
+                    raise BatchError(f"Wrong image format or dimensions: {path.name}")
+                im.verify()
+        except OSError as exc:
+            raise BatchError(f"Invalid PNG: {path.name}") from exc
+    print("ORDER VERIFIED: " + " → ".join(p.name for p in output), flush=True)
+    return output
 
 
 def check_no_duplicates(posts, hashes, date_tag):
@@ -226,7 +270,7 @@ def main():
     for file in OUTPUT.iterdir():
         if file.is_file():
             shutil.copy2(file, ARTIFACTS / file.name)
-    paths = collect_images()  # Reuse proven PNG size and filename validation.
+    paths = collect_verified_images()  # Covers all seven topics without changing Buffer code.
     if len(paths) != 5:
         raise BatchError('Refusing automatic run without 5 PNGs')
     if args.mode == 'preview':
