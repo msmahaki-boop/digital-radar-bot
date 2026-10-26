@@ -2,7 +2,7 @@ name: Acolad Telegram 7 Topics Every 3 Hours
 
 on:
   schedule:
-    - cron: '17 0,3,6,9,12,15,18,21 * * *'
+    - cron: '17,32,47 0,3,6,9,12,15,18,21 * * *'
       timezone: 'Asia/Tehran'
   workflow_dispatch:
     inputs:
@@ -69,6 +69,14 @@ jobs:
             fi
             slot_arg=(--slot-hour "$SLOT_HOUR")
           fi
+          python - <<'PYTIME'
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          n = datetime.now(ZoneInfo('Asia/Tehran'))
+          h = n.hour // 3 * 3
+          s = n.replace(hour=h, minute=17, second=0, microsecond=0)
+          print(f'CLOCK (Tehran): {n.isoformat()} | current slot: {s.isoformat()} | offset_minutes: {(n-s).total_seconds()/60:+.1f}', flush=True)
+          PYTIME
           python telegram_daily_v4.py --phase prepare --mode "$PIPELINE_MODE" --approval "$APPROVAL" "${slot_arg[@]}"
           if [[ -f telegram_daily_output/status.txt && "$(cat telegram_daily_output/status.txt)" == 'READY' ]]; then
             echo 'ready=true' >> "$GITHUB_OUTPUT"
