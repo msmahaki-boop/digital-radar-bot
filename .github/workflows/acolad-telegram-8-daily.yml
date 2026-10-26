@@ -1,9 +1,16 @@
 name: Acolad Telegram 7 Topics Every 3 Hours
 
+# All schedule expressions are UTC. Tehran is UTC+03:30 year-round.
+# Each 3-hour Tehran slot has three attempts at :17, :32, :47.
+# The existing publishing-state lock ensures at most ONE channel post per slot.
 on:
   schedule:
-    - cron: '17,32,47 0,3,6,9,12,15,18,21 * * *'
-      timezone: 'Asia/Tehran'
+    # 00:17,03:17,...,21:17 in Tehran -> :47 in UTC (previous hour)
+    - cron: '47 2,5,8,11,14,17,20,23 * * *'
+    # 00:32,03:32,...,21:32 in Tehran -> :02 UTC
+    - cron: '2 0,3,6,9,12,15,18,21 * * *'
+    # 00:47,03:47,...,21:47 in Tehran -> :17 UTC
+    - cron: '17 0,3,6,9,12,15,18,21 * * *'
   workflow_dispatch:
     inputs:
       mode:
