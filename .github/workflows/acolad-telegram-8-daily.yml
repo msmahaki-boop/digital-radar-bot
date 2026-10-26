@@ -1,4 +1,4 @@
-name: Acolad Telegram 8 News Every 3 Hours
+name: Acolad Telegram 7 Topics Every 3 Hours
 
 on:
   schedule:
@@ -32,7 +32,7 @@ concurrency:
 
 jobs:
   telegram-feed:
-    if: ${{ github.event_name != 'schedule' || vars.ACOLAD_TELEGRAM_AUTOPUBLISH_ENABLED == 'true' }}
+    if: ${{ github.event_name != 'schedule' || (vars.ACOLAD_TELEGRAM_AUTOPUBLISH_ENABLED == 'true' && vars.ACOLAD_TELEGRAM_V4_APPROVED == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 16
     steps:
@@ -54,9 +54,11 @@ jobs:
         id: prepare
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ACOLAD_TELEGRAM_V4_APPROVED: ${{ vars.ACOLAD_TELEGRAM_V4_APPROVED }}
           ACOLAD_TELEGRAM_AUTOPUBLISH_ENABLED: ${{ vars.ACOLAD_TELEGRAM_AUTOPUBLISH_ENABLED }}
           PIPELINE_MODE: ${{ github.event_name == 'schedule' && 'publish' || inputs.mode || 'preview' }}
           APPROVAL: ${{ inputs.approval }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
           SLOT_HOUR: ${{ inputs.slot_hour }}
         run: |
           slot_arg=()
@@ -67,7 +69,7 @@ jobs:
             fi
             slot_arg=(--slot-hour "$SLOT_HOUR")
           fi
-          python telegram_daily.py --phase prepare --mode "$PIPELINE_MODE" --approval "$APPROVAL" "${slot_arg[@]}"
+          python telegram_daily_v4.py --phase prepare --mode "$PIPELINE_MODE" --approval "$APPROVAL" "${slot_arg[@]}"
           if [[ -f telegram_daily_output/status.txt && "$(cat telegram_daily_output/status.txt)" == 'READY' ]]; then
             echo 'ready=true' >> "$GITHUB_OUTPUT"
           else
@@ -97,11 +99,13 @@ jobs:
         if: ${{ steps.prepare.outputs.ready == 'true' && steps.prepare.outputs.mode == 'publish' }}
         env:
           ACOLAD_TELEGRAM_AUTOPUBLISH_ENABLED: ${{ vars.ACOLAD_TELEGRAM_AUTOPUBLISH_ENABLED }}
+          ACOLAD_TELEGRAM_V4_APPROVED: ${{ vars.ACOLAD_TELEGRAM_V4_APPROVED }}
           APPROVAL: ${{ inputs.approval }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
         run: |
           git fetch origin main
           git checkout -B main origin/main
-          python telegram_daily.py --phase claim --mode publish --approval "$APPROVAL"
+          python telegram_daily_v4.py --phase claim --mode publish --approval "$APPROVAL"
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add telegram_public_state.json
@@ -113,8 +117,10 @@ jobs:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           TELEGRAM_CHANNEL_ID: ${{ vars.TELEGRAM_CHANNEL_ID }}
           ACOLAD_TELEGRAM_AUTOPUBLISH_ENABLED: ${{ vars.ACOLAD_TELEGRAM_AUTOPUBLISH_ENABLED }}
+          ACOLAD_TELEGRAM_V4_APPROVED: ${{ vars.ACOLAD_TELEGRAM_V4_APPROVED }}
           APPROVAL: ${{ inputs.approval }}
-        run: python telegram_daily.py --phase send --mode publish --approval "$APPROVAL"
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+        run: python telegram_daily_v4.py --phase send --mode publish --approval "$APPROVAL"
       - name: Save Telegram message receipt
         if: ${{ success() && steps.prepare.outputs.ready == 'true' && steps.prepare.outputs.mode == 'publish' }}
         run: |
