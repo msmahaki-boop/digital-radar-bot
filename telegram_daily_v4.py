@@ -279,25 +279,44 @@ CATEGORY: """ + topic + "\nMATERIAL:\n" + json.dumps(material, ensure_ascii=Fals
 
 
 def prepare(slot, hour, topic):
+    """Try assigned topic, then one strictly rated cross-topic fallback.
+
+    Never invent content or relax evidence thresholds; preserve global URL/slot lock.
+    """
     state = read_state()
     if any(s.get('slot') == slot for s in state['slots']):
-        print('SKIP: slot already reserved or sent, preventing a duplicate post')
+        print('SKIP: slot already reserved or sent, preventing a duplicate post', flush=True)
         return False
-    items = gather_for_topic(topic, saved_links(state), (s.get('original_title', '') for s in state['slots']))
-    if not items:
-        print('SKIP: no fresh unseen dated article in category; no filler post')
+    excluded = saved_links(state)
+    prior_titles = [s.get('original_title', '') for s in state['slots']]
+    # A sparse category must not prevent finding a genuinely relevant alternative.
+    considered = (topic,) if topic == 'best_of_day' else (topic, 'best_of_day')
+    chosen = None
+    actual_topic = topic
+    for candidate_topic in considered:
+        if candidate_topic != topic:
+            print(f'EDITOR FALLBACK: no publishable {topic} item; trying top cross-topic news', flush=True)
+        items = gather_for_topic(candidate_topic, excluded, prior_titles)
+        if not items:
+            print(f'NO CANDIDATE: {candidate_topic}', flush=True)
+            continue
+        result = generate_rated_post(enrich(items), candidate_topic)
+        if result is None:
+            print(f'BELOW THRESHOLD: {candidate_topic}', flush=True)
+            continue
+        selected = result['article']
+        sensitive = any(x in (selected.get('title','') + ' ' + selected.get('excerpt',''))
+                        for x in ('طرح نظام‌بخشی', 'قانون جدید', 'تصویب مجلس', 'افزایش تعرفه', 'بانک مرکزی', 'مجوز سکو', 'مالیات جدید'))
+        if sensitive and os.environ.get('TELEGRAM_PIPELINE_MODE') == 'publish':
+            print(f'SKIP UNVERIFIED REGULATORY/FINANCIAL CLAIM: {candidate_topic}', flush=True)
+            continue
+        chosen = (result, selected, sensitive)
+        actual_topic = candidate_topic
+        break
+    if not chosen:
+        print(f'SKIP: no acceptable fresh, independently ranked news for slot {slot}', flush=True)
         return False
-    items = enrich(items)
-    result = generate_rated_post(items, topic)
-    if result is None:
-        print(f'SKIP: category {topic} has no item with score >= {MIN_SCORE_BY_TOPIC.get(topic, MIN_SCORE)}')
-        return False
-    selected = result['article']
-    sensitive = any(x in (selected.get('title','') + ' ' + selected.get('excerpt',''))
-                    for x in ('طرح نظام‌بخشی', 'قانون جدید', 'تصویب مجلس', 'افزایش تعرفه', 'بانک مرکزی', 'مجوز سکو', 'مالیات جدید'))
-    if sensitive and os.environ.get('TELEGRAM_PIPELINE_MODE') == 'publish':
-        print('SKIP: legal/regulatory/financial item requires human primary-source verification')
-        return False
+    result, selected, sensitive = chosen
     logo_path = DEFAULT_LOGO
     photo = None
     image_status = 'not article-specific'
@@ -313,7 +332,8 @@ def prepare(slot, hour, topic):
     (OUTPUT / 'caption.txt').write_text(txt, encoding='utf-8')
     (OUTPUT / 'caption.html.txt').write_text(formatted, encoding='utf-8')
     manifest = {
-        'slot': slot, 'hour': hour, 'topic': topic,
+        'slot': slot, 'hour': hour, 'topic': actual_topic,
+        'original_slot_topic': topic,
         'source': selected['source'], 'source_url': selected['link'],
         'key': selected['key'], 'score': result['score'],
         'headline': result['headline'], 'photo': photo_name,
@@ -322,7 +342,7 @@ def prepare(slot, hour, topic):
         'created_utc': datetime.now(timezone.utc).isoformat(),
     }
     (OUTPUT / 'post.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf-8')
-    print(f'PREVIEW READY: {slot} | topic={topic} | score={result["score"]}/100 | image={bool(photo_name)}')
+    print(f'PREVIEW READY: {slot} | planned={topic} actual={actual_topic} | score={result["score"]}/100 | image={bool(photo_name)}', flush=True)
     return True
 
 
@@ -415,7 +435,7 @@ def main():
     os.environ['TELEGRAM_PIPELINE_MODE'] = args.mode
     if args.phase == 'prepare':
         if args.mode == 'publish' and not within_window(now, hour):
-            print('SKIP: requested publish outside valid 50-minute window after scheduled :17 time')
+            print(f'SKIP LATE: now={now.isoformat()} expected_slot={slot} threshold={MAX_LATE_MINUTES} minutes after :17', flush=True)
             OUTPUT.mkdir(exist_ok=True)
             (OUTPUT / 'status.txt').write_text('SKIP', encoding='utf-8')
             return

@@ -260,7 +260,17 @@ def main():
         org_id, channel_id = buffer_identity()
         # Do an early preflight so we don't burn Gemini quota if published today.
         posts = recent_buffer_posts(org_id, channel_id)
-        check_no_duplicates(posts, [], date_tag)
+        try:
+            check_no_duplicates(posts, [], date_tag)
+        except BatchError as exc:
+            duplicate_signals = (
+                'Acolad content already created for ',
+                'An Acolad story sequence already exists for today',
+            )
+            if args.mode == 'queue' and str(exc).startswith(duplicate_signals):
+                print('ALREADY SCHEDULED: Acolad story found in Buffer; this retry exits without changes.', flush=True)
+                return 0
+            raise
 
     shutil.rmtree(OUTPUT, ignore_errors=True)
     shutil.rmtree(ARTIFACTS, ignore_errors=True)
