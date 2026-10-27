@@ -17,9 +17,10 @@
       "topic": "ai",
       "original_title": "AI delivers ‘zero financial payoff’ to most companies, Apollo economist says",
       "score": 72,
-      "status": "reserved",
-      "message_id": null,
-      "reserved_utc": "2026-10-27T00:05:37.572432+00:00"
+      "status": "sent",
+      "message_id": 22,
+      "reserved_utc": "2026-10-27T00:05:37.572432+00:00",
+      "sent_utc": "2026-10-27T00:05:40.397595+00:00"
     }
   ]
 }
