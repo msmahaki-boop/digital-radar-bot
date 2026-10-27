@@ -28,9 +28,10 @@
       "topic": "best_of_day",
       "original_title": "Google Ads Expands Customer Lifecycle Goals In Search And Shopping via @sejournal, @brookeosmundson",
       "score": 85,
-      "status": "reserved",
-      "message_id": null,
-      "reserved_utc": "2026-10-27T09:02:35.278815+00:00"
+      "status": "sent",
+      "message_id": 23,
+      "reserved_utc": "2026-10-27T09:02:35.278815+00:00",
+      "sent_utc": "2026-10-27T09:02:38.155299+00:00"
     }
   ]
 }
