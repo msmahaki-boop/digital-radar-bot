@@ -39,9 +39,10 @@
       "topic": "social",
       "original_title": "Meta says advertisers should let campaigns gather data",
       "score": 78,
-      "status": "reserved",
-      "message_id": null,
-      "reserved_utc": "2026-10-27T14:56:15.937389+00:00"
+      "status": "sent",
+      "message_id": 24,
+      "reserved_utc": "2026-10-27T14:56:15.937389+00:00",
+      "sent_utc": "2026-10-27T14:56:19.454552+00:00"
     }
   ]
 }
