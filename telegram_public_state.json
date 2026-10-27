@@ -10,6 +10,16 @@
       "message_id": 18,
       "reserved_utc": "2026-10-25T15:03:29.103122+00:00",
       "sent_utc": "2026-10-25T15:03:31.602781+00:00"
+    },
+    {
+      "slot": "2026-10-27-03",
+      "url": "https://techcrunch.com/2026/10/25/ai-delivers-zero-financial-payoff-to-most-companies-according-to-apollo-economist",
+      "topic": "ai",
+      "original_title": "AI delivers ‘zero financial payoff’ to most companies, Apollo economist says",
+      "score": 72,
+      "status": "reserved",
+      "message_id": null,
+      "reserved_utc": "2026-10-27T00:05:37.572432+00:00"
     }
   ]
 }
