@@ -50,9 +50,10 @@
       "topic": "tech",
       "original_title": "اپل یک واترمارک مخفی به تصاویر ویرایش‌شده با هوش مصنوعی آیفون اضافه کرد",
       "score": 75,
-      "status": "reserved",
-      "message_id": null,
-      "reserved_utc": "2026-10-27T21:29:36.680101+00:00"
+      "status": "sent",
+      "message_id": 25,
+      "reserved_utc": "2026-10-27T21:29:36.680101+00:00",
+      "sent_utc": "2026-10-27T21:29:40.212560+00:00"
     }
   ]
 }
