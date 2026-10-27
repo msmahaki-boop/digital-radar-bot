@@ -1,13 +1,16 @@
 name: Acolad Daily Story Pipeline V2.8
 
-# SCHEDULE FIX: 12:47 UTC = 16:17 Asia/Tehran (no daylight saving in Iran).
-# Prepare daily stories early; Buffer targets 18:00 Asia/Tehran.
+# RETRY FIX: Prepare well before Buffer publication at 18:00 Asia/Tehran.
+# All cron values UTC; duplicates exit safely using Buffer history.
+# 09:11, 13:11, 15:11 Tehran; scheduling remains best-effort, not guaranteed.
 # Avoid timezone-key interpretation differences by using an explicit UTC cron.
 # IMPORTANT: scheduled publishing remains off until repository variable
 # ACOLAD_AUTOPUBLISH_ENABLED is set to true by the account owner.
 on:
   schedule:
-    - cron: '47 12 * * *'
+    - cron: '41 5 * * *'   # 09:11 Tehran: primary
+    - cron: '41 9 * * *'   # 13:11 Tehran: retry if primary never ran
+    - cron: '41 11 * * *'  # 15:11 Tehran: final early retry
   workflow_dispatch:
     inputs:
       mode:

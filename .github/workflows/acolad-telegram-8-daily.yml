@@ -91,6 +91,20 @@ jobs:
             echo 'ready=false' >> "$GITHUB_OUTPUT"
           fi
           echo "mode=$PIPELINE_MODE" >> "$GITHUB_OUTPUT"
+      - name: Write readable slot diagnostic
+        if: always()
+        shell: bash
+        run: |
+          echo '### Acolad Telegram run status' >> "$GITHUB_STEP_SUMMARY"
+          echo "- Event: ${{ github.event_name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Requested time UTC: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> "$GITHUB_STEP_SUMMARY"
+          TZ=Asia/Tehran date '+- Tehran at execution: %Y-%m-%d %H:%M:%S %Z' >> "$GITHUB_STEP_SUMMARY"
+          if [[ -f telegram_daily_output/status.txt ]]; then
+            echo "- Prepared post status: $(cat telegram_daily_output/status.txt)" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo '- Prepared post status: none (review preparation logs)' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo '- READY is **not** PUBLISHED. Confirm the send step and its PUBLISHED receipt.' >> "$GITHUB_STEP_SUMMARY"
       - name: Upload preview artifacts
         if: always()
         uses: actions/upload-artifact@v4
