@@ -20,7 +20,7 @@ import requests
 from bot import TOPICS as OLD_TOPICS, canonical_link, read_feed
 from story_data_builder import article_context
 from telegram_preview import (
-    DEFAULT_LOGO, branded_photo, fetch_relevant_photo, prepare_caption,
+    DEFAULT_LOGO, branded_photo, fetch_relevant_photo, FOOTER_TEXT, FOOTER_HTML,
 )
 from telegram_send import bot_call, preflight
 from PIL import Image
@@ -209,7 +209,16 @@ item only (or no selected item if max score is too low). Ratings refer to YOUR e
 assessment, NOT external views, likes, or audience statistics.
 Write naturally conversational Persian, human, smart and lightly witty ONLY IF appropriate;
 explain: what happened, concrete conditions/limits, and a recognizable everyday example.
-3 short paragraphs, approximately 350-650 Persian characters, no filler, hype or
+3 short paragraphs, approximately 380-580 Persian characters TOTAL, separated by
+blank lines: paragraph 1 verifiable SOURCE FACTS, paragraph 2 practical business
+implication presented conditionally, paragraph 3 ONE clearly hypothetical example.
+Use clear readable SHORT sentences. Each paragraph ideally 1 to 3 short sentences.
+Do not include headers, emojis, HTML, Markdown, or promotional CTA in the body.
+Return a content_kind: news / analysis / educational. Use 'educational' for evergreen
+how-tos, 'analysis' for commentary/explainer and 'news' for a dated event.
+Return highlight_terms: 0-2 SHORT meaningful exact phrases found verbatim in body,
+ideally digital marketing/business terms worth bold emphasis (not publisher names).
+No filler, hype or
 fabricated features, numbers, dates or places. Separate SOURCE FACTS from possible
 business implications and clearly HYPOTHETICAL examples. For reported corporate
 sales or metrics, attribute the figure to its claimant. Treat a proposed law as a
@@ -220,7 +229,7 @@ not sensational. Preserve beta restrictions, invite-only rules and actual availa
 Avoid formal news clichés and mechanical phrases. Do not cite publisher or URLs in body.
 Return valid JSON only, with this schema:
 {"ratings":[{"id":0,"score":75}],"selected_id":0,"headline":"...",
-"body":"...","photo_specific":false}
+"body":"...","content_kind":"news","highlight_terms":["..."],"photo_specific":false}
 Provide rating for EACH ID, selected_id must be the highest rated eligible ID (or null).
 photo_specific may be true ONLY if the available image ALT and article context identify
 an article-specific recognizable person/product/event, not a stock illustration.
@@ -268,6 +277,8 @@ CATEGORY: """ + topic + "\nMATERIAL:\n" + json.dumps(material, ensure_ascii=Fals
                     return {
                         'article': items[winner], 'score': values[winner],
                         'headline': headline, 'body': body,
+                        'content_kind': obj.get('content_kind', 'news'),
+                        'highlight_terms': obj.get('highlight_terms', []),
                         'photo_specific': obj.get('photo_specific') is True,
                         'all_scores': values,
                     }
@@ -277,6 +288,165 @@ CATEGORY: """ + topic + "\nMATERIAL:\n" + json.dumps(material, ensure_ascii=Fals
                 time.sleep(3 + random.random())
     raise RuntimeError(f'Gemini unavailable or returned invalid rated news ({last_error}). Skip this slot.')
 
+
+
+# ---- Acolad Telegram Editorial Style v5.0 ---------------------------------
+# Formatting stays local, deterministic, escaped and compatible with sendMessage
+# and sendPhoto(parse_mode=HTML). No new model/API requests, workflow or secrets.
+_STYLE_LABELS = {
+    'news': (
+        ('🔎 چه اتفاقی افتاده؟', 'خبر'),
+        ('🎯 برای کسب‌وکارها چه معنایی داره؟', 'کاربرد'),
+        ('💡 یک مثال ملموس', 'مثال'),
+    ),
+    'analysis': (
+        ('🧭 اصل ماجرا چیه؟', 'موضوع'),
+        ('📌 برداشت کاربردی آکولاد', 'تحلیل'),
+        ('💡 مثلاً برای یک کسب‌وکار', 'مثال'),
+    ),
+    'educational': (
+        ('🔎 مسئله چیه؟', 'مسئله'),
+        ('✅ نکته کاربردی', 'راهکار'),
+        ('💡 یک مثال ساده', 'مثال'),
+    ),
+}
+_STYLE_HEAD_EMOJI = {'news': '📰', 'analysis': '📊', 'educational': '🧠'}
+_EDITORIAL_HIGHLIGHTS = (
+    'هزینه جذب مشتری', 'ارزش طول عمر مشتری', 'نرخ تبدیل', 'بازگشت سرمایه',
+    'بودجه تبلیغاتی', 'مشتری‌های باارزش', 'مشتریان باارزش', 'تجربه کاربری',
+    'فروشگاه آنلاین', 'بازاریابی دیجیتال', 'هوش مصنوعی', 'کسب‌وکارهای کوچک',
+    'مدیریت مشتری', 'تبلیغات گوگل', 'خرید مجدد', 'کمپین تبلیغاتی', 'سئو',
+    'LTV', 'ROI', 'CRM', 'SEO',
+)
+
+
+def _style_clean(value):
+    """Remove only artificial formatting, not business facts or qualifiers."""
+    t = str(value or '').replace('\r\n', '\n').replace('\r', '\n')
+    t = re.sub(r'</?(?:b|strong|i|em)>', '', t, flags=re.I)
+    t = t.replace('**', '').replace('__', '').replace('\ufeff', '').replace('\u200e', '')
+    return re.sub(r'[ \t]+', ' ', t).strip()
+
+
+def _style_paragraphs(body):
+    txt = _style_clean(body)
+    chunks = [re.sub(r'\s+', ' ', p).strip() for p in re.split(r'\n\s*\n', txt) if p.strip()]
+    if len(chunks) >= 3:
+        return [chunks[0], chunks[1], ' '.join(chunks[2:])]
+    if len(chunks) == 2:
+        sentences = re.split(r'(?<=[.!؟])\s+', chunks[1])
+        return [chunks[0], sentences[0], ' '.join(sentences[1:])]
+    if not chunks:
+        return []
+    sentences = [x.strip() for x in re.split(r'(?<=[.!؟])\s+', chunks[0]) if x.strip()]
+    if len(sentences) >= 3:
+        return [sentences[0], sentences[1], ' '.join(sentences[2:])]
+    return [chunks[0]]
+
+
+def _clip_at_boundary(text, limit):
+    if len(text) <= limit:
+        return text
+    if limit < 45:
+        return ''
+    fragment = text[:limit - 1]
+    candidates = [m.end() for m in re.finditer(r'[.!؟]\s|[؛،]\s', fragment)]
+    cutoff = candidates[-1] if candidates and candidates[-1] >= int(limit * .63) else 0
+    if not cutoff:
+        cutoff = fragment.rfind(' ')
+    if cutoff < int(limit * .50):
+        cutoff = len(fragment)
+    return fragment[:cutoff].rstrip(' ،؛') + '…'
+
+
+def _utf16_len(text):
+    # Telegram text entity lengths use UTF-16; conservatively measure user-visible text.
+    return len(text.encode('utf-16-le')) // 2
+
+
+def _mark_key_terms(text, terms, used):
+    """Escape everything, add bold only to validated exact terms; no model HTML."""
+    available = [t for t in terms if t and t.casefold() not in used and t.casefold() in text.casefold()]
+    if not available:
+        return html.escape(text)
+    term = sorted(available, key=len, reverse=True)[0]
+    match = re.search(re.escape(term), text, flags=re.I)
+    if not match:
+        return html.escape(text)
+    used.add(term.casefold())
+    return (html.escape(text[:match.start()]) + '<b>' + html.escape(text[match.start():match.end()])
+            + '</b>' + html.escape(text[match.end():]))
+
+
+def format_acolad_caption(title, body, *, photo, kind='news', highlight_terms=None):
+    """(plain, telegram_html, shortened, style). Always under photo caption limit.
+
+    One to three factual paragraphs. No invented facts, links, bullet facts or claims.
+    The optional two bold terms MUST appear verbatim in the body.
+    """
+    title = _style_clean(title).replace('\n', ' ')
+    if not title:
+        raise ValueError('Missing headline; refusing caption')
+    style = str(kind or 'news').strip().lower()
+    if style not in _STYLE_LABELS:
+        style = 'news'
+    paragraphs = _style_paragraphs(body)
+    if not paragraphs:
+        raise ValueError('Missing story body; refusing caption')
+    # Gemini's exact-term suggestions are advisory; use deterministic fallbacks if absent.
+    candidates = []
+    if isinstance(highlight_terms, list):
+        candidates = [str(t).strip() for t in highlight_terms if isinstance(t, str)
+                      and 3 <= len(t.strip()) <= 44][:5]
+    all_body = ' '.join(paragraphs)
+    for term in _EDITORIAL_HIGHLIGHTS:
+        if len(candidates) >= 2:
+            break
+        if term.casefold() in all_body.casefold() and term.casefold() not in {x.casefold() for x in candidates}:
+            candidates.append(term)
+    candidates = candidates[:2]
+    label_pairs = _STYLE_LABELS[style]
+    prefix = _STYLE_HEAD_EMOJI[style] + ' ' + title
+    # A unified design for both photo and text posts. Photos need <=1024 chars.
+    # Reserve ~44 code units for emoji variation / site-side boundary counting.
+    target_units = 980 if photo else 1120
+    shortened = False
+    original = list(paragraphs)
+    def render(parts):
+        plain_parts = [prefix]
+        html_parts = ['<b>' + html.escape(prefix) + '</b>']
+        highlighted = set()
+        for idx, paragraph in enumerate(parts[:3]):
+            if not paragraph:
+                continue
+            label, _ = label_pairs[idx]
+            plain_parts.append(label + '\n' + paragraph)
+            html_parts.append('<b>' + html.escape(label) + '</b>\n'
+                              + _mark_key_terms(paragraph, candidates, highlighted))
+        plain_parts.append(FOOTER_TEXT)
+        html_parts.append(FOOTER_HTML)
+        return '\n\n'.join(plain_parts), '\n\n'.join(html_parts)
+    plain, formatted = render(paragraphs)
+    for _ in range(36):
+        if _utf16_len(plain) <= target_units:
+            break
+        # Shorten longest content paragraph, never the brand footer or key labels.
+        idx = max(range(len(paragraphs)), key=lambda x: len(paragraphs[x]))
+        new = _clip_at_boundary(paragraphs[idx], max(50, len(paragraphs[idx]) - 45))
+        if new == paragraphs[idx]:
+            raise ValueError('Cannot safely fit a Telegram caption; skip instead of mangling')
+        paragraphs[idx] = new
+        shortened = True
+        plain, formatted = render(paragraphs)
+    else:
+        raise ValueError('Unable to fit caption within Telegram limit')
+    # Limit is conservative for both old and newer Telegram Bot API parsing.
+    hard_limit = 1024 if photo else 4096
+    if _utf16_len(plain) > hard_limit:
+        raise ValueError('Rendered caption too long')
+    return plain, formatted, shortened or (paragraphs != original), style
+
+# ---------------------------------------------------------------------------
 
 def prepare(slot, hour, topic):
     """Try assigned topic, then one strictly rated cross-topic fallback.
@@ -328,7 +498,11 @@ def prepare(slot, hour, topic):
         with Image.open(logo_path) as logo:
             branded_photo(photo, logo).save(OUTPUT / 'news_branded.jpg', format='JPEG', quality=88, optimize=True)
         photo_name = 'news_branded.jpg'
-    txt, formatted, shortened = prepare_caption(result['headline'], result['body'], photo=bool(photo_name))
+    txt, formatted, shortened, style_name = format_acolad_caption(
+        result['headline'], result['body'], photo=bool(photo_name),
+        kind=result.get('content_kind'),
+        highlight_terms=result.get('highlight_terms'),
+    )
     (OUTPUT / 'caption.txt').write_text(txt, encoding='utf-8')
     (OUTPUT / 'caption.html.txt').write_text(formatted, encoding='utf-8')
     manifest = {
@@ -338,6 +512,7 @@ def prepare(slot, hour, topic):
         'key': selected['key'], 'score': result['score'],
         'headline': result['headline'], 'photo': photo_name,
         'image_status': image_status, 'shortened': shortened,
+        'caption_style': style_name,
         'original_title': selected['title'], 'requires_verification': sensitive,
         'created_utc': datetime.now(timezone.utc).isoformat(),
     }
