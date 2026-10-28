@@ -1,8 +1,8 @@
-"""Acolad unattended pipeline: build -> audit -> check duplicates -> Buffer.
+"""Acolad resilient daily pipeline: build -> audit -> deduplicate -> Buffer.
 
-Default mode PREVIEW, which NEVER uploads or creates anything in Buffer.
-Scheduled mode is gated by an explicit GitHub repository variable.
-Daily queue mode schedules an exact 18:00 Asia/Tehran publication, not a generic Buffer slot.
+Preview never publishes. Queued posts aim for 18:00 Tehran when possible.
+Late or delayed runs schedule at the soonest safe future time instead of failing.
+Hourly scheduled retries keep attempting until a daily story batch exists in Buffer.
 Works with existing V2.6 story_test.py and buffer_story_batch.py.
 """
 from __future__ import annotations
@@ -29,7 +29,7 @@ from story_data_builder import ALL_OLD_KEYS, NEW_TOPIC_KEYS
 CAPTION_START = "خبرهای داغ امروز | آکولاد"
 PUBLISH_HOUR = 18
 PUBLISH_MINUTE = 0
-MIN_PUBLISH_LEAD = timedelta(minutes=20)
+MIN_SCHEDULING_LEAD = timedelta(minutes=25)  # Keep Buffer customScheduled in the future
 DAILY_MARKER = "ACOLAD-DAILY:"
 LINK_MARKER = "ACOLAD-IDS:"
 
@@ -57,12 +57,28 @@ def buffer_identity():
 
 
 def today_publish_target(now_utc=None):
-    """Today at 18:00 Iran standard time, represented in UTC for Buffer."""
+    """Prefer 18:00 Tehran, but never schedule in the past or too soon.
+
+    A late GitHub start is not an error. Publication may happen after 18:00
+    whenever the first successful run finishes; it is NOT deferred a whole day.
+    The target is recalculated after generation/uploads, near the Buffer write.
+    """
     now_utc = now_utc or datetime.now(timezone.utc)
+    if now_utc.tzinfo is None:
+        raise ValueError('now_utc must be timezone-aware')
     today = now_utc.astimezone(TZ).date()
-    publish_local = datetime.combine(today, time(PUBLISH_HOUR, PUBLISH_MINUTE), tzinfo=TZ)
-    publish_utc = publish_local.astimezone(timezone.utc)
-    return publish_local, publish_utc
+    desired_local = datetime.combine(today, time(PUBLISH_HOUR, PUBLISH_MINUTE), tzinfo=TZ)
+    desired_utc = desired_local.astimezone(timezone.utc)
+    target_utc = max(desired_utc, now_utc + MIN_SCHEDULING_LEAD)
+    return target_utc.astimezone(TZ), target_utc
+
+
+def same_content_day(date_tag):
+    """Avoid creating yesterday's batch if rendering straddles local midnight."""
+    if local_date() != date_tag:
+        print(f'DATE ROLLOVER: generated for {date_tag}; next hourly run will handle today. NO BUFFER WRITE.', flush=True)
+        return False
+    return True
 
 
 def recent_buffer_posts(org_id, channel_id):
@@ -171,6 +187,13 @@ def check_no_duplicates(posts, hashes, date_tag):
     for p in posts:
         text = str(p.get('text', ''))
         status = str(p.get('status', '')).lower()
+        # A Buffer draft never gets published automatically; likewise a definite
+        # publishing error is eligible for retry. Other/unknown statuses block
+        # re-creation rather than risk a duplicate live Instagram story.
+        if status in ('error', 'draft'):
+            if DAILY_MARKER in text:
+                print(f"RETRY ELIGIBLE: existing Buffer post {p.get('id')} has status={status}", flush=True)
+            continue
         if DAILY_MARKER + date_tag in text:
             raise BatchError(f"Acolad content already created for {date_tag}; post {p.get('id')}")
         # Also cover the original manually-created story, which had no marker.
@@ -198,7 +221,7 @@ def caption(date_tag, hashes):
 
 
 def create_one_post(channel_id, urls, date_tag, hashes, draft: bool, target_utc: datetime):
-    """Only draft or schedule exactly 18:00 Tehran today; never share-now."""
+    """Create one draft or schedule for an explicitly future UTC timestamp."""
     query = '''mutation CreateStory($input: CreatePostInput!) {
       createPost(input: $input) {
         __typename
@@ -251,10 +274,8 @@ def main():
     print(f'ACOLAD DAILY | local date={date_tag} | mode={args.mode}', flush=True)
     if args.mode == 'queue' and args.approval != 'QUEUE_APPROVED':
         raise BatchError('Queue mode requires QUEUE_APPROVED (automated workflow supplies it only when explicitly enabled)')
-    publish_local, publish_utc = today_publish_target()
-    print(f'TARGET PUBLISH: {publish_local.isoformat()} | UTC {publish_utc.isoformat()}', flush=True)
-    if args.mode == 'queue' and datetime.now(timezone.utc) + MIN_PUBLISH_LEAD >= publish_utc:
-        raise BatchError('Too late to safely prepare todays 18:00 Tehran stories; refuse to queue for tomorrow')
+    print(f'DAILY GOAL: one story batch per Tehran calendar date; preferred 18:00. Late runs are allowed.', flush=True)
+    print(f'TARGET POLICY: 18:00 Tehran if still feasible; otherwise now + {int(MIN_SCHEDULING_LEAD.total_seconds() // 60)} minutes.', flush=True)
     org_id = channel_id = None
     if args.mode != 'preview':
         org_id, channel_id = buffer_identity()
@@ -295,13 +316,28 @@ def main():
     # Repeat uniqueness check after expensive generation, just before any write.
     posts = recent_buffer_posts(org_id, channel_id)
     check_no_duplicates(posts, hashes, date_tag)
-    # Recheck time before any media writes: Gemini may have taken a long time.
-    if args.mode == 'queue' and datetime.now(timezone.utc) + MIN_PUBLISH_LEAD >= publish_utc:
-        raise BatchError('Generation finished too near 18:00; not uploading or scheduling stale stories')
+    # Generation may take minutes. No hard 18:00 cutoff; late runs still schedule.
+    if args.mode == 'queue' and not same_content_day(date_tag):
+        return 0
     urls = [upload_image(p) for p in paths]
-    # Recheck again before creating the public-facing scheduled post.
-    if args.mode == 'queue' and datetime.now(timezone.utc) + timedelta(minutes=5) >= publish_utc:
-        raise BatchError('Cloudinary upload finished too late; do not schedule')
+    # Refresh from the authoritative Buffer API immediately before write.
+    # This also guards against someone manually scheduling while media uploaded.
+    latest_posts = recent_buffer_posts(org_id, channel_id)
+    try:
+        check_no_duplicates(latest_posts, hashes, date_tag)
+    except BatchError as exc:
+        duplicate_signals = (
+            'Acolad content already created for ',
+            'An Acolad story sequence already exists for today',
+        )
+        if args.mode == 'queue' and str(exc).startswith(duplicate_signals):
+            print('ALREADY SCHEDULED: batch appeared during media upload; no second post.', flush=True)
+            return 0
+        raise
+    if args.mode == 'queue' and not same_content_day(date_tag):
+        return 0
+    publish_local, publish_utc = today_publish_target()
+    print(f'BUFFER TARGET: {publish_local.isoformat()} | UTC {publish_utc.isoformat()}', flush=True)
     create_one_post(channel_id, urls, date_tag, hashes, draft=(args.mode == 'draft'), target_utc=publish_utc)
     return 0
 
