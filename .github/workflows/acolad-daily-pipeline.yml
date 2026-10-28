@@ -1,20 +1,17 @@
 name: Acolad Daily Story Pipeline V2.8
 
-# RETRY FIX: Prepare well before Buffer publication at 18:00 Asia/Tehran.
-# All cron values UTC; duplicates exit safely using Buffer history.
-# 09:11, 13:11, 15:11 Tehran; scheduling remains best-effort, not guaranteed.
-# Avoid timezone-key interpretation differences by using an explicit UTC cron.
-# IMPORTANT: scheduled publishing remains off until repository variable
-# ACOLAD_AUTOPUBLISH_ENABLED is set to true by the account owner.
+# RELIABLE-RETRY V4.6: Every hour, at :11 Tehran, until Buffer holds
+# the day's story batch. This is a best-effort poller, NOT a guarantee
+# that GitHub starts every cron event. All cron values are in UTC.
+# A queued or sent batch exits before image generation, so repeats are cheap.
+# If 18:00 Tehran has passed, schedule the batch for a safe future time.
 on:
   schedule:
-    - cron: '41 5 * * *'   # 09:11 Tehran: primary
-    - cron: '41 9 * * *'   # 13:11 Tehran: retry if primary never ran
-    - cron: '41 11 * * *'  # 15:11 Tehran: final early retry
+    - cron: '41 * * * *'  # :41 UTC = :11 Tehran (Iran UTC+03:30) every hour
   workflow_dispatch:
     inputs:
       mode:
-        description: 'preview (no upload), draft (Buffer draft), queue (custom 18:00 Tehran time)'
+        description: 'preview (no upload), draft (Buffer draft), queue (auto-schedule any time today)'
         required: true
         type: choice
         default: preview
