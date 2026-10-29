@@ -87,6 +87,16 @@
       "message_id": 28,
       "reserved_utc": "2026-10-29T02:54:22.540654+00:00",
       "sent_utc": "2026-10-29T02:54:25.804556+00:00"
+    },
+    {
+      "slot": "2026-10-29-12",
+      "url": "https://digiato.com/iran-technology-news/afta-center-issues-warning-to-iranian-organizations",
+      "topic": "small_business_growth",
+      "original_title": "مرکز افتا به سازمان‌های ایرانی هشدار داد: وب‌سایت‌هایتان را به دامنه ir منتقل کنید",
+      "score": 85,
+      "status": "reserved",
+      "message_id": null,
+      "reserved_utc": "2026-10-29T09:35:09.221461+00:00"
     }
   ]
 }
