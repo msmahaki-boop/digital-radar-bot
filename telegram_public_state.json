@@ -83,9 +83,10 @@
       "topic": "iran_economy",
       "original_title": "معاون بازاریابی دیجی‌پی: بازپرداخت ۶ قسطه دیجی‌پی برای کمپین بلک‌فرایدی فعال می‌شود",
       "score": 85,
-      "status": "reserved",
-      "message_id": null,
-      "reserved_utc": "2026-10-29T02:54:22.540654+00:00"
+      "status": "sent",
+      "message_id": 28,
+      "reserved_utc": "2026-10-29T02:54:22.540654+00:00",
+      "sent_utc": "2026-10-29T02:54:25.804556+00:00"
     }
   ]
 }
