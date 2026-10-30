@@ -105,9 +105,10 @@
       "topic": "best_of_day",
       "original_title": "You can generate and edit Google Docs files directly in Gemini chats now",
       "score": 85,
-      "status": "reserved",
-      "message_id": null,
-      "reserved_utc": "2026-10-30T02:59:52.642775+00:00"
+      "status": "sent",
+      "message_id": 30,
+      "reserved_utc": "2026-10-30T02:59:52.642775+00:00",
+      "sent_utc": "2026-10-30T02:59:55.503957+00:00"
     }
   ]
 }
