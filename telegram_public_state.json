@@ -109,6 +109,16 @@
       "message_id": 30,
       "reserved_utc": "2026-10-30T02:59:52.642775+00:00",
       "sent_utc": "2026-10-30T02:59:55.503957+00:00"
+    },
+    {
+      "slot": "2026-10-30-21",
+      "url": "https://digiato.com/iran-technology-news/future-erps-age-artificial-intelligence",
+      "topic": "best_of_day",
+      "original_title": "آینده ERPها؛ گذار از ثبت اطلاعات به تصمیم‌گیری هوشمند",
+      "score": 85,
+      "status": "reserved",
+      "message_id": null,
+      "reserved_utc": "2026-10-30T17:50:04.844187+00:00"
     }
   ]
 }
