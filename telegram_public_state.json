@@ -127,9 +127,10 @@
       "topic": "small_business_growth",
       "original_title": "رشد سریع در کسب‌وکارهای دیجیتال چه چالش‌ها و الزاماتی دارد؟",
       "score": 85,
-      "status": "reserved",
-      "message_id": null,
-      "reserved_utc": "2026-10-31T08:54:49.766186+00:00"
+      "status": "sent",
+      "message_id": 32,
+      "reserved_utc": "2026-10-31T08:54:49.766186+00:00",
+      "sent_utc": "2026-10-31T08:54:52.691745+00:00"
     }
   ]
 }
