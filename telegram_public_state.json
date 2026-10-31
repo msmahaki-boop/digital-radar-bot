@@ -138,9 +138,10 @@
       "topic": "iran_platforms",
       "original_title": "دارورسانی آنلاین در دور باطل مجوزها | پلتفرم‌ها دارو می‌فروشند یا فقط می‌رسانند؟",
       "score": 85,
-      "status": "reserved",
-      "message_id": null,
-      "reserved_utc": "2026-10-31T11:52:53.459926+00:00"
+      "status": "sent",
+      "message_id": 33,
+      "reserved_utc": "2026-10-31T11:52:53.459926+00:00",
+      "sent_utc": "2026-10-31T11:52:56.126127+00:00"
     }
   ]
 }
