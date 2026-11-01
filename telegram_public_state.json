@@ -160,9 +160,10 @@
       "topic": "marketing",
       "original_title": "Hackers Hijacked DebugBear’s DNS To Serve Malicious JavaScript via @sejournal, @vahandev",
       "score": 85,
-      "status": "reserved",
-      "message_id": null,
-      "reserved_utc": "2026-11-01T06:06:26.610387+00:00"
+      "status": "sent",
+      "message_id": 36,
+      "reserved_utc": "2026-11-01T06:06:26.610387+00:00",
+      "sent_utc": "2026-11-01T06:06:29.140984+00:00"
     }
   ]
 }
