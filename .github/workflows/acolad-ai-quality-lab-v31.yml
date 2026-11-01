@@ -1,0 +1,52 @@
+name: Acolad AI Quality Lab V3.1 (isolated manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'offline = local synthetic test; compare = FREE OpenRouter models only'
+        required: true
+        default: offline
+        type: choice
+        options:
+          - offline
+          - compare
+      cases:
+        description: 'Number of hypothetical editorial cases'
+        required: true
+        default: '1'
+        type: choice
+        options:
+          - '1'
+          - '2'
+          - '3'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: acolad-ai-quality-lab-v31-only
+  cancel-in-progress: false
+
+jobs:
+  ai-quality-v31:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Isolated editorial quality test (NO PUBLISH)
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          ACOLAD_V31_MODELS: ${{ vars.ACOLAD_V31_MODELS }}
+        run: python -u acolad_ai_quality_lab_v31.py --mode "${{ inputs.mode }}" --cases "${{ inputs.cases }}"
+      - name: Save diagnostic results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-ai-quality-v31-results
+          path: ai_quality_v31_results/
+          if-no-files-found: warn
+          retention-days: 14
