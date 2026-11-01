@@ -1,0 +1,61 @@
+name: Acolad GapGPT API Probe (isolated manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'offline (no API), catalog (GET models), trial (ONE explicitly approved generation)'
+        required: true
+        type: choice
+        default: offline
+        options:
+          - offline
+          - catalog
+          - trial
+      approval:
+        description: 'For trial ONLY: GAPGPT_ONE_TRIAL_APPROVED'
+        required: false
+        type: string
+      free_credit_confirmation:
+        description: 'For trial ONLY after checking API free balance and no paid auto top-up: I_CHECKED_FREE_API_CREDIT'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: acolad-gapgpt-probe-independent
+  cancel-in-progress: false
+
+jobs:
+  gapgpt-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Probe (NO social publishing)
+        env:
+          GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
+          ACOLAD_GAPGPT_MODEL_ID: ${{ vars.ACOLAD_GAPGPT_MODEL_ID }}
+          PROBE_MODE: ${{ inputs.mode }}
+          PROBE_APPROVAL: ${{ inputs.approval }}
+          PROBE_FREE_CONFIRM: ${{ inputs.free_credit_confirmation }}
+        run: |
+          python -u acolad_gapgpt_probe.py \
+            --mode "$PROBE_MODE" \
+            --approval "$PROBE_APPROVAL" \
+            --free-credit-confirmation "$PROBE_FREE_CONFIRM"
+      - name: Upload safe results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-gapgpt-probe-results
+          path: gapgpt_lab_results/
+          if-no-files-found: warn
+          retention-days: 7
