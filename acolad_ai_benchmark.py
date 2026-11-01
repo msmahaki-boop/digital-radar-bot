@@ -23,7 +23,7 @@ OUTPUT = Path('ai_benchmark_results')
 OPENROUTER_MODELS = 'https://openrouter.ai/api/v1/models'
 OPENROUTER_CHAT = 'https://openrouter.ai/api/v1/chat/completions'
 GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/'
-REQUEST_TIMEOUT = 38
+REQUEST_TIMEOUT = 90
 
 CASES = [
     {'id':'pricing', 'title':'فروشگاه آنلاین و هزینه ارسال', 'facts':'سناریوی فرضی: فروشگاه اینترنتی کوچکی با افزایش هزینه ارسال و بسته‌بندی روبه‌رو شده، ولی هنوز حاشیه سود هر سفارش را اندازه نگرفته است. هیچ درصد یا خبر روزی تأیید نشده است.', 'audience':'صاحب فروشگاه اینترنتی ایرانی'},
