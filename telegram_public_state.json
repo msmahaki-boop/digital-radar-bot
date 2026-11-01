@@ -164,6 +164,16 @@
       "message_id": 36,
       "reserved_utc": "2026-11-01T06:06:26.610387+00:00",
       "sent_utc": "2026-11-01T06:06:29.140984+00:00"
+    },
+    {
+      "slot": "2026-11-02-00",
+      "url": "https://digiato.com/cryptocurrency/what-happened-behind-binance-hack",
+      "topic": "tech",
+      "original_title": "پشت‌پرده هک بایننس؛ بزرگ‌ترین سرقت تاریخ کریپتو چطور رقم خورد؟",
+      "score": 85,
+      "status": "reserved",
+      "message_id": null,
+      "reserved_utc": "2026-11-01T21:23:27.477306+00:00"
     }
   ]
 }
