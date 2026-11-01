@@ -60,10 +60,13 @@ def build_trial_payload(model):
         {"role": "system", "content": "تو نویسنده حرفه‌ای فارسی هستی. ادعای واقعی بدون منبع نساز."},
         {"role": "user", "content": PROMPT}],
         "max_tokens": 1800, "stream": False}
-    # GPT-6 Luna defaults to reasoning medium. The upstream API does not accept
-    # temperature with reasoning enabled; some proxies propagate HTTP 400.
-    # Do not change reasoning effort or raise token limit in this diagnosis run.
-    if model != "gpt-6-luna":
+    # GPT-6 Luna defaults to medium reasoning. With a small completion budget,
+    # reasoning tokens can exhaust the limit before any visible text appears.
+    # For this ONE editorial-writing probe, request no hidden reasoning tokens.
+    # GapGPT is a proxy: support for this parameter must be checked in live trial.
+    if model == "gpt-6-luna":
+        payload["reasoning_effort"] = "none"
+    else:
         payload["temperature"] = 0.5
     return payload
 
