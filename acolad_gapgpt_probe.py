@@ -36,10 +36,36 @@ PROMPT = ("تو نویسنده ارشد آژانس دیجیتال مارکتین
 
 
 class SafeAPIError(Exception):
-    def __init__(self, code, category):
+    def __init__(self, code, category, provider_code="", provider_param=""):
         self.code = code
         self.category = category
+        self.provider_code = provider_code
+        self.provider_param = provider_param
         super().__init__(f"HTTP {code if code is not None else 'network'}: {category}")
+
+
+def safe_error_field(value):
+    """Keep only compact provider code/parameter identifiers, never raw error bodies."""
+    if not isinstance(value, str) or len(value) > 64:
+        return ""
+    if value.lower().startswith(("sk-", "bearer", "aiza", "api_key", "apikey")):
+        return ""
+    if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_.-]{0,63}", value):
+        return value
+    return ""
+
+
+def build_trial_payload(model):
+    payload = {"model": model, "messages": [
+        {"role": "system", "content": "تو نویسنده حرفه‌ای فارسی هستی. ادعای واقعی بدون منبع نساز."},
+        {"role": "user", "content": PROMPT}],
+        "max_tokens": 1800, "stream": False}
+    # GPT-6 Luna defaults to reasoning medium. The upstream API does not accept
+    # temperature with reasoning enabled; some proxies propagate HTTP 400.
+    # Do not change reasoning effort or raise token limit in this diagnosis run.
+    if model != "gpt-6-luna":
+        payload["temperature"] = 0.5
+    return payload
 
 
 def fetch_json(path, key, *, payload=None, timeout=35):
@@ -68,7 +94,18 @@ def fetch_json(path, key, *, payload=None, timeout=35):
                           403: "access denied", 404: "endpoint or model not available",
                           408: "timeout", 429: "rate limit / quota", 500: "provider error",
                           502: "upstream error", 503: "provider unavailable"}.get(e.code, "provider HTTP error")
-        raise SafeAPIError(e.code, classification) from None
+        # The gateway may provide structured error.code/error.param. Only keep
+        # allowlisted identifiers. Never keep error.message, raw body or headers.
+        provider_code = provider_param = ""
+        try:
+            error_response = json.loads(e.read(8192).decode("utf-8"))
+            details = error_response.get("error", {}) if isinstance(error_response, dict) else {}
+            if isinstance(details, dict):
+                provider_code = safe_error_field(details.get("code"))
+                provider_param = safe_error_field(details.get("param"))
+        except (ValueError, UnicodeError, OSError, AttributeError):
+            pass
+        raise SafeAPIError(e.code, classification, provider_code, provider_param) from None
     except (urllib.error.URLError, TimeoutError, OSError):
         raise SafeAPIError(None, "network timeout / connection error") from None
 
@@ -164,10 +201,7 @@ def main(argv=None):
                 report.update(run_status="TRIAL_BLOCKED", reason="Set an exact permitted model ID in ACOLAD_GAPGPT_MODEL_ID")
             else:
                 t = time.monotonic()
-                payload = {"model": model, "messages": [
-                    {"role": "system", "content": "تو نویسنده حرفه‌ای فارسی هستی. ادعای واقعی بدون منبع نساز."},
-                    {"role": "user", "content": PROMPT}],
-                    "max_tokens": 1800, "temperature": 0.5, "stream": False}
+                payload = build_trial_payload(model)
                 obj = fetch_json("/chat/completions", key, payload=payload, timeout=95)
                 text, finish, usage = response_text(obj)
                 report.update(run_status="RESPONSE_RECEIVED_NEEDS_HUMAN_REVIEW" if text else "EMPTY_RESPONSE",
@@ -180,7 +214,11 @@ def main(argv=None):
                 return 0
     except SafeAPIError as e:
         report.update(run_status="API_ERROR", http_status=e.code, error_category=e.category,
-                      notes="No secret or provider error response body saved. GET /models support is not yet verified end to end.")
+                      notes="Only safe provider error identifiers are recorded; no raw error, prompt or API key saved.")
+        if e.provider_code:
+            report["provider_error_code"] = e.provider_code
+        if e.provider_param:
+            report["provider_error_param"] = e.provider_param
     save_report(report)
     print(report["run_status"], "| NO PUBLICATION")
     return 0
