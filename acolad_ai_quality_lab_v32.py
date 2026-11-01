@@ -196,7 +196,7 @@ def editorial_review(obj,case):
                 holds.append('possible unsourced real-world event claim: '+pattern[:42])
     if case.get('id')=='shipping':
         tg=str(tel.get('body','')) if isinstance(tel,dict) else ''
-        if not any(x in tg for x in ('بهای کالا','قیمت خرید','هزینه خرید','هزینه تأمین','هزینه تامین','بهای تمام‌شده','بهای تمام شده','قیمت تمام‌شده','قیمت تمام شده')):
+        if not any(x in tg for x in ('بهای کالا','بهای خرید کالا','بهای خرید محصول','قیمت خرید','قیمت خرید محصول','هزینه خرید','هزینه تأمین','هزینه تامین','بهای تمام‌شده','بهای تمام شده','قیمت تمام‌شده','قیمت تمام شده')):
             holds.append('shipping margin advice omits cost of goods; incomplete profit calculation')
     evidence=str(obj.get('evidence_boundary',''))
     if ('به صراحت جدا' in evidence or ('مرز بین' in evidence and 'است' in evidence and 'فرضی' not in evidence)):
