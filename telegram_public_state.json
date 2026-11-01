@@ -142,6 +142,16 @@
       "message_id": 33,
       "reserved_utc": "2026-10-31T11:52:53.459926+00:00",
       "sent_utc": "2026-10-31T11:52:56.126127+00:00"
+    },
+    {
+      "slot": "2026-11-01-03",
+      "url": "https://www.theverge.com/ai-artificial-intelligence/1023440/starbucks-ai-personalized-menu-drive-thru",
+      "topic": "ai",
+      "original_title": "Starbucks wants to use AI to show you a ‘personalized digital menu’ at the drive-thru",
+      "score": 75,
+      "status": "reserved",
+      "message_id": null,
+      "reserved_utc": "2026-11-01T00:08:52.041076+00:00"
     }
   ]
 }
