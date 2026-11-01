@@ -149,9 +149,10 @@
       "topic": "ai",
       "original_title": "Starbucks wants to use AI to show you a ‘personalized digital menu’ at the drive-thru",
       "score": 75,
-      "status": "reserved",
-      "message_id": null,
-      "reserved_utc": "2026-11-01T00:08:52.041076+00:00"
+      "status": "sent",
+      "message_id": 35,
+      "reserved_utc": "2026-11-01T00:08:52.041076+00:00",
+      "sent_utc": "2026-11-01T00:08:54.559701+00:00"
     }
   ]
 }
