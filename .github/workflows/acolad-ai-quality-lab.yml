@@ -1,0 +1,41 @@
+name: Acolad AI Quality Lab (manual only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      samples:
+        description: "Number of hypothetical Persian editorial cases"
+        required: true
+        default: "2"
+        type: choice
+        options:
+          - "2"
+          - "3"
+
+permissions:
+  contents: read
+
+jobs:
+  editorial-quality-lab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run comparison (never publishes)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          ACOLAD_GEMINI_MODEL: ${{ vars.ACOLAD_GEMINI_MODEL }}
+          ACOLAD_OPENROUTER_MODELS: ${{ vars.ACOLAD_OPENROUTER_MODELS }}
+        run: python acolad_ai_benchmark.py --cases "${{ inputs.samples }}"
+      - name: Upload anonymous reviews and separate answer key
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-ai-quality-results
+          path: ai_benchmark_results/
+          if-no-files-found: warn
+          retention-days: 14
