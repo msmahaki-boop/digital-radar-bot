@@ -171,9 +171,10 @@
       "topic": "tech",
       "original_title": "پشت‌پرده هک بایننس؛ بزرگ‌ترین سرقت تاریخ کریپتو چطور رقم خورد؟",
       "score": 85,
-      "status": "reserved",
-      "message_id": null,
-      "reserved_utc": "2026-11-01T21:23:27.477306+00:00"
+      "status": "sent",
+      "message_id": 41,
+      "reserved_utc": "2026-11-01T21:23:27.477306+00:00",
+      "sent_utc": "2026-11-01T21:23:30.131370+00:00"
     }
   ]
 }
