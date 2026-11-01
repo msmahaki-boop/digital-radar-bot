@@ -1,0 +1,52 @@
+name: Acolad AI Quality Lab V3 (isolated manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'offline = no API use; compare = verified free OpenRouter models only'
+        required: true
+        default: offline
+        type: choice
+        options:
+          - offline
+          - compare
+      cases:
+        description: 'Number of hypothetical editorial scenarios'
+        required: true
+        default: '1'
+        type: choice
+        options:
+          - '1'
+          - '2'
+          - '3'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: acolad-ai-quality-lab-v3-only
+  cancel-in-progress: false
+
+jobs:
+  ai-quality-v3:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run separate non-publishing AI editorial lab
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          ACOLAD_V3_MODELS: ${{ vars.ACOLAD_V3_MODELS }}
+        run: python -u acolad_ai_quality_lab_v3.py --mode "${{ inputs.mode }}" --cases "${{ inputs.cases }}"
+      - name: Upload report even if a model is unavailable
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-ai-quality-v3-results
+          path: ai_quality_v3_results/
+          if-no-files-found: warn
+          retention-days: 14
