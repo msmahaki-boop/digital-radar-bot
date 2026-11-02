@@ -230,6 +230,21 @@ class LunaResearchTests(unittest.TestCase):
                'excerpt':'Survey 188 respondents using questionnaires'}]
         self.assertTrue(any('unverified experiment' in x for x in e.cinematic_quality(story,refs)))
 
+    def test_iran_payment_news_matches_payment_experiment(self):
+        today=e.now().date().isoformat()
+        news={'id':'S01','title':'گزارش اسنپ‌پی: سهم خرید اعتباری آنلاین در ایران',
+              'publisher':'زومیت','source_type':'rss_summary','evidence_depth':'full_article',
+              'date':today,'rank':21}
+        academic={'id':'S05','title':'When payment options stand out: Payment option salience on the product page increases purchase likelihood',
+                  'publisher':'Journal of Retailing','source_type':'academic_doi',
+                  'evidence_depth':'abstract','date':'2026-09-01','rank':30}
+        self.assertTrue(e.related_source_pair(news,academic))
+        pairs=e.suggested_evidence_pairs([news,academic])
+        self.assertEqual(len(pairs),1)
+        self.assertEqual(pairs[0]['shared_theme'],'payment_option_visibility')
+        self.assertNotIn('plan: no shared concrete topic across selected articles',
+                         e.validate_plan({'source_ids':['S01','S05']},[news,academic]))
+
     def test_model_luna_only(self):
         self.assertEqual(e.MODEL,'gpt-6-luna')
         self.assertEqual(e.MAX_CALLS,4)
