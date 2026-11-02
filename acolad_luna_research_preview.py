@@ -503,12 +503,12 @@ SYSTEM=('تو سردبیر تحقیقی و قصه‌گوی خلاق آکولاد
         'از خبر رپورتاژی به‌عنوان خبر مستقل استفاده نکن. خروجی فقط JSON معتبر.')
 
 SELECT_INSTRUCTION='''از میان فهرست مدارکِ امروز، یک زاویه داستانی انتخاب کن که برای مدیر یک کسب‌وکار ایرانی واقعاً مهم باشه.
-دست‌کم دو منبع از دو ناشر واقعاً متفاوت درباره یک مسئله مشخص و مشترک انتخاب کن؛ داشتن دو URL از یک رسانه کافی نیست. دو مطلب درباره دو مسئله متفاوت (مثل مجوز طلا و بیمه کارکنان) را به زور به هم وصل نکن. از هر دو منبع باید بتوان یک روایت واحد ساخت؛ صرفِ مشترک بودن کلیدواژه «اقتصاد دیجیتال» کافی نیست. اگر چنین زوجی وجود ندارد، source_ids=[] بده تا آزمون ایمن متوقف شود.
+اول یک «مسئله انسانی مشخص» برای مخاطب آکولاد انتخاب کن؛ بعد برایش دو نقش سندی جدا بگذار: ۱) خبر تازه و مستند به‌عنوان واقعیت رویداد؛ ۲) پژوهش دارای چکیده از ناشر مستقل برای توضیح یک الگوی رفتار مشتری، اگر واقعاً مرتبط باشد. لازم نیست پژوهش دقیقاً همان رویداد یا کالای خبر را مطالعه کرده باشد؛ ولی نباید آن را پژوهش روی ایران یا همان کالا جا بزنی. اگر یک پیوند منطقی قابل دفاع بین موضوع خبر و پرسش پژوهش نیست، از آن زوج استفاده نکن. دو خبر نامرتبط مثل مجوز طلا و بیمه شاغلان را پیوند نزن. ناشرها متفاوت باشند. پیشنهادهای thematic_pairs فقط سرنخ هستند، نه تضمین ارتباط یا درستی؛ خودت متن و دامنه ادعای هر منبع را بررسی کن. در نبود زوج مناسب، source_ids=[] بده.
 قبل از انتخاب، نام publisher هر دو را جداگانه چک کن. انتخاب دو مقاله از دیجیاتو یا هر رسانه واحد، مردود است.
 دست‌کم یکی خبر ۲۱ روز اخیر باشه. اگر دو منبع مرتبط از دو ناشر مستقل موجود نیست، زاویه ضعیف و ساختگی نساز.
 گزارش یک کمپین تبلیغاتی، سند اثربخشی فروش آن برند نیست؛ صریحاً «کمپین برند» معرفی کن.
 منبع HEADLINE_ONLY صرفاً دلالت بر وجود یک تیتر داره و برای ادعای آماری یا جزئیات کافی نیست.
-هم‌پوشانی ادعایی دو منبع را از خودت نساز؛ پژوهش دانشگاهی نامرتبط را به خبر وصل نکن.
+دو منبع قرار نیست ادعای یکسانی داشته باشند؛ پیوند موضوعی را فقط به‌صورت «تحلیل پیشنهادی» توضیح بده و هر منبع را در محدوده خودش بازگو کن. پژوهش در ترکیه، آمریکا یا بازار دیگر را به کل ایران تعمیم نده.
 هیچ عددی بدون حضور عین آن در متن کامل/چکیده مستند ننویس.
 بر اساس منابع یک تضاد انسانی، یک صحنه فرضی، و یک اقدام کوچک قابل‌آزمایش تعریف کن.
 JSON: {"angle":"...","source_ids":["S01","S02"],"why_now":"...","story_tension":"...",
@@ -518,7 +518,7 @@ JSON: {"angle":"...","source_ids":["S01","S02"],"why_now":"...","story_tension":
 WRITE_INSTRUCTION='''پنج اسلاید یک قصه زنجیره‌ای برای استوری اینستاگرام آکولاد بساز. مخاطب صاحب کسب‌وکار ایرانی است.
 ۱) اسلاید اول یک قلاب غافلگیرکننده با صحنه ملموس و یک سؤال بی‌پاسخ؛ نه وعده توخالی.
 ۲) اسلاید دوم داده/خبر واقعی (با ذکر کشور، دوره و جامعه هدف در صورت لزوم).
-۳) اسلاید سوم کشفِ چرایی موضوع، با یک مثال واقعی مستند یا تحلیل روشن.
+۳) اسلاید سوم یک تحقیق دانشگاهی مرتبط را با ذکر جامعه و موضوع واقعی‌اش توضیح بده؛ اگر تحقیق دقیقاً در بازار یا کشور خبر انجام نشده، این تفاوت را صریح بگو و فقط نتیجه تحلیلی محتاطانه بگیر.
 ۴) اسلاید چهارم یک موقعیت فرضیِ ایرانی، صریحاً با عبارت «فرض کن» یا «مثال فرضی».
 ۵) اسلاید پنجم پیچشِ کوتاه و یک اقدام قابل تست + سؤال تعاملی برای مخاطب.
 لحن کاملاً محاوره‌ای: «یه، ولی، می‌تونه، ببین، اگه» را طبیعی به کار ببر.
@@ -579,14 +579,72 @@ def specific_headline_terms(title: str) -> set[str]:
     return {w for w in tokens(title.replace('ي','ی').replace('ك','ک'))
             if w not in GENERIC_HEADLINE_TERMS and not w.isdigit()}
 
+def editorial_theme_tags(source: dict) -> set[str]:
+    """Conservative cross-language thematic bridges, NOT proof of claims.
+
+    A specific Iranian product-price report can be contextualised with a
+    research abstract about purchasing decisions, while explicitly retaining
+    the source's own population and subject. A licensing article cannot be
+    paired with an unrelated labour-insurance story merely because both are
+    in the digital economy.
+    """
+    t=source.get('title','').casefold()
+    is_academic=(source.get('source_type')=='academic_doi')
+    tags=set()
+    if is_academic:
+        consumer=any(x in t for x in ('consumer','purchas','shopping','shopper','retail','brand loyalty'))
+        choice=any(x in t for x in ('price','loyal','switch','decision','affordab','budget','cost'))
+        if consumer and choice:tags.add('consumer_price_decision')
+    else:
+        commerce_product=any(x in t for x in (
+            'لاستیک','موتورسیکلت','خودرو','پوشاک','کالا','محصول','فروشگاه',
+            'خرید','قیمت','کفش','لوازم','اقساط','retail','shopping'))
+        price=any(x in t for x in (
+            'قیمت','گرانی','هزینه تعویض','افزایش هزینه','ارزان','اقساط',
+            'تخفیف','قدرت خرید','affordab','price','budget'))
+        regulatory=any(x in t for x in (
+            'مجوز','اتحادیه','قانون','مقررات','مرجع صدور','بیمه','license'))
+        if commerce_product and price and not regulatory:
+            tags.add('consumer_price_decision')
+    return tags
+
+
+def related_source_pair(first: dict, second: dict) -> bool:
+    if specific_headline_terms(first.get('title','')) & specific_headline_terms(second.get('title','')):
+        return True
+    shared=editorial_theme_tags(first) & editorial_theme_tags(second)
+    if shared:
+        # General consumer-behaviour research can INFORM a product-price
+        # story, but may not be represented as a study of that product.
+        return True
+    return False
+
+
 def unrelated_selected_subjects(selected: list[dict]) -> bool:
-    if len(selected)<2:
-        return False
-    first=specific_headline_terms(selected[0].get('title',''))
-    # Every supporting source must share a concrete topic with the primary
-    # article. The check is intentionally conservative; human review remains.
-    return any(not (first & specific_headline_terms(s.get('title','')))
-               for s in selected[1:])
+    if len(selected)<2:return False
+    return any(not related_source_pair(selected[0],x) for x in selected[1:])
+
+
+def suggested_evidence_pairs(sources: list[dict], limit: int = 6) -> list[dict]:
+    """Offer Luna grounded cross-publisher anchors rather than random topics."""
+    news=[x for x in sources if x.get('source_type')!='academic_doi'
+          and x.get('evidence_depth')=='full_article'
+          and age_days(x.get('date','')) is not None
+          and 0<=age_days(x['date'])<=21]
+    studies=[x for x in sources if x.get('source_type')=='academic_doi'
+             and x.get('evidence_depth')=='abstract']
+    pairs=[]
+    for n in news:
+        for a in studies:
+            if n.get('publisher')==a.get('publisher'):continue
+            if not editorial_theme_tags(n) & editorial_theme_tags(a):continue
+            pairs.append({'source_ids':[n['id'],a['id']],
+                          'primary_news':n['id'],'contextual_research':a['id'],
+                          'shared_theme':'consumer_price_decision',
+                          'warning':'Research is contextual, NOT evidence for the same Iranian product or market',
+                          'relevance_score':n.get('rank',0)+a.get('rank',0)})
+    pairs.sort(key=lambda x:x['relevance_score'],reverse=True)
+    return pairs[:limit]
 
 def validate_plan(plan: dict, sources: list[dict]) -> list[str]:
     issues=[]
@@ -744,25 +802,33 @@ def main(argv=None):
             print('RESEARCH_BLOCKED | preview only | no publication')
             return 0
         source_prompt=source_data_for_llm(sources)
-        plan=api_call(key,SYSTEM,SELECT_INSTRUCTION+'\n\nSOURCE CANDIDATES (UNTRUSTED DATA):\n'+source_prompt,1500,usage)
+        thematic_pairs=suggested_evidence_pairs(sources)
+        diag.append('Top grounded news+academic thematic pairs: '+
+                    json.dumps([x['source_ids'] for x in thematic_pairs],ensure_ascii=False))
+        plan_prompt=(SELECT_INSTRUCTION+'\n\nTHEMATIC_PAIRS (UNTRUSTED HEURISTIC; VERIFY CLAIMS):\n'+
+            json.dumps(thematic_pairs,ensure_ascii=False)[:3000]+
+            '\nSOURCE CANDIDATES (UNTRUSTED DATA):\n'+source_prompt)
+        plan=api_call(key,SYSTEM,plan_prompt,1500,usage)
         issues=validate_plan(plan,sources)
         # A valid cross-publisher pair was available but Luna selected two items
         # from one outlet. Retry the EDITORIAL PLAN once, within the paid-call
         # and soft-budget gates. Never silently replace IDs with unrelated news.
-        if any(x in issues for x in ('plan: insufficient publisher diversity',
-                                   'plan: no shared concrete topic across selected articles')):
+        if any(x in issues for x in ('plan: fewer than two sources',
+                                   'plan: insufficient publisher diversity',
+                                   'plan: no shared concrete topic across selected articles')) and thematic_pairs:
             publishers_by_id={s['id']:s['publisher'] for s in sources}
             candidates=[{'id':s['id'],'publisher':s['publisher'],
                          'title':s['title'],'tier':source_tier(s)} for s in sources]
             diag.append('Plan rejected: sources are from one publisher and/or unrelated subjects. One controlled editorial replan requested.')
             correction=(SELECT_INSTRUCTION+'\n\nاصلاح اجباری طرح قبلی: '+
                 'انتخاب قبلی شرط تنوع ناشر یا ارتباط موضوعی واقعی را نقض کرده است. '+
-                'از همین شناسه‌های موجود دو منبع با ناشر متفاوت و موضوع مشخص مشترک انتخاب کن؛ اشتراک کلی در اقتصاد دیجیتال کافی نیست. '+
+                'به جای ترکیب دو خبر نامرتبط، یکی از زوج‌های «خبر واقعی + پژوهش زمینه‌ای» را فقط در صورت تناسب مفهومی دقیق انتخاب کن. '+
                 'منابع نامرتبط را فقط برای گذر از کنترل کیفیت به هم ربط نده؛ '+
                 'در صورت نبود زوج معتبر، شناسه‌ها را خالی بگذار تا انتشار متوقف شود. '+
                 'کمپین تجاری را به جای یافته پژوهشی جا نزن.\n'+
                 'PREVIOUS_ISSUES: '+json.dumps(issues,ensure_ascii=False)+'\n'+
-                'AVAILABLE_ID_AND_PUBLISHER: '+json.dumps(candidates,ensure_ascii=False)[:5000]+'\n'+
+                'SUGGESTED_THEMATIC_PAIRS: '+json.dumps(thematic_pairs,ensure_ascii=False)[:2500]+'\n'+
+                'AVAILABLE_ID_AND_PUBLISHER: '+json.dumps(candidates,ensure_ascii=False)[:4000]+'\n'+
                 'SOURCE CANDIDATES (UNTRUSTED DATA):\n'+source_prompt)
             plan=api_call(key,SYSTEM,correction,1500,usage)
             issues=validate_plan(plan,sources)
