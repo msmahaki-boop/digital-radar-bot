@@ -25,7 +25,7 @@ class VisualSafetyTests(unittest.TestCase):
                             "thumburl":"https://upload.wikimedia.org/pic.jpg",
                             "extmetadata":{"LicenseShortName":{"value":"All rights reserved"}}}]}}}}
                 return Response()
-        result=v.select_stock("online shopping",session=Fake())
+        result=v.select_stock("laptop computer",session=Fake())
         self.assertIsNone(result["chosen"])
         self.assertNotEqual(result["status"],"LICENSED_RELEVANT_CANDIDATE")
     def test_stock_host_locked(self):
