@@ -131,6 +131,22 @@ class LunaResearchTests(unittest.TestCase):
 
     def test_json_extraction(self):
         self.assertEqual(e.json_from_model('```json\n{"a":1}\n```'),{'a':1})
+    def test_bold_repair_preserves_words_and_numbers(self):
+        message='🚨 توی فروشگاه لاستیک، قیمت چهار حلقه ۴۰ میلیون می‌شه؛ این فقط مثال فرضیه.'
+        story={'slides':[{'n':1,'text':message}]}
+        notes=e.repair_missing_bold(story)
+        self.assertEqual(len(notes),1)
+        amended=story['slides'][0]['text']
+        self.assertGreaterEqual(amended.count('**'),2)
+        self.assertEqual(amended.replace('**',''),message)
+        self.assertEqual(e.repair_missing_bold(story),[])
+
+    def test_bold_repair_keeps_existing_emphasis(self):
+        message='یه روز **قیمت خرید** بالا رفت و مشتری مکث کرد.'
+        story={'slides':[{'n':1,'text':message}]}
+        self.assertEqual(e.repair_missing_bold(story),[])
+        self.assertEqual(story['slides'][0]['text'],message)
+
     def test_model_luna_only(self):
         self.assertEqual(e.MODEL,'gpt-6-luna')
         self.assertEqual(e.MAX_CALLS,4)
