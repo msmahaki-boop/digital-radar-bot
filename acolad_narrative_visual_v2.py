@@ -35,7 +35,7 @@ def font_integrity():
         with name.open("rb") as f:head=f.read(64)
         if not head or head==bytes(len(head)):
             return "ZERO_FILLED:"+str(name)
-        if head[:4] not in (b"\\x00\\x01\\x00\\x00",b"OTTO",b"true",b"typ1"):
+        if head[:4] not in (b"\x00\x01\x00\x00",b"OTTO",b"true",b"typ1"):
             return "INVALID_FONT_HEADER:"+str(name)
     return "VALID"
 
