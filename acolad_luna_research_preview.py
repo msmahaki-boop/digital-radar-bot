@@ -530,6 +530,7 @@ SELECT_INSTRUCTION='''از میان فهرست مدارکِ امروز، یک ز
 قبل از انتخاب، نام publisher هر دو را جداگانه چک کن. انتخاب دو مقاله از دیجیاتو یا هر رسانه واحد، مردود است.
 دست‌کم یکی خبر ۲۱ روز اخیر باشه. اگر دو منبع مرتبط از دو ناشر مستقل موجود نیست، زاویه ضعیف و ساختگی نساز.
 گزارش یک کمپین تبلیغاتی، سند اثربخشی فروش آن برند نیست؛ صریحاً «کمپین برند» معرفی کن.
+اگر خبر شامل برآورد فروشنده اعتبار مثل اسنپ‌پی یا گزارش ذی‌نفع تجاری است، آمار را فقط با عبارت «به برآورد خود شرکت» نقل کن و از تأیید مستقل ادعا نکن. این گزارش را با یافته آزمایش مستقل پژوهشگران یکی ندان؛ «چه اتفاقی در بازار گزارش شده» در برابر «در آزمایش چه تغییر رفتاری دیده‌اند» دو ادعای جدا هستند.
 منبع HEADLINE_ONLY صرفاً دلالت بر وجود یک تیتر داره و برای ادعای آماری یا جزئیات کافی نیست.
 دو منبع قرار نیست ادعای یکسانی داشته باشند؛ پیوند موضوعی را فقط به‌صورت «تحلیل پیشنهادی» توضیح بده و هر منبع را در محدوده خودش بازگو کن. پژوهش در ترکیه، آمریکا یا بازار دیگر را به کل ایران تعمیم نده.
 هیچ عددی بدون حضور عین آن در متن کامل/چکیده مستند ننویس.
@@ -656,6 +657,10 @@ def editorial_theme_tags(source: dict) -> set[str]:
         consumer=any(x in t for x in ('consumer','purchas','shopping','shopper','retail','brand loyalty'))
         choice=any(x in t for x in ('price','loyal','switch','decision','affordab','budget','cost'))
         if consumer and choice:tags.add('consumer_price_decision')
+        # Payment visibility in a retail experiment can give a defensible
+        # contextual bridge to an Iranian buy-now-pay-later market report.
+        if 'payment' in t and any(w in t for w in ('option','checkout','retail','product','shopping')):
+            tags.add('payment_option_visibility')
     else:
         commerce_product=any(x in t for x in (
             'لاستیک','موتورسیکلت','خودرو','پوشاک','کالا','محصول','فروشگاه',
@@ -667,6 +672,10 @@ def editorial_theme_tags(source: dict) -> set[str]:
             'مجوز','اتحادیه','قانون','مقررات','مرجع صدور','بیمه','license'))
         if commerce_product and price and not regulatory:
             tags.add('consumer_price_decision')
+        if not regulatory and any(k in t for k in ('خرید اعتباری','اسنپ‌پی','پرداخت اقساطی',
+                'گزینه‌های پرداخت','روش پرداخت','الان بخر','بعداً پرداخت',
+                'bnpl','buy now pay later')):
+            tags.add('payment_option_visibility')
     return tags
 
 
@@ -698,10 +707,11 @@ def suggested_evidence_pairs(sources: list[dict], limit: int = 6) -> list[dict]:
     for n in news:
         for a in studies:
             if n.get('publisher')==a.get('publisher'):continue
-            if not editorial_theme_tags(n) & editorial_theme_tags(a):continue
+            overlap=editorial_theme_tags(n) & editorial_theme_tags(a)
+            if not overlap:continue
             pairs.append({'source_ids':[n['id'],a['id']],
                           'primary_news':n['id'],'contextual_research':a['id'],
-                          'shared_theme':'consumer_price_decision',
+                          'shared_theme':sorted(overlap)[0],
                           'warning':'Research is contextual, NOT evidence for the same Iranian product or market',
                           'relevance_score':n.get('rank',0)+a.get('rank',0)})
     pairs.sort(key=lambda x:x['relevance_score'],reverse=True)
