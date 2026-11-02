@@ -147,6 +147,56 @@ class LunaResearchTests(unittest.TestCase):
         self.assertEqual(e.repair_missing_bold(story),[])
         self.assertEqual(story['slides'][0]['text'],message)
 
+    def test_variable_length_storyboard_and_additive_background(self):
+        s={'id':'S01','title':'رفتار خرید و مشتری','excerpt':'خریدار به قیمت توجه دارد',
+           'date':'2026-11-02','evidence_depth':'full_article'}
+        a={'id':'S02','title':'رفتار قیمت','excerpt':'تصمیم و قیمت',
+           'date':'2026-11-02','evidence_depth':'abstract'}
+        frames=[]
+        for i in range(1,12):
+            scene=(i-1)//3+1
+            is_new=(i-1)%3==0
+            frames.append({'n':i,'scene_id':scene,
+                'visual_action':'new_scene' if is_new else 'add_text',
+                'text':'ولی مهدی هنوز نمی‌فهمه مشتری کجا مکث می‌کنه',
+                'source_ids':['S01'] if i%2 else ['S02'],
+                'visual_idea':'تصویر فروشگاه مهدی'})
+        story={'slides':frames,'interaction':{'type':'poll','options':['قیمت','اعتماد']}}
+        self.assertEqual(e.story_quality(story,[s,a]),[])
+        preview=e.storyboard_frames(story)
+        self.assertEqual(len(preview),11)
+        self.assertEqual(preview[1]['scene_id'],1)
+        self.assertEqual(preview[1]['display_text'].count('ولی مهدی'),2)
+        self.assertEqual(preview[3]['display_text'].count('ولی مهدی'),1)
+        self.assertEqual(preview[2]['visual_idea'],preview[0]['visual_idea'])
+
+    def test_add_text_without_same_scene_blocked(self):
+        sample={'slides':[{'n':1,'scene_id':1,'visual_action':'new_scene',
+                            'text':'یه ماجرای عجیب برای مشتری اتفاق افتاد','source_ids':['S01']},
+                           {'n':2,'scene_id':2,'visual_action':'add_text',
+                            'text':'ولی هنوز نمیدونه چرا','source_ids':['S02']}],
+                 'interaction':{'type':'poll','options':['الف','ب']}}
+        issues=e.story_quality(sample,[])
+        self.assertTrue(any('add_text must keep' in x for x in issues))
+
+    def test_bold_and_emoji_are_optional_on_individual_frames(self):
+        story={'slides':[{'n':1,'scene_id':1,'visual_action':'new_scene',
+                           'text':'مهدی تازه یه سایت ساخته و خوشحاله', 'source_ids':['S01']},
+                          {'n':2,'scene_id':1,'visual_action':'add_text',
+                           'text':'ولی سفارش زیادی نمیاد','source_ids':['S02']}],
+               'interaction':{'type':'question','question':'چرا؟','options':[]}}
+        sources=[{'id':'S01','title':'یک خبر','excerpt':'داستان','evidence_depth':'full_article'},
+                 {'id':'S02','title':'یک پژوهش','excerpt':'رفتار','evidence_depth':'abstract'}]
+        self.assertEqual(e.story_quality(story,sources),[])
+
+    def test_too_many_accumulated_words_fail_without_count_cap(self):
+        text=' '.join(['مشتری']*23)
+        story={'slides':[{'n':1,'scene_id':1,'visual_action':'new_scene','text':text,'source_ids':[]},
+                         {'n':2,'scene_id':1,'visual_action':'add_text','text':text,'source_ids':[]},
+                         {'n':3,'scene_id':1,'visual_action':'add_text','text':text,'source_ids':[]}],
+               'interaction':{'type':'poll','options':['الف','ب']}}
+        self.assertTrue(any('accumulated scene text' in x for x in e.story_quality(story,[])))
+
     def test_model_luna_only(self):
         self.assertEqual(e.MODEL,'gpt-6-luna')
         self.assertEqual(e.MAX_CALLS,4)
