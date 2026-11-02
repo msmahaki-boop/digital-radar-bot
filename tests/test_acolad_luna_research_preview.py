@@ -38,6 +38,25 @@ class LunaResearchTests(unittest.TestCase):
         plan={'source_ids':['S01','S99']}
         sources=[{'id':'S01','publisher':'one','date':e.now().date().isoformat(),'source_type':'rss_summary'}]
         self.assertTrue(any('invented' in x for x in e.validate_plan(plan,sources)))
+    def test_diverse_source_selection(self):
+        rows=[{'id':str(i),'publisher':'ناشر الف' if i<9 else ('ناشر ب' if i<12 else 'ناشر ج')}
+              for i in range(15)]
+        chosen=e.diversified_source_sample(rows,6,max_each=2)
+        self.assertEqual(len(chosen),6)
+        self.assertEqual({x['publisher'] for x in chosen},{'ناشر الف','ناشر ب','ناشر ج'})
+
+    def test_compact_research_prompt_keeps_all_19_sources(self):
+        rows=[{'id':'S'+str(i).zfill(2),'title':'داستان فروش آنلاین و مشتری '+str(i),
+               'date':'2026-11-02','publisher':'ناشر '+str(i%4),
+               'evidence_depth':'full_article','excerpt':'تحلیل رفتار خرید و هزینه '*100,
+               'institutions':[]} for i in range(1,20)]
+        packed=e.source_data_for_llm(rows)
+        import json
+        obj=json.loads(packed)
+        self.assertEqual(len(obj),19)
+        self.assertEqual(obj[-1]['id'],'S19')
+        self.assertLessEqual(len(packed),19000)
+
     def test_cross_publisher_requirement(self):
         today=e.now().date().isoformat()
         records=[
