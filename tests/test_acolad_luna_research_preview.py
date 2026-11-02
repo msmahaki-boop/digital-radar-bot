@@ -215,7 +215,17 @@ class LunaResearchTests(unittest.TestCase):
 
     def test_cinema_complete_story(self):
         beats=['hook','setup','conflict','evidence','discovery','action','payoff','cta']
-        frames=[{'n':i+1,'beat':beat,'text':'مهدی فهمید باید مراحل خرید رو تست کنه!'}
+        words=[
+            'فرض کن مهدی یه سایت فروشگاه داره',
+            'یه روز به آمار سایتش نگاه می‌کنه',
+            'بازدید هست ولی خیلی‌ها خرید رو کامل نمی‌کنن',
+            'یه مطالعه واقعی درباره نمایش گزینه پرداخت خونده',
+            'پس شاید واضح بودن گزینه‌ها هم مهم باشه',
+            'روش پرداخت رو زودتر کنار قیمت نشون می‌ده',
+            'حالا دو نسخه رو با نرخ خرید واقعی مقایسه می‌کنه',
+            'آکولاد می‌تونه همین آزمایش رو طراحی و بررسی کنه',
+        ]
+        frames=[{'n':i+1,'beat':beat,'text':words[i]}
                 for i,beat in enumerate(beats)]
         story={'slides':frames,'resolution':{
             'central_question':'چرا مشتری سبدش رو رها می‌کنه؟',
