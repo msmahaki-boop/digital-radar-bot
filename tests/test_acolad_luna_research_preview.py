@@ -245,6 +245,36 @@ class LunaResearchTests(unittest.TestCase):
         self.assertNotIn('plan: no shared concrete topic across selected articles',
                          e.validate_plan({'source_ids':['S01','S05']},[news,academic]))
 
+    def test_cinema_flags_filler_transition(self):
+        frames=[{'n':1,'beat':'hook','text':'فرض کن مهدی به یک مانع واقعی برخورد کرده'},
+                {'n':2,'beat':'conflict','text':'اما مشتری خرید را نیمه کاره رها می‌کند'},
+                {'n':3,'beat':'evidence','text':'حالا چی؟'},
+                {'n':4,'beat':'action','text':'روش پرداخت را نشان بده'},
+                {'n':5,'beat':'payoff','text':'دو نسخه را با شاخص نهایی بسنج'}]
+        s={'slides':frames,'resolution':{'central_question':'مانع خرید کجاست؟',
+           'answer':'نمایش انتخاب‌ها ممکن است کمک کند',
+           'action':'آزمایش دو نسخه صفحه و سود سفارش',
+           'payoff_frame':5}}
+        self.assertTrue(any('filler transition' in x for x in e.cinematic_quality(s,[])))
+
+    def test_cinema_flags_repeated_text(self):
+        beats=['hook','conflict','evidence','action','payoff']
+        lines=['فرض کن مهدی سایت فروشگاه داره','مشتری به صفحه محصول می‌رسه',
+               'مشتری به صفحه محصول می‌رسه','تغییر مشخص می‌ده','اثر رو می‌سنجه']
+        f=[{'beat':b,'text':x} for b,x in zip(beats,lines)]
+        s={'slides':f,'resolution':{'central_question':'چرا مشتری خرید نمی‌کند؟',
+           'answer':'نامعلوم ولی فرضیه مشخصی داریم','action':'تست نمایش انتخاب‌های پرداخت',
+           'payoff_frame':5}}
+        self.assertTrue(any('repeats frame' in x for x in e.cinematic_quality(s,[])))
+
+    def test_cinema_flags_order_inversion(self):
+        beats=['hook','conflict','action','evidence','payoff']
+        f=[{'beat':b,'text':'فریم شماره '+str(i)} for i,b in enumerate(beats)]
+        s={'slides':f,'resolution':{'central_question':'چرا خرید سخت شده؟',
+           'answer':'داده‌ها راه‌حل قطعی نشان نمی‌دهند','action':'یک تغییر مشخص را آزمایش کن',
+           'payoff_frame':5}}
+        self.assertIn('cinema: action jumps ahead of evidence',e.cinematic_quality(s,[]))
+
     def test_model_luna_only(self):
         self.assertEqual(e.MODEL,'gpt-6-luna')
         self.assertEqual(e.MAX_CALLS,4)
