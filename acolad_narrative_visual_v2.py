@@ -24,12 +24,30 @@ TEXT_BOTTOM=1470
 TEXT_X=966
 MAX_WIDTH=855
 
+def font_integrity():
+    """Fail closed on the repository's current zero-filled placeholder fonts.
+
+    Never silently replace the actual Acolad brand font in production.
+    """
+    names=(REG,MEDIUM,BOLD)
+    for name in names:
+        if not name.is_file():return "MISSING:"+str(name)
+        with name.open("rb") as f:head=f.read(64)
+        if not head or head==bytes(len(head)):
+            return "ZERO_FILLED:"+str(name)
+        if head[:4] not in (b"\\x00\\x01\\x00\\x00",b"OTTO",b"true",b"typ1"):
+            return "INVALID_FONT_HEADER:"+str(name)
+    return "VALID"
+
 def check_assets():
-    for p in (BASE,REG,MEDIUM,BOLD):
-        if not p.is_file():raise FileNotFoundError(f"Required brand asset missing: {p}")
+    if not BASE.is_file():raise FileNotFoundError("Missing Acolad brand background "+str(BASE))
+    result=font_integrity()
+    if result!="VALID":
+        raise RuntimeError("IRANSANS_ASSETS_NOT_READY: "+result+
+                           ". Upload original licensed IRANSans TTFs to assets/fonts/ before production rendering.")
     if not features.check("raqm"):raise RuntimeError("Missing RTL RAQM text layout support")
-    image=Image.open(BASE)
-    if image.size!=(1080,1920):raise ValueError("Incorrect Acolad background dimensions")
+    with Image.open(BASE) as image:
+        if image.size!=(1080,1920):raise ValueError("Incorrect Acolad background dimensions")
 
 def font_set(size):
     return (ImageFont.truetype(str(REG),size,layout_engine=ImageFont.Layout.RAQM),
