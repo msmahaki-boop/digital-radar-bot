@@ -2,9 +2,6 @@ name: Acolad Narrative Visual + Stock + NovinHub READ ONLY PREVIEW
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - 'ops/acolad-visual-preview-20261102.trigger'
 
 permissions:
   contents: read
