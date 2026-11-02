@@ -10,14 +10,34 @@ STORY_PATH=Path("examples/acolad_narrative_v2_fixed_demo.json")
 class FrozenSceneTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        v.check_assets()
+        cls.original=(v.REG,v.MEDIUM,v.BOLD)
+        cls.font_issue=v.font_integrity()
         cls.story=json.loads(STORY_PATH.read_text(encoding="utf8"))
+        # TEST ONLY: substitute system fonts to validate frozen geometry while
+        # real brand files contain zero bytes. Production never substitutes.
+        cls.test_font=Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")
+        cls.test_bold=Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf")
+        if not cls.test_font.is_file():raise unittest.SkipTest("test-only font missing")
+        v.REG=cls.test_font
+        v.MEDIUM=cls.test_font
+        v.BOLD=cls.test_bold
 
-    def test_repository_iransans_files_are_used(self):
-        self.assertEqual(v.REG.as_posix(),"assets/fonts/IRANSans-Regular.ttf")
-        self.assertEqual(v.BOLD.as_posix(),"assets/fonts/IRANSans-Bold.ttf")
-        self.assertTrue(v.REG.is_file())
-        self.assertTrue(v.BOLD.is_file())
+    @classmethod
+    def tearDownClass(cls):
+        v.REG,v.MEDIUM,v.BOLD=cls.original
+
+    def test_brand_fonts_are_corrupt_and_release_must_block(self):
+        self.assertTrue(self.original[0].as_posix().endswith("assets/fonts/IRANSans-Regular.ttf"))
+        self.assertTrue(self.original[2].as_posix().endswith("assets/fonts/IRANSans-Bold.ttf"))
+        self.assertTrue(self.font_issue.startswith("ZERO_FILLED"),self.font_issue)
+        v.REG,v.MEDIUM,v.BOLD=self.original
+        try:
+            with self.assertRaisesRegex(RuntimeError,"IRANSANS_ASSETS_NOT_READY"):
+                v.check_assets()
+        finally:
+            v.REG=self.test_font
+            v.MEDIUM=self.test_font
+            v.BOLD=self.test_bold
 
     def test_scene_order_and_frozen_preset(self):
         groups=v.scene_chunks(self.story)
