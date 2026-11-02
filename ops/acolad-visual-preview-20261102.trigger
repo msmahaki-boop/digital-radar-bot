@@ -1,2 +1,3 @@
 One-time preview: real Acolad logo base, RTL bold/highlight, licensed stock search, NovinHub GET account only. NO drafting, NO sending, NO social publish.
 Second preview: approved 15-frame editorial fixture, CC0 photo verification, read-only NovinHub. No upload/draft/queue/post.
+Third free preview: explicit verified Wikimedia Commons CC0 storefront photo fallback, same 15-frame story; read-only NovinHub.
