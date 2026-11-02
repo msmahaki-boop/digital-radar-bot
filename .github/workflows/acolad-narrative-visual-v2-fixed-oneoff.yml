@@ -1,0 +1,42 @@
+name: Acolad IRANSans PIXEL-LOCKED Story V2 FREE PREVIEW
+
+on:
+  push:
+    paths:
+      - 'ops/acolad-narrative-visual-v2-fixed-oneoff.trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render-test:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install text and color emoji rendering dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-color-emoji libharfbuzz0b libfribidi0 >/dev/null
+          python -m pip install --disable-pip-version-check requests==2.32.5 Pillow==11.3.0
+      - name: Tests must verify genuinely pixel-identical old text
+        run: python -m unittest discover -s tests -p 'test_acolad_narrative_visual_v2.py' -v
+      - name: Real 1080x1920 Acolad IRANSans pixel-frozen preview
+        run: |
+          python acolad_narrative_visual_v2.py \
+            --story-json examples/acolad_narrative_v2_fixed_demo.json \
+            --stock off \
+            --output acolad_narrative_visual_v2_output
+      - name: Upload actual images, proof and metadata
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-iransans-frozen-text-v2-images
+          path: acolad_narrative_visual_v2_output/
+          if-no-files-found: warn
+          retention-days: 14
