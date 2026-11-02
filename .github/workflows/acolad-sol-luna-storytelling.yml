@@ -1,0 +1,59 @@
+name: Acolad Sol vs Luna Storytelling (manual, isolated, paid API)
+
+on:
+  workflow_dispatch:
+    inputs:
+      budget_usd:
+        description: 'Estimated planning budget, USD (default 0.06 = 15000 toman); NOT provider billing cap'
+        type: choice
+        required: true
+        default: '0.06'
+        options:
+          - '0.06'
+      approval:
+        description: 'Live test: I_APPROVE_SOL_LUNA_PAID_TEST'
+        type: string
+        required: true
+      gift_confirmation:
+        description: 'Only if GAPGPT_API_KEY uses limited gift credit: I_CONFIRMED_LIMITED_GIFT_KEY'
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: acolad-sol-luna-storytelling-independent
+  cancel-in-progress: false
+
+jobs:
+  two-model-storytelling:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compare only Sol and Luna - no publishing
+        env:
+          GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
+          PLANNED_BUDGET: ${{ inputs.budget_usd }}
+          APPROVAL: ${{ inputs.approval }}
+          GIFT: ${{ inputs.gift_confirmation }}
+        run: |
+          python -u acolad_sol_luna_storytelling_lab.py \
+            --mode compare \
+            --budget-usd "$PLANNED_BUDGET" \
+            --approval "$APPROVAL" \
+            --gift-confirmation "$GIFT"
+      - name: Upload blind review and cost even after failed providers
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-sol-luna-storytelling-results
+          path: acolad_sol_luna_storytelling_results/
+          if-no-files-found: warn
+          retention-days: 14
