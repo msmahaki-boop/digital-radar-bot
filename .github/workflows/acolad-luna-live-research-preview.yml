@@ -20,7 +20,7 @@ on:
         default: '0.02'
         required: true
       approval:
-        description: 'To permit 1-3 potentially paid Luna calls: I_APPROVE_LUNA_RESEARCH_PAID_PREVIEW'
+        description: 'To permit 1-4 potentially paid Luna calls (only one corrective replan allowed): I_APPROVE_LUNA_RESEARCH_PAID_PREVIEW'
         type: string
         required: true
       gift_confirmation:
