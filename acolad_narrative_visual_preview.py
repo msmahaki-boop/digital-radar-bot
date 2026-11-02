@@ -61,12 +61,30 @@ def split_markup(src):
             if tok:words.append((tok,bold))
     return words
 
+def is_emoji_token(value):
+    return bool(value) and (any(ord(c)>=0x1F300 for c in value)
+                            or any(ord(c) in (0x2728,0x2764) for c in value))
+
+def make_emoji(value,size):
+    # The Noto color emoji font has a fixed 109-px strike. Downsample safely.
+    emoji_path="/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf"
+    if not Path(emoji_path).is_file():
+        return None
+    f=ImageFont.truetype(emoji_path,109)
+    b=f.getbbox(value)
+    if not b:return None
+    layer=Image.new("RGBA",(max(1,b[2]-b[0]+6),max(1,b[3]-b[1]+6)),(0,0,0,0))
+    ImageDraw.Draw(layer).text((3-b[0],3-b[1]),value,font=f,embedded_color=True)
+    target=round(size*1.26)
+    return ImageOps.contain(layer,(target,target),method=Image.Resampling.LANCZOS)
+
 def wrap(words,draw,regular,bold,maxw):
     rows=[];line=[];used=0
     for word,em in words:
         f=bold if em else regular
         segment=word+" "
-        width=draw.textlength(segment,font=f,direction="rtl",language="fa")
+        width=(round(regular.size*1.35) if is_emoji_token(word)
+               else draw.textlength(segment,font=f,direction="rtl",language="fa"))
         if used+width>maxw and line:
             rows.append(line);line=[];used=0
         if width>maxw:raise ValueError("One word is too long to render")
@@ -81,7 +99,7 @@ def render_text(im,text,photo=False):
     top,bottom=(990,1465) if photo else (455,1440)
     canvas=ImageDraw.Draw(im)
     best=None
-    for size in (64,60,56,52,48,44,40,36):
+    for size in (80,76,72,68,64,60,56,52,48,44,40,36):
         reg=ImageFont.truetype(font_path(),size,layout_engine=ImageFont.Layout.RAQM)
         heavy=ImageFont.truetype(font_path("bold"),size,layout_engine=ImageFont.Layout.RAQM)
         lines=wrap(words,canvas,reg,heavy,850)
@@ -95,6 +113,15 @@ def render_text(im,text,photo=False):
         x=955
         for token,em in row:
             f=heavy if em else reg
+            if is_emoji_token(token):
+                emoji=make_emoji(token,size)
+                if emoji is None:
+                    raise RuntimeError("Emoji font missing; do not render tofu boxes")
+                width=round(size*1.35)
+                im.alpha_composite(emoji,(int(x-width),int(y+size*.1)))
+                canvas=ImageDraw.Draw(im)
+                x-=width
+                continue
             width=canvas.textlength(token+" ",font=f,direction="rtl",language="fa")
             tokenw=canvas.textlength(token,font=f,direction="rtl",language="fa")
             if em:
