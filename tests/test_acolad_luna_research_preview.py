@@ -197,6 +197,39 @@ class LunaResearchTests(unittest.TestCase):
                'interaction':{'type':'poll','options':['الف','ب']}}
         self.assertTrue(any('accumulated scene text' in x for x in e.story_quality(story,[])))
 
+    def test_study_design_survey_vs_experiment(self):
+        experimental={'source_type':'academic_doi','evidence_depth':'abstract',
+                       'excerpt':'Randomized experiments compared shoppers across conditions.'}
+        survey={'source_type':'academic_doi','evidence_depth':'abstract',
+                'excerpt':'188 shoppers answered a survey with Likert questionnaires.'}
+        self.assertEqual(e.study_design_hint(experimental),'EXPERIMENT_METHOD_IN_ABSTRACT')
+        self.assertEqual(e.study_design_hint(survey),'OBSERVATIONAL_SURVEY')
+
+    def test_cinema_filler_and_open_ending_blocked(self):
+        frames=[{'n':i,'beat':None,'text':'مهدی یه سایت درست کرد.'} for i in range(1,28)]
+        frames[-1]['text']='اما مهدی هنوز نمی‌دونه چرا خرید نمی‌کنن'
+        issues=e.cinematic_quality({'slides':frames},[])
+        self.assertTrue(any('missing story beat' in x for x in issues))
+        self.assertTrue(any('ending reopens' in x for x in issues))
+        self.assertTrue(any('resolution missing' in x for x in issues))
+
+    def test_cinema_complete_story(self):
+        beats=['hook','setup','conflict','evidence','discovery','action','payoff','cta']
+        frames=[{'n':i+1,'beat':beat,'text':'مهدی فهمید باید مراحل خرید رو تست کنه!'}
+                for i,beat in enumerate(beats)]
+        story={'slides':frames,'resolution':{
+            'central_question':'چرا مشتری سبدش رو رها می‌کنه؟',
+            'answer':'دلیل قطعی روشن نیست ولی قیمت می‌تونه مانع باشه',
+            'action':'قیمت کل و گزینه‌ها رو زودتر نشون بده و نرخ خرید رو بسنج',
+            'payoff_frame':7}}
+        self.assertEqual(e.cinematic_quality(story,[]),[])
+
+    def test_no_fake_neuromarketing(self):
+        story={'slides':[{'beat':'hook','text':'آزمایش نورومارکتینگ: مغز درد می‌کشه!'}]}
+        refs=[{'source_type':'academic_doi','evidence_depth':'abstract',
+               'excerpt':'Survey 188 respondents using questionnaires'}]
+        self.assertTrue(any('unverified experiment' in x for x in e.cinematic_quality(story,refs)))
+
     def test_model_luna_only(self):
         self.assertEqual(e.MODEL,'gpt-6-luna')
         self.assertEqual(e.MAX_CALLS,4)
