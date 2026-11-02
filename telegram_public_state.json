@@ -175,6 +175,16 @@
       "message_id": 41,
       "reserved_utc": "2026-11-01T21:23:27.477306+00:00",
       "sent_utc": "2026-11-01T21:23:30.131370+00:00"
+    },
+    {
+      "slot": "2026-11-02-03",
+      "url": "https://martech.org/more-paid-social-ads-wont-fix-a-creative-problem",
+      "topic": "best_of_day",
+      "original_title": "More paid social ads won’t fix a creative problem",
+      "score": 85,
+      "status": "reserved",
+      "message_id": null,
+      "reserved_utc": "2026-11-02T00:24:56.974063+00:00"
     }
   ]
 }
