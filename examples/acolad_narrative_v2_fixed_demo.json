@@ -1,0 +1,147 @@
+{
+  "topic": "فروشگاه مهدی و گزینه پرداختی که دیده نمی‌شد",
+  "publication_permission": "NONE_PREVIEW_ONLY",
+  "is_fictional_character": true,
+  "sources": [
+    {
+      "id": "R1",
+      "type": "peer_reviewed_research",
+      "title": "When payment options stand out: Payment option salience on the product page increases purchase likelihood",
+      "doi": "10.1016/j.jretai.2026.01.005",
+      "evidence_limit": "مقایسه نمایش گزینه پرداخت در صفحه محصول؛ اندازه‌گیری افزودن به سبد، نه الزاماً خرید نهایی. مقدار حدود ۳۸٪ برای تفاوت مشخص گزارش شده؛ بررسی مجدد پیش از انتشار الزامی است"
+    }
+  ],
+  "slides": [
+    {
+      "n": 1,
+      "scene_id": 1,
+      "visual_action": "new_scene",
+      "beat": "hook",
+      "text": "فرض کن مهدی یه فروشگاه اینترنتی **خوشگل و درست‌حسابی** داره",
+      "source_ids": [],
+      "visual_idea": "صفحه فروشگاه اینترنتی"
+    },
+    {
+      "n": 2,
+      "scene_id": 1,
+      "visual_action": "add_text",
+      "beat": "conflict",
+      "text": "ولی هر شب یه چیز کلافه‌ش می‌کنه\nبازدید هست، **سبد خرید تقریباً خالیه**",
+      "source_ids": [],
+      "visual_idea": "همان داشبورد فروشگاه"
+    },
+    {
+      "n": 3,
+      "scene_id": 2,
+      "visual_action": "new_scene",
+      "beat": "setup",
+      "text": "اولین فکری که می‌کنه چیه؟\n**تخفیف بیشتر**",
+      "source_ids": [],
+      "visual_idea": "صفحه محصول و قیمت"
+    },
+    {
+      "n": 4,
+      "scene_id": 2,
+      "visual_action": "add_text",
+      "beat": "discovery",
+      "text": "اما وقتی خودش وارد سایت می‌شه، می‌بینه **روش‌های پرداخت** پشت یه منوی بسته قایم شدن",
+      "source_ids": [],
+      "visual_idea": "همان صفحه و منوی پرداخت"
+    },
+    {
+      "n": 5,
+      "scene_id": 3,
+      "visual_action": "new_scene",
+      "beat": "evidence",
+      "text": "جالبه که یه تحقیق در سال **۲۰۲۶** دقیقاً همین موضوع رو توی فروشگاه آنلاین بررسی کرده",
+      "source_ids": [
+        "R1"
+      ],
+      "visual_idea": "مرجع پژوهشی و فروشگاه اینترنتی"
+    },
+    {
+      "n": 6,
+      "scene_id": 3,
+      "visual_action": "add_text",
+      "beat": "experiment",
+      "text": "بازدیدکننده‌ها تصادفی **چهار جور صفحه محصول** دیدن\nفرقشون؟ روش نمایش گزینه پرداخت",
+      "source_ids": [
+        "R1"
+      ],
+      "visual_idea": "همان نما و چهار حالت"
+    },
+    {
+      "n": 7,
+      "scene_id": 4,
+      "visual_action": "new_scene",
+      "beat": "discovery",
+      "text": "وقتی لوگوی روش‌های پرداخت واضح جلوی چشم بود، حدود **۳۸٪** بیشتر کالا به سبد اضافه شد",
+      "source_ids": [
+        "R1"
+      ],
+      "visual_idea": "نمودار افزودن به سبد"
+    },
+    {
+      "n": 8,
+      "scene_id": 4,
+      "visual_action": "add_text",
+      "beat": "evidence",
+      "text": "ولی حواست باشه\n**این عدد فروش نهایی نیست** و به معنی نتیجه قطعی برای ایران هم نیست",
+      "source_ids": [
+        "R1"
+      ],
+      "visual_idea": "همان نتیجه پژوهش"
+    },
+    {
+      "n": 9,
+      "scene_id": 5,
+      "visual_action": "new_scene",
+      "beat": "action",
+      "text": "حالا مهدی یه فرضیه بهتر از «بیشتر تخفیف بده» داره",
+      "source_ids": [],
+      "visual_idea": "بازطراحی صفحه محصول"
+    },
+    {
+      "n": 10,
+      "scene_id": 5,
+      "visual_action": "add_text",
+      "beat": "action",
+      "text": "می‌خواد گزینه‌های پرداختِ واقعی رو **کنار قیمت و واضح** نشون بده",
+      "source_ids": [],
+      "visual_idea": "همان صفحه محصول"
+    },
+    {
+      "n": 11,
+      "scene_id": 6,
+      "visual_action": "new_scene",
+      "beat": "payoff",
+      "text": "بعد دوتا نسخه رو تست کنه\nو ببینه **سبد، خرید نهایی و سود** واقعاً تغییر می‌کنن یا نه",
+      "source_ids": [],
+      "visual_idea": "دو نسخه صفحه و آمار خرید"
+    },
+    {
+      "n": 12,
+      "scene_id": 6,
+      "visual_action": "add_text",
+      "beat": "cta",
+      "text": "آکولاد اینجاست که کمک کنه\n**به‌جای حدس، با آزمایش تصمیم بگیریم** ✨",
+      "source_ids": [],
+      "visual_idea": "همان صفحه مقایسه"
+    }
+  ],
+  "resolution": {
+    "central_question": "چرا بعضی بازدیدکننده‌ها وارد صفحه محصول می‌شوند ولی کالا را به سبد اضافه نمی‌کنند؟",
+    "answer": "نمایش نامشخص گزینه‌های پرداخت یک فرضیه قابل‌آزمایش است، نه علت اثبات‌شده فروشگاه فرضی مهدی",
+    "action": "شفاف‌سازی گزینه‌های پرداخت موجود و مقایسه دو نسخه با سنجش افزودن به سبد، خرید نهایی و سود",
+    "payoff_frame": 11
+  },
+  "interaction": {
+    "type": "poll",
+    "question": "تو موقع خرید کجا گیر می‌کنی؟",
+    "options": [
+      "قیمت نهایی",
+      "روش پرداخت"
+    ]
+  },
+  "editorial_caveat": "فقط پیش‌نمایش؛ مثال مهدی فرضی است. صحت پژوهش و عدد باید قبل از Draft بازبینی شود. استیکر به‌صورت خودکار ساخته نمی‌شود."
+}
