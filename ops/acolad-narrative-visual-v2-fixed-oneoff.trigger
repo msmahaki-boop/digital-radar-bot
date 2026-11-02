@@ -1,1 +1,2 @@
 FREE pixel lock typography tests V2. NO SECRET. NO PUBLISH. NO NOVINHUB WRITE.
+Second free diagnostic run: font assets confirmed zero-filled, test layout using temporary system fonts only, prevent release. NO NOVINHUB WRITES.
