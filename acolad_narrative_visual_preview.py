@@ -186,6 +186,20 @@ def select_stock(query,session=requests,limit=9):
                     break
         except (requests.RequestException,ValueError,KeyError):
             pass
+    # Last-resort editorial CC0 photograph. Source and CC0 status were
+    # manually checked on its Wikimedia Commons page on 2026-11-02.
+    # Only eligible for online-shopping stories, never generic news.
+    # Download must still succeed with verified image format/dimensions.
+    if not result["chosen"] and query=="online shopping":
+        result["chosen"]={
+          "title":"File:Online store on a screen (Unsplash).jpg",
+          "source":"https://commons.wikimedia.org/wiki/File:Online_store_on_a_screen_(Unsplash).jpg",
+          "url":"https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Online_store_on_a_screen_%28Unsplash%29.jpg/1280px-Online_store_on_a_screen_%28Unsplash%29.jpg",
+          "license":"CC0 1.0 (verified on Commons file page)",
+          "attribution":"Jens Kreuter (2016), CC0 1.0",
+          "width":1280,"height":720
+        }
+        result["status"]="CC0_VERIFIED_EDITORIAL_FALLBACK"
     return result
 
 def download_stock(candidate,session=requests):
