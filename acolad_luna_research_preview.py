@@ -516,7 +516,7 @@ JSON: {"angle":"...","source_ids":["S01","S02"],"why_now":"...","story_tension":
 "limits":["محدودیت شواهد"]}'''
 
 WRITE_INSTRUCTION='''پنج اسلاید یک قصه زنجیره‌ای برای استوری اینستاگرام آکولاد بساز. مخاطب صاحب کسب‌وکار ایرانی است.
-۱) اسلاید اول یک قلاب غافلگیرکننده با صحنه ملموس و یک سؤال بی‌پاسخ؛ نه وعده توخالی.
+۱) اسلاید اول یک قلاب غافلگیرکننده با صحنه ملموس و یک سؤال بی‌پاسخ؛ نه وعده توخالی. اگر صحنه ساختگی است، حتماً همان اسلاید اول صریحاً بگو «فرض کن» یا «مثال فرضی»؛ آن را به‌صورت اتفاق واقعی جا نزن.
 ۲) اسلاید دوم داده/خبر واقعی (با ذکر کشور، دوره و جامعه هدف در صورت لزوم).
 ۳) اسلاید سوم یک تحقیق دانشگاهی مرتبط را با ذکر جامعه و موضوع واقعی‌اش توضیح بده؛ اگر تحقیق دقیقاً در بازار یا کشور خبر انجام نشده، این تفاوت را صریح بگو و فقط نتیجه تحلیلی محتاطانه بگیر.
 ۴) اسلاید چهارم یک موقعیت فرضیِ ایرانی، صریحاً با عبارت «فرض کن» یا «مثال فرضی».
@@ -671,6 +671,28 @@ def normalize_digits(s: str) -> str:
 
 def numeric_tokens(s: str) -> set[str]:
     return set(re.findall(r'(?<!\w)\d+(?:[.,]\d+)?%?',normalize_digits(s)))
+
+
+def repair_missing_bold(story: dict) -> list[str]:
+    """Presentation-only repair: insert Markdown emphasis around existing words.
+
+    Never changes the underlying wording, numbers, claims, sources, or story
+    structure. The human-review gate remains required before any publishing.
+    """
+    notes=[]
+    slides=story.get('slides') if isinstance(story,dict) else None
+    if not isinstance(slides,list):return notes
+    for i,slide in enumerate(slides,1):
+        if not isinstance(slide,dict):continue
+        t=slide.get('text')
+        if not isinstance(t,str) or t.count('**')>=2:continue
+        found=list(re.finditer(r'[\u0600-\u06FF\u200c]+',t))
+        if len(found)<2:continue
+        begin=found[0].start()
+        end=found[min(3,len(found))-1].end()
+        slide['text']=t[:begin]+'**'+t[begin:end]+'**'+t[end:]
+        notes.append(f'Slide {i}: presentation emphasis repaired without changing words')
+    return notes
 
 
 def story_quality(story: dict, selected: list[dict]) -> list[str]:
@@ -851,6 +873,10 @@ def main(argv=None):
             if len(revised_issues)<=len(issues):story,issues=revised,revised_issues
         except RuntimeError as ex:
             diag.append('Editorial polishing skipped: '+str(ex)[:100])
+        # Cosmetic markdown fixes must not block an otherwise source-grounded
+        # draft. Re-check all substantive rules after the text-only repair.
+        diag.extend(repair_missing_bold(story))
+        issues=story_quality(story,chosen)
         status='PREVIEW_NEEDS_HUMAN_REVIEW' if not issues else 'QA_BLOCKED_HUMAN_REVIEW_REQUIRED'
     except (RuntimeError,ValueError,KeyError,TypeError) as ex:
         issues.append('Pipeline interrupted: '+str(ex)[:160])
