@@ -1,0 +1,184 @@
+{
+  "topic": "انتخاب‌هایی که مشتری در صفحه محصول نمی‌بیند",
+  "is_fictional_character": true,
+  "visual_review_only": true,
+  "slides": [
+    {
+      "n": 1,
+      "scene_id": 1,
+      "visual_action": "new_scene",
+      "beat": "hook",
+      "text": "فرض کن مهدی یه فروشگاه اینترنتی لوازم خونه داره\nاما یه عدد توی پنلش نمی‌ذاره بخوابه",
+      "source_ids": [],
+      "visual_idea": "صفحه سایت و آمار فروشگاه"
+    },
+    {
+      "n": 2,
+      "scene_id": 1,
+      "visual_action": "add_text",
+      "beat": "conflict",
+      "text": "آدم‌ها صفحه محصول رو می‌بینن\nولی روی **افزودن به سبد** خیلی کم کلیک می‌کنن",
+      "source_ids": [],
+      "visual_idea": "همان صفحه سایت و آمار"
+    },
+    {
+      "n": 3,
+      "scene_id": 2,
+      "visual_action": "new_scene",
+      "beat": "setup",
+      "text": "مهدی اول می‌خواد یه تخفیف تازه بذاره",
+      "source_ids": [],
+      "visual_idea": "صفحه محصول موبایل"
+    },
+    {
+      "n": 4,
+      "scene_id": 2,
+      "visual_action": "add_text",
+      "beat": "discovery",
+      "text": "تا اینکه خودش مسیر خرید رو می‌ره\nیه امکان مهم ته صفحه قایم شده: **روش‌های پرداخت**",
+      "source_ids": [],
+      "visual_idea": "همان صفحه محصول موبایل"
+    },
+    {
+      "n": 5,
+      "scene_id": 3,
+      "visual_action": "new_scene",
+      "beat": "evidence",
+      "text": "توی ایران هم یه سرنخ هست\nاسنپ‌پی از **۴٬۱۱۹ کاربر خودش** نظرسنجی کرده",
+      "source_ids": [
+        "S01"
+      ],
+      "visual_idea": "پژوهش در مورد خرید اعتباری"
+    },
+    {
+      "n": 6,
+      "scene_id": 3,
+      "visual_action": "add_text",
+      "beat": "evidence",
+      "text": "**۳۴٪** گفتن اگه درگاه اسنپ‌پی نباشه، خریدشون رو عقب می‌ندازن",
+      "source_ids": [
+        "S01"
+      ],
+      "visual_idea": "همان پژوهش خرید اعتباری"
+    },
+    {
+      "n": 7,
+      "scene_id": 4,
+      "visual_action": "new_scene",
+      "beat": "evidence",
+      "text": "یه پژوهش در سال ۲۰۲۶، دیده‌شدنِ روش پرداخت رو توی **سایت واقعی لباس** آزمایش کرد",
+      "source_ids": [
+        "S02"
+      ],
+      "visual_idea": "طرح آزمایش پرداخت در فروشگاه اینترنتی"
+    },
+    {
+      "n": 8,
+      "scene_id": 4,
+      "visual_action": "add_text",
+      "beat": "experiment",
+      "text": "بازدیدکننده‌ها تصادفی یکی از **چهار نسخه** صفحه محصول رو دیدن",
+      "source_ids": [
+        "S02"
+      ],
+      "visual_idea": "همان طرح آزمایش"
+    },
+    {
+      "n": 9,
+      "scene_id": 4,
+      "visual_action": "add_text",
+      "beat": "experiment",
+      "text": "تفاوت؟ لوگو یا نوشته\n**جلوی چشم یا پشت یه منوی بسته**",
+      "source_ids": [
+        "S02"
+      ],
+      "visual_idea": "همان طرح آزمایش"
+    },
+    {
+      "n": 10,
+      "scene_id": 5,
+      "visual_action": "new_scene",
+      "beat": "discovery",
+      "text": "وقتی لوگوهای پرداخت واضح دیده می‌شدن\nحدود **۳۸٪** بیشتر کالا به سبد اضافه شد 👀",
+      "source_ids": [
+        "S02"
+      ],
+      "visual_idea": "نمایش نتایج پژوهش"
+    },
+    {
+      "n": 11,
+      "scene_id": 5,
+      "visual_action": "add_text",
+      "beat": "evidence",
+      "text": "ولی این عدد درباره **سبد خرید**ه\nنه فروش نهایی",
+      "source_ids": [
+        "S02"
+      ],
+      "visual_idea": "همان نتایج پژوهش"
+    },
+    {
+      "n": 12,
+      "scene_id": 6,
+      "visual_action": "new_scene",
+      "beat": "action",
+      "text": "مهدی برمی‌گرده به سایتش\nاین بار به‌جای تخفیف، یه چیز رو تغییر می‌ده",
+      "source_ids": [],
+      "visual_idea": "صفحه سایت و تصمیم مهدی"
+    },
+    {
+      "n": 13,
+      "scene_id": 6,
+      "visual_action": "add_text",
+      "beat": "action",
+      "text": "روش‌های پرداختِ موجود رو کنار قیمت، **واضح و ساده** نشون می‌ده",
+      "source_ids": [],
+      "visual_idea": "همان صفحه سایت"
+    },
+    {
+      "n": 14,
+      "scene_id": 7,
+      "visual_action": "new_scene",
+      "beat": "payoff",
+      "text": "بعد دو نسخه صفحه رو تست می‌کنه\nو سه چیز رو می‌سنجه: **سبد، خرید نهایی و سود**",
+      "source_ids": [],
+      "visual_idea": "تحلیل داده های فروش و تست"
+    },
+    {
+      "n": 15,
+      "scene_id": 7,
+      "visual_action": "add_text",
+      "beat": "cta",
+      "text": "دیگه قرار نیست از روی حدس تصمیم بگیره\nما تو آکولاد از **همین تغییرهای قابل‌سنجش** شروع می‌کنیم ✨",
+      "source_ids": [],
+      "visual_idea": "همان صفحه تحلیل"
+    }
+  ],
+  "editorial_caveat": "پیش‌نمایش گرافیکی بر پایه نمونه دستی V4؛ پیش از ساخت پیش‌نویس نوین‌هاب، صحت اعداد و اصالت منابع دوباره بازبینی شود. هر نتیجه پژوهش فقط مربوط به افزودن به سبد است، نه فروش نهایی.",
+  "sources": [
+    {
+      "id": "S01",
+      "title": "گزارش نظرسنجی کاربران اسنپ‌پی",
+      "status": "NEEDS_PRE_PUBLISH_RECHECK"
+    },
+    {
+      "id": "S02",
+      "title": "When payment options stand out — Journal of Retailing",
+      "doi": "10.1016/j.jretai.2026.01.005",
+      "status": "NEEDS_PRE_PUBLISH_RECHECK"
+    }
+  ],
+  "resolution": {
+    "central_question": "چرا بازدیدکننده صفحه محصول به سبد اضافه نمی‌کند؟",
+    "answer": "نمایش واضح‌تر گزینه پرداخت یک فرضیه قابل‌آزمایش است",
+    "action": "دو نسخه صفحه را با سنجش افزودن به سبد، تکمیل خرید و سود مقایسه کن",
+    "payoff_frame": 14
+  },
+  "interaction": {
+    "type": "poll",
+    "question": "تو اول کجا مکث می‌کنی؟",
+    "options": [
+      "قیمت",
+      "روش پرداخت"
+    ]
+  }
+}
