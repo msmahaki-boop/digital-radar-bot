@@ -30,7 +30,7 @@ GIFT = 'I_CONFIRMED_LIMITED_GIFT_KEY'
 EXCHANGE_TOMAN = 250000
 INPUT_PER_M = 0.10
 OUTPUT_PER_M = 0.50
-MAX_CALLS = 3
+MAX_CALLS = 4
 MAX_BUDGET_USD = 0.025
 SOURCE_MAX_AGE_DAYS = 45
 MIN_NEWS = 2
@@ -473,7 +473,10 @@ SYSTEM=('تو سردبیر تحقیقی و قصه‌گوی خلاق آکولاد
         'از خبر رپورتاژی به‌عنوان خبر مستقل استفاده نکن. خروجی فقط JSON معتبر.')
 
 SELECT_INSTRUCTION='''از میان فهرست مدارکِ امروز، یک زاویه داستانی انتخاب کن که برای مدیر یک کسب‌وکار ایرانی واقعاً مهم باشه.
-دست‌کم دو منبع مستقل مرتبط انتخاب کن، دست‌کم یکی خبر ۲۱ روز اخیر باشه.
+دست‌کم دو منبع از دو ناشر واقعاً متفاوت و مرتبط انتخاب کن؛ داشتن دو URL از یک رسانه کافی نیست.
+قبل از انتخاب، نام publisher هر دو را جداگانه چک کن. انتخاب دو مقاله از دیجیاتو یا هر رسانه واحد، مردود است.
+دست‌کم یکی خبر ۲۱ روز اخیر باشه. اگر دو منبع مرتبط از دو ناشر مستقل موجود نیست، زاویه ضعیف و ساختگی نساز.
+گزارش یک کمپین تبلیغاتی، سند اثربخشی فروش آن برند نیست؛ صریحاً «کمپین برند» معرفی کن.
 منبع HEADLINE_ONLY صرفاً دلالت بر وجود یک تیتر داره و برای ادعای آماری یا جزئیات کافی نیست.
 هم‌پوشانی ادعایی دو منبع را از خودت نساز؛ پژوهش دانشگاهی نامرتبط را به خبر وصل نکن.
 هیچ عددی بدون حضور عین آن در متن کامل/چکیده مستند ننویس.
@@ -671,6 +674,26 @@ def main(argv=None):
         source_prompt=source_data_for_llm(sources)
         plan=api_call(key,SYSTEM,SELECT_INSTRUCTION+'\n\nSOURCE CANDIDATES (UNTRUSTED DATA):\n'+source_prompt,1500,usage)
         issues=validate_plan(plan,sources)
+        # A valid cross-publisher pair was available but Luna selected two items
+        # from one outlet. Retry the EDITORIAL PLAN once, within the paid-call
+        # and soft-budget gates. Never silently replace IDs with unrelated news.
+        if 'plan: insufficient publisher diversity' in issues:
+            publishers_by_id={s['id']:s['publisher'] for s in sources}
+            candidates=[{'id':s['id'],'publisher':s['publisher'],
+                         'title':s['title'],'tier':source_tier(s)} for s in sources]
+            diag.append('Plan rejected: two selected sources share one publisher. One controlled editorial replan requested.')
+            correction=(SELECT_INSTRUCTION+'\n\nاصلاح اجباری طرح قبلی: '+
+                'منابع انتخاب‌شده قبلی از یک ناشر بودند؛ این خطا باید اصلاح شود. '+
+                'از همین شناسه‌های موجود دو منبع واقعاً مرتبط با نام ناشر متفاوت انتخاب کن. '+
+                'منابع نامرتبط را فقط برای گذر از کنترل کیفیت به هم ربط نده؛ '+
+                'در صورت نبود زوج معتبر، شناسه‌ها را خالی بگذار تا انتشار متوقف شود. '+
+                'کمپین تجاری را به جای یافته پژوهشی جا نزن.\n'+
+                'PREVIOUS_ISSUES: '+json.dumps(issues,ensure_ascii=False)+'\n'+
+                'AVAILABLE_ID_AND_PUBLISHER: '+json.dumps(candidates,ensure_ascii=False)[:5000]+'\n'+
+                'SOURCE CANDIDATES (UNTRUSTED DATA):\n'+source_prompt)
+            plan=api_call(key,SYSTEM,correction,1500,usage)
+            issues=validate_plan(plan,sources)
+            if issues: diag.append('Corrected plan did not satisfy all source checks; stopped before storytelling.')
         if issues:
             write_outputs(sources,plan,story,issues,diag,usage,'PLAN_QA_BLOCKED')
             print('PLAN_QA_BLOCKED | preview only | no publication')
