@@ -4,6 +4,9 @@ on:
   push:
     paths:
       - 'ops/acolad-narrative-visual-v2-fixed-oneoff.trigger'
+      - 'assets/fonts/IRANSans-Regular.ttf'
+      - 'assets/fonts/IRANSans-Medium.ttf'
+      - 'assets/fonts/IRANSans-Bold.ttf'
   workflow_dispatch:
 
 permissions:
@@ -26,12 +29,28 @@ jobs:
           python -m pip install --disable-pip-version-check requests==2.32.5 Pillow==11.3.0
       - name: Tests must verify genuinely pixel-identical old text
         run: python -m unittest discover -s tests -p 'test_acolad_narrative_visual_v2.py' -v
+      - name: Check if real IRANSans is valid (never fall back)
+        id: realfont
+        run: |
+          python - <<'PY'
+          import os
+          from acolad_narrative_visual_v2 import font_integrity
+          ok=font_integrity()=='VALID'
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:
+              f.write('valid='+('true' if ok else 'false')+'\n')
+          print('BRAND_FONT_STATUS:', 'VALID' if ok else 'BLOCKED_ZERO_FILLED_OR_INVALID')
+          print('TEXT_LAYOUT_TESTING_ONLY; NO DRAFT AND NO PUBLISH')
+          PY
       - name: Real 1080x1920 Acolad IRANSans pixel-frozen preview
+        if: steps.realfont.outputs.valid == 'true'
         run: |
           python acolad_narrative_visual_v2.py \
             --story-json examples/acolad_narrative_v2_fixed_demo.json \
             --stock off \
             --output acolad_narrative_visual_v2_output
+      - name: Block release until original fonts are replaced
+        if: steps.realfont.outputs.valid != 'true'
+        run: echo 'PREVIEW BLOCKED - replace zero-filled IRANSans font files in assets/fonts/. No draft was created.'
       - name: Upload actual images, proof and metadata
         if: always()
         uses: actions/upload-artifact@v4
