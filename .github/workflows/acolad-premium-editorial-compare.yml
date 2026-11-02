@@ -1,0 +1,73 @@
+name: Acolad Premium Editorial Comparison (isolated manual only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'offline = NO API; compare = live provider requests and possible gift credit consumption'
+        type: choice
+        required: true
+        default: offline
+        options:
+          - offline
+          - compare
+      set:
+        description: 'core = 4 models; all = 5 including Claude Opus 5.5'
+        type: choice
+        required: true
+        default: core
+        options:
+          - core
+          - all
+      budget_usd:
+        description: 'Estimated maximum budget; 0.12 for core, 0.19 for all. NOT a billing hard stop'
+        type: string
+        required: true
+        default: '0.12'
+      approval:
+        description: 'Live compare only: I_APPROVE_PAID_COMPARISON'
+        type: string
+        required: false
+      gift_confirmation:
+        description: 'Live compare only: I_CONFIRMED_GIFT_KEY'
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: acolad-premium-editorial-lab-only
+  cancel-in-progress: false
+
+jobs:
+  premium-quality-benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Create independent no-publishing benchmark report
+        env:
+          GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
+          BENCH_MODE: ${{ inputs.mode }}
+          BENCH_SET: ${{ inputs.set }}
+          BENCH_BUDGET: ${{ inputs.budget_usd }}
+          BENCH_APPROVAL: ${{ inputs.approval }}
+          BENCH_GIFT: ${{ inputs.gift_confirmation }}
+        run: |
+          python -u acolad_premium_editorial_compare.py \
+            --mode "$BENCH_MODE" --set "$BENCH_SET" --budget-usd "$BENCH_BUDGET" \
+            --approval "$BENCH_APPROVAL" --gift-confirmation "$BENCH_GIFT"
+      - name: Archive blind report and cost estimates
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-premium-editorial-comparison-results
+          path: acolad_premium_editorial_results/
+          if-no-files-found: warn
+          retention-days: 14
