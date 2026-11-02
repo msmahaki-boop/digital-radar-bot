@@ -155,6 +155,37 @@ def select_stock(query,session=requests,limit=9):
             break
     except (requests.RequestException,ValueError,KeyError) as exc:
         result["status"]="STOCK_SEARCH_FAILED_"+type(exc).__name__
+    # Editorial fallback: Wikimedia Commons file explicitly published as CC0.
+    # Query the live file metadata before use; never trust the reference alone.
+    # This photograph depicts a laptop displaying an online store and suits
+    # an e-commerce/checkout scenario, not arbitrary news topics.
+    if not result["chosen"] and query=="online shopping":
+        params={"action":"query","titles":"File:Online store on a screen (Unsplash).jpg",
+            "prop":"imageinfo","iiprop":"url|size|extmetadata","iiurlwidth":"1050","format":"json"}
+        try:
+            response=session.get("https://commons.wikimedia.org/w/api.php",
+                params=params,headers={"User-Agent":UA},timeout=18)
+            response.raise_for_status()
+            pages=response.json().get("query",{}).get("pages",{})
+            for page in pages.values():
+                ii=(page.get("imageinfo") or [{}])[0]
+                meta=ii.get("extmetadata") or {}
+                license_value=html.unescape(meta.get("LicenseShortName",{}).get("value","")).lower()
+                url=ii.get("thumburl") or ii.get("url","")
+                if (("cc0" in license_value or "public domain" in license_value)
+                    and not meta.get("NonFree",{}).get("value","").lower()=="true"
+                    and image_host_allowed(url)
+                    and ii.get("width",0)>=700 and ii.get("height",0)>=400):
+                    result["chosen"]={
+                        "title":page.get("title"),"source":ii.get("descriptionurl"),
+                        "url":url,"license":license_value,
+                        "attribution":html.unescape(re.sub("<[^>]*>"," ",
+                          meta.get("Artist",{}).get("value",""))).strip()[:180],
+                        "width":ii["width"],"height":ii["height"]}
+                    result["status"]="LICENSED_RELEVANT_CC0_CURATED"
+                    break
+        except (requests.RequestException,ValueError,KeyError):
+            pass
     return result
 
 def download_stock(candidate,session=requests):
@@ -228,10 +259,19 @@ def novinhub_readonly():
             headers={"Authorization":"Bearer "+token,"Accept":"application/json",
                      "User-Agent":UA},timeout=16)
         # Do not print headers/body: account payload may contain private data.
+        payload=r.json() if r.ok else None
+        accounts=(payload if isinstance(payload,list) else
+                  payload.get("data") if isinstance(payload,dict) else None)
+        if isinstance(accounts,dict):accounts=accounts.get("data")
+        if not isinstance(accounts,list):accounts=None
+        # Count only; do not expose account identifiers or private metadata.
+        found_acolad=(any(
+            "acolad.agency" in str(a.get("identifier","")).lower()
+            or "acolad.agency" in str(a.get("profile_url","")).lower()
+            for a in accounts if isinstance(a,dict)) if accounts is not None else None)
         return {"status":"READ_ONLY_HTTP_"+str(r.status_code),
-                "accounts_visible":(len(r.json().get("data",[])) if
-                  r.ok and isinstance(r.json(),dict) and
-                  isinstance(r.json().get("data"),list) else None)}
+                "accounts_visible":len(accounts) if accounts is not None else None,
+                "acolad_instagram_match":found_acolad}
     except (requests.RequestException,ValueError) as e:
         return {"status":"READ_ONLY_ERROR_"+type(e).__name__}
 
