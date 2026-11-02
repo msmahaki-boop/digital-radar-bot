@@ -38,10 +38,24 @@ class LunaResearchTests(unittest.TestCase):
         plan={'source_ids':['S01','S99']}
         sources=[{'id':'S01','publisher':'one','date':e.now().date().isoformat(),'source_type':'rss_summary'}]
         self.assertTrue(any('invented' in x for x in e.validate_plan(plan,sources)))
+    def test_cross_publisher_requirement(self):
+        today=e.now().date().isoformat()
+        records=[
+            {'id':'S01','publisher':'دیجیاتو','date':today,'source_type':'rss_summary','evidence_depth':'full_article'},
+            {'id':'S02','publisher':'دیجیاتو','date':today,'source_type':'rss_summary','evidence_depth':'full_article'},
+            {'id':'S03','publisher':'زومیت','date':today,'source_type':'rss_summary','evidence_depth':'full_article'},
+        ]
+        self.assertIn('plan: insufficient publisher diversity',e.validate_plan({'source_ids':['S01','S02']},records))
+        self.assertNotIn('plan: insufficient publisher diversity',e.validate_plan({'source_ids':['S01','S03']},records))
+    def test_replan_call_count_gate(self):
+        usage={'requests_sent':4,'cost_estimated_usd':0.0,'budget_usd':0.02}
+        with self.assertRaisesRegex(RuntimeError,'MAX_CALLS reached'):
+            e.api_call('never_sent','sys','user',100,usage)
+
     def test_json_extraction(self):
         self.assertEqual(e.json_from_model('```json\n{"a":1}\n```'),{'a':1})
     def test_model_luna_only(self):
         self.assertEqual(e.MODEL,'gpt-6-luna')
-        self.assertEqual(e.MAX_CALLS,3)
+        self.assertEqual(e.MAX_CALLS,4)
 
 if __name__=='__main__':unittest.main()
