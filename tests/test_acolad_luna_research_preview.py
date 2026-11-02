@@ -100,6 +100,30 @@ class LunaResearchTests(unittest.TestCase):
         story={'slides':slides,'interaction':{'type':'poll','options':['الف','ب']}}
         self.assertFalse(any('numerical claim 2026' in i for i in e.story_quality(story,sources)))
 
+    def test_cross_language_consumer_research_bridge(self):
+        n={'id':'S01','title':'هزینه تعویض لاستیک ایرانی و جدول قیمت بازار',
+           'date':e.now().date().isoformat(),'publisher':'دیجیاتو',
+           'source_type':'rss_summary','evidence_depth':'full_article','rank':25}
+        a={'id':'S06','title':'The Economics of Consumer Loyalty in Quick Commerce: Price Sensitivity and Brand Switching',
+           'date':'2025-03-06','publisher':'Independent Journal',
+           'source_type':'academic_doi','evidence_depth':'abstract','rank':19}
+        self.assertTrue(e.related_source_pair(n,a))
+        self.assertFalse(e.unrelated_selected_subjects([n,a]))
+        pairs=e.suggested_evidence_pairs([n,a])
+        self.assertEqual(len(pairs),1)
+        self.assertEqual(pairs[0]['source_ids'],['S01','S06'])
+        issues=e.validate_plan({'source_ids':['S01','S06']},[n,a])
+        self.assertNotIn('plan: no shared concrete topic across selected articles',issues)
+    def test_unrelated_labor_and_gold_still_blocked(self):
+        news={'id':'S01','title':'مرجع صدور مجوز فروش آنلاین طلا',
+              'date':e.now().date().isoformat(),'publisher':'دیجیاتو',
+              'source_type':'rss_summary','evidence_depth':'full_article'}
+        other={'id':'S02','title':'وقتی درآمد دیجیتال است و بیمه سنتی',
+               'date':e.now().date().isoformat(),'publisher':'زومیت',
+               'source_type':'rss_summary','evidence_depth':'full_article'}
+        self.assertTrue(e.unrelated_selected_subjects([news,other]))
+        self.assertEqual(e.suggested_evidence_pairs([news,other]),[])
+
     def test_replan_call_count_gate(self):
         usage={'requests_sent':4,'cost_estimated_usd':0.0,'budget_usd':0.02}
         with self.assertRaisesRegex(RuntimeError,'MAX_CALLS reached'):
