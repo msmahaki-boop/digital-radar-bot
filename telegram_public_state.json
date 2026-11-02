@@ -182,9 +182,10 @@
       "topic": "best_of_day",
       "original_title": "More paid social ads won’t fix a creative problem",
       "score": 85,
-      "status": "reserved",
-      "message_id": null,
-      "reserved_utc": "2026-11-02T00:24:56.974063+00:00"
+      "status": "sent",
+      "message_id": 42,
+      "reserved_utc": "2026-11-02T00:24:56.974063+00:00",
+      "sent_utc": "2026-11-02T00:24:59.732530+00:00"
     }
   ]
 }
