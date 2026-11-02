@@ -1,0 +1,1 @@
+2026-11-02 one-time NO-SECRET NO-PAID connectivity diagnostic to api.gapgpt.app after two ConnectionError previews
