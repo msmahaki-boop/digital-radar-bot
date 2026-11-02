@@ -1,0 +1,1 @@
+One-time preview: real Acolad logo base, RTL bold/highlight, licensed stock search, NovinHub GET account only. NO drafting, NO sending, NO social publish.
