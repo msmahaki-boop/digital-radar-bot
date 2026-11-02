@@ -22,7 +22,7 @@ jobs:
       - name: Setup Persian font and Pillow
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq fonts-noto-core libharfbuzz0b libfribidi0 >/dev/null
+          sudo apt-get install -y -qq fonts-noto-core fonts-noto-color-emoji libharfbuzz0b libfribidi0 >/dev/null
           python -m pip install --disable-pip-version-check requests==2.32.5 Pillow==11.3.0
       - name: Free offline safety and text layout tests
         run: python -m unittest discover -s tests -p 'test_acolad_narrative_visual_preview.py' -v
