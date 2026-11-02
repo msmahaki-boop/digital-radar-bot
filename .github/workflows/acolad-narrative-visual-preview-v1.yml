@@ -30,7 +30,7 @@ jobs:
         env:
           NOVINHUB_API_TOKEN: ${{ secrets.NOVINHUB_API_TOKEN }}
         run: |
-          python acolad_narrative_visual_preview.py --stock auto --read-only-novinhub
+          python acolad_narrative_visual_preview.py --story-json examples/acolad_narrative_v4_visual_preview.json --stock auto --read-only-novinhub
       - name: Upload visual PREVIEW ONLY
         if: always()
         uses: actions/upload-artifact@v4
