@@ -854,6 +854,50 @@ def story_quality(story: dict, selected: list[dict]) -> list[str]:
     return issues
 
 
+def cinematic_quality(story: dict, selected: list[dict]) -> list[str]:
+    """Check the structure and resolution of a story before human review."""
+    issues=[]
+    if not isinstance(story,dict):return ['cinema: invalid story']
+    frames=story.get('slides')
+    if not isinstance(frames,list) or not frames:return ['cinema: empty storyboard']
+    valid={'hook','setup','conflict','evidence','experiment','discovery','action','payoff','cta'}
+    beats=[]
+    for i,frame in enumerate(frames,1):
+        if not isinstance(frame,dict):issues.append(f'cinema: frame {i} invalid');continue
+        beat=frame.get('beat')
+        beats.append(beat)
+        if beat not in valid:issues.append(f'cinema: frame {i} missing story beat')
+        txt=str(frame.get('text') or '')
+        if re.search(r'گزارش(?: معتبر)? دیجیاتو|دیجیاتو می.گه|دی.?ام.?بورد می.گه',txt):
+            issues.append(f'cinema: frame {i} unnecessary publisher mention')
+        if re.search(r'آزمایش نورومارکتینگ|اسکن مغز|درد مغز|در آزمایش نشان داد',txt):
+            if not any(study_design_hint(src)=='EXPERIMENT_METHOD_IN_ABSTRACT' for src in selected):
+                issues.append(f'cinema: frame {i} unverified experiment')
+    if not beats or beats[0]!='hook':issues.append('cinema: missing opening hook')
+    for need in ('conflict','evidence','action','payoff'):
+        if need not in beats:issues.append('cinema: missing '+need+' beat')
+    r=story.get('resolution')
+    if not isinstance(r,dict):
+        issues.append('cinema: resolution missing')
+    elif not all(isinstance(r.get(k),str) and len(r[k].strip())>=8
+                 for k in ('central_question','answer','action')):
+        issues.append('cinema: no clear answer and action')
+    else:
+        pf=r.get('payoff_frame')
+        if type(pf) is not int or pf<1 or pf>len(frames):
+            issues.append('cinema: payoff frame invalid')
+        elif not isinstance(frames[pf-1],dict) or frames[pf-1].get('beat')!='payoff':
+            issues.append('cinema: payoff frame not a payoff')
+        elif pf<len(frames)//2:
+            issues.append('cinema: payoff happens too early')
+    ending=' '.join(str(f.get('text') or '') for f in frames[-2:] if isinstance(f,dict))
+    if re.search(r'هنوز.{0,35}نمی.دونه|هنوز.{0,35}معلوم نیست',ending):
+        issues.append('cinema: ending reopens unresolved question')
+    dots=sum(bool(re.search(r'[.۔]\s*$',str(f.get('text') or ''))) for f in frames if isinstance(f,dict))
+    if len(frames)>=4 and dots*5>len(frames)*3:issues.append('cinema: too many final periods')
+    return issues
+
+
 def write_outputs(sources: list[dict], plan: dict | None, story: dict | None, issues: list[str],
                   diagnostic: list[str], usage: dict, status: str) -> None:
     ROOT.mkdir(parents=True,exist_ok=True)
@@ -876,6 +920,8 @@ def write_outputs(sources: list[dict], plan: dict | None, story: dict | None, is
     (ROOT/'selected_evidence.json').write_text(json.dumps(selected,ensure_ascii=False,indent=2),encoding='utf-8')
     (ROOT/'topic_plan.json').write_text(json.dumps(plan or {},ensure_ascii=False,indent=2),encoding='utf-8')
     (ROOT/'stories.json').write_text(json.dumps(story or {},ensure_ascii=False,indent=2),encoding='utf-8')
+    (ROOT/'editorial_resolution.json').write_text(
+        json.dumps((story or {}).get('resolution',{}),ensure_ascii=False,indent=2),encoding='utf-8')
     frames=storyboard_frames(story or {})
     (ROOT/'storyboard_frames.json').write_text(
         json.dumps(frames,ensure_ascii=False,indent=2),encoding='utf-8')
@@ -902,6 +948,13 @@ def write_outputs(sources: list[dict], plan: dict | None, story: dict | None, is
         md += ['## پیشنهاد تعامل (استیکر اینستاگرام باید دستی افزوده شود)',
                f'نوع: {interact.get("type","")} | سؤال: {interact.get("question","")}',
                ' / '.join(interact.get('options',[]) or []),'']
+    if isinstance(story,dict) and isinstance(story.get('resolution'),dict):
+        r=story['resolution']
+        md += ['## پاسخ نهایی روایت',
+               '**گره اصلی:** '+str(r.get('central_question','')),
+               '**پاسخ:** '+str(r.get('answer','')),
+               '**اقدام:** '+str(r.get('action','')),
+               '**قاب حل مسئله:** '+str(r.get('payoff_frame',''))]
     md += ['## منابع انتخاب‌شده']
     for x in selected:
         md += [f'- **{x["id"]}** | {x["publisher"]} | {x["date"]} | {source_tier(x)}',
@@ -1013,21 +1066,24 @@ def main(argv=None):
         evidence=source_data_for_llm(chosen,8000)
         user=WRITE_INSTRUCTION+'\nPLAN:\n'+json.dumps(plan,ensure_ascii=False)[:3500]+'\nEVIDENCE:\n'+evidence
         story=api_call(key,SYSTEM,user,5700,usage)
-        issues=story_quality(story,chosen)
+        issues=story_quality(story,chosen)+cinematic_quality(story,chosen)
         # Always attempt one additional editorial pass for rhythm and emotional pull.
         # Keep original if the revised version introduces more machine-detected faults.
         edit=EDIT_INSTRUCTION+'\nISSUES:\n'+json.dumps(issues,ensure_ascii=False)+'\nSTORY:\n'+json.dumps(story,ensure_ascii=False)+'\nEVIDENCE:\n'+evidence
         try:
             revised=api_call(key,SYSTEM,edit,5900,usage)
-            revised_issues=story_quality(revised,chosen)
-            if len(revised_issues)<=len(issues):story,issues=revised,revised_issues
+            revised_issues=story_quality(revised,chosen)+cinematic_quality(revised,chosen)
+            if len(revised_issues)<len(issues) or (
+                    len(revised_issues)==len(issues) and
+                    len(revised.get('slides',[]))<=len(story.get('slides',[]))):
+                story,issues=revised,revised_issues
         except RuntimeError as ex:
             diag.append('Editorial polishing skipped: '+str(ex)[:100])
         # Cosmetic markdown fixes must not block an otherwise source-grounded
         # draft. Re-check all substantive rules after the text-only repair.
         # Bold is editorial emphasis, not a per-frame requirement. Never
         # inject emphasis mechanically into a conversational reveal.
-        issues=story_quality(story,chosen)
+        issues=story_quality(story,chosen)+cinematic_quality(story,chosen)
         status='PREVIEW_NEEDS_HUMAN_REVIEW' if not issues else 'QA_BLOCKED_HUMAN_REVIEW_REQUIRED'
     except (RuntimeError,ValueError,KeyError,TypeError) as ex:
         issues.append('Pipeline interrupted: '+str(ex)[:160])
