@@ -35,10 +35,11 @@ SEMANTIC_MOTIFS=(
   (("پشتیبانی","خدمت","تجربه مشتری","support"),"a tired shopkeeper buried under parcels and message notes"),
 )
 def editorial_english_motif(visual:str,topic:str)->str:
-    subject=(str(visual)+" "+str(topic)).casefold()
-    # A scene is a metaphorical visual, not a fictional photograph of events.
-    for needles,english in SEMANTIC_MOTIFS:
-        if any(x in subject for x in needles):return english
+    # Visual brief is the ACTUAL scene; the overall story title is fallback,
+    # otherwise the same headline keyword leaks into every concept prompt.
+    for subject in (str(visual).casefold(),str(topic).casefold()):
+        for needles,english in SEMANTIC_MOTIFS:
+            if any(x in subject for x in needles):return english
     return "a little person dragging a huge abstract question mark uphill"
 
 def original_prompt(visual:str,topic:str)->str:
