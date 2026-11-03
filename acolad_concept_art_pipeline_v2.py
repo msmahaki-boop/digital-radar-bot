@@ -194,7 +194,7 @@ def gemini_one_image(scene:int,metaphor:str,output:Path, budget_toman:int,
         report["status"]="GEMINI_"+type(ex).__name__
         return report
 
-def create_art(story:dict,output=OUT,allow_paid=False,budget_toman=20000,allow_horde=False):
+def create_art(story:dict,output=OUT,allow_paid=False,budget_toman=20000,allow_horde=False,allow_pollinations=False):
     scenes=image_scenes(story)
     output.mkdir(parents=True,exist_ok=True)
     status={"status":"PREVIEW_ONLY","scene_ids":scenes,"image_api_calls":0,
@@ -210,6 +210,22 @@ def create_art(story:dict,output=OUT,allow_paid=False,budget_toman=20000,allow_h
             status["providers"].append(ai)
             if ai.get("status")=="GENERATED_GEMINI_IMAGE":
                 continue
+        # Attempt genuine image rendering on the legacy no-key endpoint first.
+        # Only a verified image payload counts; 401/402/403 are NOT success.
+        if allow_pollinations and n==0:
+            from acolad_pollinations_legacy_image_v1 import run as pollinations_run
+            try:
+                attempt=pollinations_run(visual,str(story.get("topic","")),
+                                       output=output/"pollinations_probe")
+                status["providers"].append(attempt)
+                if attempt.get("real_ai_image"):
+                    with Image.open(output/"pollinations_probe"/attempt["image_file"]) as ai_img:
+                        ai_img.convert("RGBA").save(dest,optimize=True)
+                    continue
+            except Exception as error:
+                status["providers"].append({
+                   "provider":"Pollinations legacy", "status":"UNEXPECTED_"+type(error).__name__,
+                   "real_ai_image":False})
         # Separate genuine diffusion provider, not a simulated/cartoon fallback.
         # Anonymous Horde may queue/fail; enforce a bounded attempt.
         if allow_horde and n==0:
@@ -241,6 +257,7 @@ def main():
     parser.add_argument("--story-json",type=Path,required=True)
     parser.add_argument("--allow-paid",action="store_true")
     parser.add_argument("--allow-horde",action="store_true",help="Bounded genuine no-key image generation attempt; fallback to procedural PNG")
+    parser.add_argument("--allow-pollinations",action="store_true",help="Test one legacy image endpoint with strict PNG validation")
     parser.add_argument("--approval",default="")
     parser.add_argument("--budget-toman",type=int,default=20000)
     args=parser.parse_args()
@@ -249,7 +266,7 @@ def main():
     if args.budget_toman>MAX_TOMAN:
         raise SystemExit("BUDGET_TOO_HIGH")
     data=json.loads(args.story_json.read_text(encoding="utf-8"))
-    create_art(data,allow_paid=args.allow_paid,budget_toman=args.budget_toman,allow_horde=args.allow_horde)
+    create_art(data,allow_paid=args.allow_paid,budget_toman=args.budget_toman,allow_horde=args.allow_horde,allow_pollinations=args.allow_pollinations)
     return 0
 if __name__=="__main__":
     raise SystemExit(main())
