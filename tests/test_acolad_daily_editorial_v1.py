@@ -39,6 +39,32 @@ class DailyEditorialTests(unittest.TestCase):
             [s["source_ids"] for s in changed["slides"]],
             [s["source_ids"] for s in story["slides"]])
 
+    def test_recent_story_is_not_chosen_again_for_next_daily_episode(self):
+        today=dt.date(2026,11,3)
+        sources=[
+            {"id":"S01","title":"گزارش الف","source_type":"rss_summary",
+             "evidence_depth":"full_article","url":"https://example.com/repeated"},
+            {"id":"S02","title":"گزارش ب","source_type":"rss_summary",
+             "evidence_depth":"full_article","url":"https://example.com/new"},
+            {"id":"S03","title":"Academic evidence","source_type":"academic_doi",
+             "evidence_depth":"abstract","url":"https://doi.org/10.1/new"},
+        ]
+        history=[{"url":"https://example.com/repeated","date":today.isoformat()}]
+        result=daily.unseen_recent_articles(sources,history,[])
+        self.assertEqual(len(result),2)
+        self.assertNotIn("https://example.com/repeated",[s["url"] for s in result])
+        self.assertEqual(result[0]["id"],"S01")
+
+    def test_corrupt_history_is_safe_and_no_credentials_are_stored(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            original=daily.HISTORY
+            daily.HISTORY=Path(tmp)/"history.json"
+            try:
+                daily.HISTORY.write_text("invalid json",encoding="utf-8")
+                self.assertEqual(daily.read_history(dt.date(2026,11,3)),[])
+            finally:
+                daily.HISTORY=original
+
     def test_seven_editorial_pillars_really_present(self):
         self.assertEqual(len(daily.TOPICS),7)
         self.assertIn("iran_economy",daily.TOPICS)
