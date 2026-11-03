@@ -219,7 +219,7 @@ def create_art(story:dict,output=OUT,allow_paid=False,budget_toman=20000,allow_h
                                        output=output/"pollinations_probe")
                 status["providers"].append(attempt)
                 status["image_api_calls"]+=attempt.get("requests_sent",0)
-                if attempt.get("real_ai_image"):
+                if attempt.get("real_ai_image") and attempt.get("brand_safe_for_compositing"):
                     with Image.open(output/"pollinations_probe"/attempt["image_file"]) as ai_img:
                         ai_img.convert("RGBA").save(dest,optimize=True)
                     continue
