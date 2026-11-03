@@ -215,9 +215,10 @@
       "topic": "tech",
       "original_title": "Researchers warned of North Korean hacking tactics years before record $6.3B Binance heist",
       "score": 85,
-      "status": "reserved",
-      "message_id": null,
-      "reserved_utc": "2026-11-03T20:50:05.135125+00:00"
+      "status": "sent",
+      "message_id": 45,
+      "reserved_utc": "2026-11-03T20:50:05.135125+00:00",
+      "sent_utc": "2026-11-03T20:50:11.979290+00:00"
     }
   ]
 }
