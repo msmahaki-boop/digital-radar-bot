@@ -1,0 +1,76 @@
+name: Acolad REAL MODEL Image Embedded in Genuine Story — Preview Only
+
+on:
+  push:
+    paths:
+      - 'ops/acolad-guest-checkout-real-ai-art-oneoff.trigger'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install typography
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-color-emoji libharfbuzz0b libfribidi0 >/dev/null
+          python -m pip install --disable-pip-version-check Pillow==11.3.0 requests==2.32.5
+      - name: Download proven REAL model image from preceding completed GitHub AI run
+        uses: actions/download-artifact@v4
+        with:
+          name: acolad-genuine-local-diffusion-single-ink-drawing
+          run-id: 41636820688
+          repository: msmahaki-boop/digital-radar-bot
+          github-token: ${{ github.token }}
+          path: acolad_local_real_diffusion_output
+      - name: Verify real diffusion receipt and prepare original additional panels
+        run: |
+          python -u acolad_concept_art_pipeline_v2.py \
+            --story-json examples/acolad_new_daily_episode_guest_checkout_20261103.json \
+            --budget-toman 20000
+          python - <<'PY'
+          import json,shutil
+          from pathlib import Path
+          from PIL import Image
+          raw=Path('acolad_local_real_diffusion_output/original_diffusion_01.png')
+          receipt=json.loads(Path('acolad_local_real_diffusion_output/inference_receipt.json').read_text())
+          assert receipt.get('real_model_generated') and receipt.get('status')=='REAL_LOCAL_DIFFUSION_IMAGE_SAVED'
+          with Image.open(raw) as image:
+              assert image.width>=384 and image.height>=384
+          dest=Path('acolad_concept_assets/scene_02.png')
+          assert dest.is_file()
+          shutil.copyfile(raw,dest)
+          note={'scene':2,'source':'nota-ai/bk-sdm-tiny','original_hf_license':'creativeml-openrail-m',
+                'real_diffusion_model_generated':True,
+                'human_quality_review_needed':True,
+                'other_scenes':'original procedural concept artwork',
+                'published':0,'drafted':0}
+          Path('acolad_concept_assets/verified_real_image_handoff.json').write_text(
+              json.dumps(note,ensure_ascii=False,indent=2),encoding='utf8')
+          print('REAL_MODEL_IMAGE_IMPORTED_AND_COMPOSITING_PENDING')
+          PY
+      - name: Re-render 12 branded story images including one genuine model image
+        run: |
+          python -u acolad_narrative_visual_v2.py \
+            --story-json examples/acolad_new_daily_episode_guest_checkout_20261103.json \
+            --stock off \
+            --output acolad_guest_checkout_with_real_model_image
+      - name: Export actual story PNGs and model provenance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-12-stories-with-1-proven-genuine-AI-image
+          path: |
+            acolad_guest_checkout_with_real_model_image/
+            acolad_concept_assets/
+            acolad_local_real_diffusion_output/inference_receipt.json
+          retention-days: 14
+          if-no-files-found: warn
