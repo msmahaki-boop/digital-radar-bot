@@ -1,0 +1,22 @@
+name: Acolad quick daily source and scene metaphor QA (NO PUBLISH)
+on:
+  push:
+    paths:
+      - 'ops/acolad-daily-scene-motif-oneoff.trigger'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install art metadata QA only
+        run: python -m pip install --disable-pip-version-check Pillow==11.3.0 requests==2.32.5 beautifulsoup4==4.14.2
+      - name: Verify every scene prompts distinct real illustration and no reporting fabrication
+        run: |
+          python -m unittest discover -s tests -p 'test_acolad_daily_ai_scene_selection_v1.py' -v
+          python -m unittest discover -s tests -p 'test_acolad_daily_editorial_v1.py' -v
