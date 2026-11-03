@@ -12,6 +12,23 @@ STORY=Path("examples/acolad_new_daily_episode_guest_checkout_20261103.json")
 class DailyEditorialTests(unittest.TestCase):
     def setUp(self):
         self.story=json.loads(STORY.read_text(encoding="utf-8"))
+    def test_model_every_frame_new_scene_gets_genuine_frozen_text(self):
+        story=json.loads(STORY.read_text(encoding="utf-8"))
+        for frame in story["slides"]:
+            frame["scene_id"]=frame["n"]
+            frame["visual_action"]="new_scene"
+        changed,was_patched=daily.repair_all_new_scenes(story)
+        self.assertTrue(was_patched)
+        self.assertEqual(story["slides"][1]["visual_action"],"new_scene")
+        self.assertEqual(changed["slides"][1]["visual_action"],"add_text")
+        self.assertEqual(changed["slides"][0]["scene_id"],changed["slides"][1]["scene_id"])
+        self.assertEqual(
+            [s["text"] for s in changed["slides"]],
+            [s["text"] for s in story["slides"]])
+        self.assertEqual(
+            [s["source_ids"] for s in changed["slides"]],
+            [s["source_ids"] for s in story["slides"]])
+
     def test_seven_editorial_pillars_really_present(self):
         self.assertEqual(len(daily.TOPICS),7)
         self.assertIn("iran_economy",daily.TOPICS)
