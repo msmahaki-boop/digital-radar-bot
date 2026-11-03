@@ -204,9 +204,10 @@
       "topic": "marketing",
       "original_title": "PageSpeed Insights Scores May Rise After Lighthouse Update via @sejournal, @MattGSouthern",
       "score": 82,
-      "status": "reserved",
-      "message_id": null,
-      "reserved_utc": "2026-11-03T05:48:53.020566+00:00"
+      "status": "sent",
+      "message_id": 44,
+      "reserved_utc": "2026-11-03T05:48:53.020566+00:00",
+      "sent_utc": "2026-11-03T05:48:55.849327+00:00"
     }
   ]
 }
