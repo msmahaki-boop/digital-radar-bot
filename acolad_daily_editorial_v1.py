@@ -158,6 +158,26 @@ def repair_all_new_scenes(story:dict)->tuple[dict,bool]:
         else:i+=1
     return result,True
 
+def repair_unnecessary_publisher_mentions(story:dict)->tuple[dict,bool]:
+    """Remove outlet name-dropping without altering real claim or source IDs."""
+    import copy
+    out=copy.deepcopy(story)
+    changed=False
+    substitutions=(
+        ("گزارش دیجیاتو می‌گه", "در گزارش منتشرشده اومده که"),
+        ("گزارش دیجیاتو میگه", "در گزارش منتشرشده اومده که"),
+        ("دی‌ام‌بورد می‌گه", "در گزارش منتشرشده اومده که"),
+        ("دی ام بورد میگه", "در گزارش منتشرشده اومده که"),
+    )
+    for slide in out.get("slides",[]):
+        text=str(slide.get("text",""))
+        for before,after in substitutions:
+            if before in text:
+                text=text.replace(before,after)
+                changed=True
+        slide["text"]=text
+    return out,changed
+
 def run_preview(day=None,budget_usd=0.018,output=OUT):
     date=day or local_day()
     output.mkdir(parents=True,exist_ok=True)
@@ -184,31 +204,39 @@ def run_preview(day=None,budget_usd=0.018,output=OUT):
     original=status.get("status","UNKNOWN")
     full=RESEARCH_OUT/"stories.json"
     good=original=="PREVIEW_NEEDS_HUMAN_REVIEW" and full.exists()
-    allowed_layout_problem=(
+    possible_cosmetic_issues=(status.get("issues") or [])
+    allowed_cosmetic_problem=(
         original=="QA_BLOCKED_HUMAN_REVIEW_REQUIRED"
-        and set(status.get("issues") or [])=={
-           "story lacks at least one progressive same-background reveal"}
+        and bool(possible_cosmetic_issues)
+        and all(x=="story lacks at least one progressive same-background reveal"
+                or (x.startswith("cinema: frame ")
+                    and x.endswith(" unnecessary publisher mention"))
+                for x in possible_cosmetic_issues)
         and full.exists())
-    story=(json.loads(full.read_text(encoding="utf-8")) if (good or allowed_layout_problem) else {})
-    if allowed_layout_problem:
-        revised,changed=repair_all_new_scenes(story)
-        if changed:
-            selected_path=RESEARCH_OUT/"selected_evidence.json"
-            chosen=(json.loads(selected_path.read_text(encoding="utf-8"))
-                    if selected_path.exists() else [])
-            fresh_issues=news.story_quality(revised,chosen)+news.cinematic_quality(revised,chosen)
-            if not fresh_issues:
-                story=revised
-                good=True
-                status["status"]="PREVIEW_NEEDS_HUMAN_REVIEW"
-                status["issues"]=[]
-                status["editorial_scene_lock_repaired_without_text_changes"]=True
-                status["scene_lock_patch_from"]=original
-                status["story_scenes"]=len({s.get("scene_id") for s in story["slides"]})
-                (output/"scene_locked_story.json").write_text(
-                    json.dumps(story,ensure_ascii=False,indent=2),encoding="utf-8")
-            else:
-                status["scene_lock_repair_issues"]=fresh_issues
+    story=(json.loads(full.read_text(encoding="utf-8")) if
+           (good or allowed_cosmetic_problem) else {})
+    if allowed_cosmetic_problem:
+        revised,copy_repaired=repair_unnecessary_publisher_mentions(story)
+        if "story lacks at least one progressive same-background reveal" in possible_cosmetic_issues:
+            revised,scene_repaired=repair_all_new_scenes(revised)
+        else:scene_repaired=False
+        selected_path=RESEARCH_OUT/"selected_evidence.json"
+        chosen=(json.loads(selected_path.read_text(encoding="utf-8"))
+                if selected_path.exists() else [])
+        fresh_issues=news.story_quality(revised,chosen)+news.cinematic_quality(revised,chosen)
+        if not fresh_issues:
+            story=revised
+            good=True
+            status["status"]="PREVIEW_NEEDS_HUMAN_REVIEW"
+            status["issues"]=[]
+            status["editorial_scene_lock_repaired_without_text_changes"]=scene_repaired
+            status["publisher_name_dropped_without_changing_source"]=copy_repaired
+            status["prior_machine_status"]=original
+            status["story_scenes"]=len({s.get("scene_id") for s in story["slides"]})
+            (output/"editorially_repaired_story.json").write_text(
+                json.dumps(story,ensure_ascii=False,indent=2),encoding="utf-8")
+        else:
+            status["cosmetic_repair_issues"]=fresh_issues
     distinct=story_is_distinct(story) if good else False
     status["dynamic_story_ready_for_design"]=bool(good and distinct)
     status["narrative_style_today"]=style
