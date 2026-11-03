@@ -208,6 +208,16 @@
       "message_id": 44,
       "reserved_utc": "2026-11-03T05:48:53.020566+00:00",
       "sent_utc": "2026-11-03T05:48:55.849327+00:00"
+    },
+    {
+      "slot": "2026-11-04-00",
+      "url": "https://techcrunch.com/2026/11/03/researchers-warned-of-north-korean-hacking-tactics-years-before-record-6-3b-binance-heist",
+      "topic": "tech",
+      "original_title": "Researchers warned of North Korean hacking tactics years before record $6.3B Binance heist",
+      "score": 85,
+      "status": "reserved",
+      "message_id": null,
+      "reserved_utc": "2026-11-03T20:50:05.135125+00:00"
     }
   ]
 }
