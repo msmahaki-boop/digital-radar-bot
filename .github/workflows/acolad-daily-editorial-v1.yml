@@ -126,9 +126,10 @@ jobs:
         run: |
           if [ -s acolad_daily_editorial_output/current_story.json ]; then
             if [ "$GITHUB_EVENT_NAME" = "schedule" ]; then
-              echo 'Scheduled daily preview: ZERO paid image calls; original PNG conceptual art fallback.'
+              echo 'Scheduled daily preview: genuine no-key AI image attempts, original transparent fallback; ZERO paid image calls.'
               python -u acolad_concept_art_pipeline_v2.py \
                 --story-json acolad_daily_editorial_output/current_story.json \
+                --allow-pollinations \
                 --allow-horde \
                 --budget-toman 20000
             else
@@ -136,6 +137,7 @@ jobs:
                 --story-json acolad_daily_editorial_output/current_story.json \
                 --allow-paid \
                 --approval APPROVED_ONE_GEMINI_CONCEPT_IMAGE_WITHIN_20000_TOMAN \
+                --allow-pollinations \
                 --allow-horde \
                 --budget-toman 20000
             fi
