@@ -28,7 +28,7 @@ jobs:
           OMP_NUM_THREADS: '8'
         run: |
           python -u acolad_local_diffusion_real_image_v1.py \
-            --steps 10 \
+            --steps 18 \
             --output acolad_local_real_diffusion_output
       - name: Archive real rendered picture and model license receipt
         if: always()
