@@ -1,0 +1,1 @@
+Check per-scene art diversity, research ad filtering, story source integrity, no image model calls and no publication
