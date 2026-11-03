@@ -45,16 +45,16 @@ def image_scenes(story:dict)->list[int]:
         sid=frame.get("scene_id")
         if type(sid) is not int:continue
         groups.setdefault(sid,[]).append(frame)
-    # One artwork each ~2-3 story frames, not every slide.
-    count=0
+    # Prefer 1 meaningful visual every ~2-3 frames, at major narrative
+    # turns rather than inserting low-value slides or interrupting frozen text.
     for sid,group in groups.items():
-        count+=len(group)
-        if count>=2:
+        if any(f.get("beat") in ("evidence","experiment","discovery","payoff")
+               for f in group):
             ids.append(sid)
-            count=0
-    # Keep last CTA scene clean if it's only one frame.
-    if ids and len(groups[ids[-1]])==1 and max(groups)==ids[-1]:
-        ids.pop()
+    if not ids:
+        ids=[sid for i,sid in enumerate(groups) if i%2==1]
+    # Downsample heavily illustrated long storyboards. An image belongs to
+    # an existing scene and is reused as text accumulates within that scene.
     return ids[:4]
 
 def ink_sketch(scene:int, metaphor:str, output:Path)->dict:
