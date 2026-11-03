@@ -98,7 +98,7 @@ jobs:
           retention-days: 14
 
   manual-dynamic-luna-preview:
-    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'dynamic' && inputs.approval == 'APPROVED_DAILY_EDITORIAL_PREVIEW_20000_TOMAN'
+    if: (github.event_name == 'workflow_dispatch' && inputs.mode == 'dynamic' && inputs.approval == 'APPROVED_DAILY_EDITORIAL_PREVIEW_20000_TOMAN') || (github.event_name == 'schedule' && vars.ACOLAD_DAILY_LUNA_PREVIEW_ENABLED == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -125,11 +125,18 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           if [ -s acolad_daily_editorial_output/current_story.json ]; then
-            python -u acolad_concept_art_pipeline_v2.py \
-              --story-json acolad_daily_editorial_output/current_story.json \
-              --allow-paid \
-              --approval APPROVED_ONE_GEMINI_CONCEPT_IMAGE_WITHIN_20000_TOMAN \
-              --budget-toman 20000
+            if [ "$GITHUB_EVENT_NAME" = "schedule" ]; then
+              echo 'Scheduled daily preview: ZERO paid image calls; original PNG conceptual art fallback.'
+              python -u acolad_concept_art_pipeline_v2.py \
+                --story-json acolad_daily_editorial_output/current_story.json \
+                --budget-toman 20000
+            else
+              python -u acolad_concept_art_pipeline_v2.py \
+                --story-json acolad_daily_editorial_output/current_story.json \
+                --allow-paid \
+                --approval APPROVED_ONE_GEMINI_CONCEPT_IMAGE_WITHIN_20000_TOMAN \
+                --budget-toman 20000
+            fi
             python -u acolad_narrative_visual_v2.py \
               --story-json acolad_daily_editorial_output/current_story.json \
               --stock off --output acolad_daily_episode_visual_output
