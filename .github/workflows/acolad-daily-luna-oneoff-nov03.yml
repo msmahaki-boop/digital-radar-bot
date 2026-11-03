@@ -1,0 +1,60 @@
+name: Acolad LIVE Fresh Luna Editorial ONE-OFF Preview Nov 03 (NO PUBLISH)
+
+on:
+  push:
+    paths:
+      - 'ops/acolad-daily-luna-oneoff-nov03.trigger'
+
+permissions:
+  contents: read
+
+jobs:
+  dynamic-real-editorial:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-color-emoji libharfbuzz0b libfribidi0 >/dev/null
+          python -m pip install --disable-pip-version-check requests==2.32.5 beautifulsoup4==4.14.2 Pillow==11.3.0
+      - name: Verify original brand and evolving narrative
+        run: |
+          python -m unittest discover -s tests -p 'test_acolad_daily_editorial_v1.py' -v
+          python -m unittest discover -s tests -p 'test_acolad_narrative_visual_v2.py' -v
+      - name: Real-time source research plus small Luna paid narrative preview only
+        env:
+          GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
+        run: |
+          python -u acolad_daily_editorial_v1.py \
+            --mode preview \
+            --approval APPROVED_DAILY_EDITORIAL_PREVIEW_20000_TOMAN \
+            --budget-usd 0.018
+      - name: Draw original contextual panels if research QA passes, then genuine story render
+        run: |
+          if [ -s acolad_daily_editorial_output/current_story.json ]; then
+            python -u acolad_concept_art_pipeline_v2.py \
+              --story-json acolad_daily_editorial_output/current_story.json \
+              --budget-toman 20000
+            python -u acolad_narrative_visual_v2.py \
+              --story-json acolad_daily_editorial_output/current_story.json \
+              --stock off --output acolad_live_narrative_nov03_images
+          else
+            echo 'SOURCE OR STORY QA NOT READY: full source and issue report preserved, no fabricated narrative.'
+          fi
+      - name: Export source trace, original story and images for editor
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-todays-live-luna-story-verified-sources
+          path: |
+            acolad_luna_research_preview/
+            acolad_daily_editorial_output/
+            acolad_live_narrative_nov03_images/
+            acolad_concept_assets/
+          if-no-files-found: warn
+          retention-days: 14
