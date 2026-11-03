@@ -1,0 +1,44 @@
+name: Acolad REAL AI Black-Ink Illustration — Horde Single Probe (NO PUBLISH)
+
+on:
+  push:
+    paths:
+      - 'ops/acolad-ai-horde-original-illustration-once.trigger'
+
+permissions:
+  contents: read
+
+jobs:
+  actual-model-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 13
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Required image libraries
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-color-emoji libharfbuzz0b libfribidi0 >/dev/null
+          python -m pip install --disable-pip-version-check Pillow==11.3.0 requests==2.32.5
+      - name: ONE genuine anonymous diffusion worker image (timeout 195 seconds)
+        env:
+          AI_HORDE_API_KEY: ${{ secrets.AI_HORDE_API_KEY }}
+        run: |
+          python -u acolad_horde_real_image_v1.py \
+            --visual "A tiny online-shop customer trying to buy a birthday present, blocked by a giant LOCKED DOOR marked only with a tiny blank keyhole. Behind the door a welcoming open shopping cart. One absurd, witty, instantly clear visual metaphor for mandatory customer registration. Original black ink pen drawing with intentionally imperfect loose lines, almost no color, playful editorial newspaper cartoon, plain white paper, absolutely NO TEXT, NO BRANDS and NO WATERMARK." \
+            --topic "New Acolad story: guest checkout hidden behind compulsory account creation" \
+            --timeout 195 \
+            --output acolad_horde_actual_image
+          status=$?
+          echo "HORDE_EXIT_CODE=$status (failure remains a recorded diagnostic, no false image success)"
+          exit 0
+      - name: Archive actual worker image and authenticated receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-horde-genuine-image-guest-checkout-probe
+          path: acolad_horde_actual_image/
+          if-no-files-found: warn
+          retention-days: 14
