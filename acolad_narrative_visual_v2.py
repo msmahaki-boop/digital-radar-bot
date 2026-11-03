@@ -15,14 +15,22 @@ REG=FONT_DIR/"IRANSans-Regular.ttf"
 BOLD=FONT_DIR/"IRANSans-Bold.ttf"
 MEDIUM=FONT_DIR/"IRANSans-Medium.ttf"
 OUT=Path("acolad_narrative_visual_v2_output")
-FONT_SIZES=(74,70,66,62,58,54,50,46,42,38)
+FONT_SIZES=(66,62,58,54,50,46,42,38)
 TEXT_COLOR=(29,30,43)
 ACCENT=(112,46,197)
-BG_TEXT_TOP=465
+BG_TEXT_TOP=485
 PHOTO_TEXT_TOP=1015
 TEXT_BOTTOM=1470
-TEXT_X=966
-MAX_WIDTH=855
+TEXT_X=540
+MAX_WIDTH=830
+CONCEPT_DIR=Path("acolad_concept_assets")
+HIGHLIGHT_INKS=(
+    ((99,43,184),(205,179,250,162)),     # lavender
+    ((9,111,161),(143,223,249,164)),     # cyan
+    ((121,69,15),(250,219,143,166)),     # warm yellow
+    ((137,40,108),(249,186,216,154)),    # blush
+    ((23,111,87),(161,231,209,156)),     # mint
+)
 
 def font_integrity():
     """Fail closed on the repository's current zero-filled placeholder fonts.
@@ -87,38 +95,117 @@ def plan_scene(segments,photo=False):
         if y< TEXT_BOTTOM-10:return planned
     raise ValueError("Scene too text-heavy for frozen-layout, split into another scene")
 
+def _row_runs(row):
+    """Group consecutive bold words so highlights cover PHRASES, not word tiles."""
+    runs=[]
+    for word,bold in row:
+        if legacy.is_emoji_token(word):
+            runs.append((word,False,True))
+        elif runs and runs[-1][1]==bold and not runs[-1][2]:
+            prev,_,_=runs.pop()
+            runs.append((prev+" "+word,bold,False))
+        else:
+            runs.append((word,bold,False))
+    return runs
+
+def _highlight_brush(image,box,variant):
+    """Transparent painterly underline with organic wavy edges; never a box."""
+    x0,y0,x1,y1=[round(x) for x in box]
+    if x1<=x0:return
+    salt=(x0*17+y0*7+variant*31)%13
+    layer=Image.new("RGBA",image.size,(0,0,0,0))
+    ink=ImageDraw.Draw(layer)
+    color=HIGHLIGHT_INKS[variant%len(HIGHLIGHT_INKS)][1]
+    w=x1-x0
+    # One broad imperfect swipe with a small pencil-fiber extension.
+    points=[
+       (x0-6,y0+7+salt%3),
+       (x0+w*.17,y0+2),
+       (x0+w*.43,y0+6),
+       (x0+w*.72,y0+1+salt%4),
+       (x1+5,y0+4),
+       (x1+9,y1-3),
+       (x0+w*.75,y1+3),
+       (x0+w*.45,y1),
+       (x0+w*.20,y1+2),
+       (x0-8,y1-2),
+    ]
+    ink.polygon(points,fill=color)
+    # Uneven second pass gives a marker/brush texture, not flat rectangle.
+    ink.line([(x0,y1-3),(x0+w*.28,y1-5),(x0+w*.60,y1-4),(x1,y1-7)],
+             fill=(color[0],color[1],color[2],53),width=4)
+    image.alpha_composite(layer)
+
+def _run_width(draw,run,regular,emphasis,size):
+    text,bold,emoji=run
+    if emoji:return size*1.35
+    f=emphasis if bold else regular
+    return draw.textlength(text,font=f,direction="rtl",language="fa")
+
 def render_rows(image,layout):
-    """Append only fresh segment to the prior image, leaving prior pixels untouched."""
+    """Render only new text; previous scene pixels remain perfectly frozen."""
     draw=ImageDraw.Draw(image)
     size=layout["size"]
     normal,emphasis=font_set(size)
-    advance=int(size*1.7)
+    advance=int(size*1.68)
     y=layout["y"]
     for row in layout["lines"]:
-        x=TEXT_X
-        for word,isbold in row:
-            f=emphasis if isbold else normal
-            if legacy.is_emoji_token(word):
-                icon=legacy.make_emoji(word,size)
-                if icon is None:raise RuntimeError("Missing emoji glyph")
-                width=int(size*1.35)
-                image.alpha_composite(icon,(round(x-width),round(y+size*.08)))
+        runs=_row_runs(row)
+        gap=draw.textlength(" ",font=normal,direction="rtl",language="fa")
+        widths=[_run_width(draw,run,normal,emphasis,size) for run in runs]
+        total=sum(widths)+gap*max(0,len(runs)-1)
+        if total>MAX_WIDTH+2:raise ValueError("Line longer than centered text safe zone")
+        x=TEXT_X+total/2
+        for i,(run,width) in enumerate(zip(runs,widths)):
+            text,isbold,isemoji=run
+            if isemoji:
+                icon=legacy.make_emoji(text,size)
+                if icon is None:raise RuntimeError("Missing Noto color emoji glyph")
+                image.alpha_composite(icon,(round(x-width),round(y+size*.11)))
                 draw=ImageDraw.Draw(image)
-                x-=width
-                continue
-            word_width=draw.textlength(word,font=f,direction="rtl",language="fa")
-            advance_width=draw.textlength(word+" ",font=f,direction="rtl",language="fa")
-            if isbold:
-                overlay=Image.new("RGBA",image.size,(0,0,0,0))
-                high=ImageDraw.Draw(overlay)
-                high.rounded_rectangle((round(x-word_width-10),round(y+size*.58),
-                    round(x+6),round(y+size*1.19)),radius=9,fill=(201,172,255,160))
-                image.alpha_composite(overlay)
-                draw=ImageDraw.Draw(image)
-            draw.text((x,y),word,font=f,fill=ACCENT if isbold else TEXT_COLOR,
-                      direction="rtl",language="fa",anchor="ra")
-            x-=advance_width
+            else:
+                font=emphasis if isbold else normal
+                if isbold:
+                    index=(layout.get("highlight_seed",0)+i+y//100)
+                    color=HIGHLIGHT_INKS[index%len(HIGHLIGHT_INKS)][0]
+                    _highlight_brush(image,(x-width-5,y+size*.63,
+                                           x+5,y+size*1.21),index)
+                    draw=ImageDraw.Draw(image)
+                else:
+                    color=TEXT_COLOR
+                draw.text((x,y),text,font=font,fill=color,
+                          direction="rtl",language="fa",anchor="ra")
+            x-=width+gap
         y+=advance
+
+def add_concept_illustration(background,illustration):
+    """Insert a source-free conceptual sketch, preserving original brand/logo.
+
+    Image zone is intentionally separate from caption zone; new text can
+    accumulate in place underneath it.
+    """
+    from PIL import ImageOps
+    zone=(125,295,955,900)
+    im=illustration.convert("RGBA")
+    if im.width<256 or im.height<256:
+        raise ValueError("Generated concept artwork resolution too small")
+    fitted=ImageOps.contain(im,(zone[2]-zone[0],zone[3]-zone[1]),
+                            method=Image.Resampling.LANCZOS)
+    x=zone[0]+((zone[2]-zone[0])-fitted.width)//2
+    y=zone[1]+((zone[3]-zone[1])-fitted.height)//2
+    if fitted.getextrema()[3][0]==255:
+        # Image API sometimes returns an opaque flat paper background.
+        # Fade near-white pixels gently so Acolad's original base shows through.
+        pix=fitted.load()
+        for py in range(fitted.height):
+            for px in range(fitted.width):
+                red,green,blue,alpha=pix[px,py]
+                whiteness=min(red,green,blue)
+                if whiteness>=248:
+                    pix[px,py]=(red,green,blue,0)
+                elif whiteness>=226 and max(red,green,blue)-whiteness<25:
+                    pix[px,py]=(red,green,blue,int(alpha*(248-whiteness)/22))
+    background.alpha_composite(fitted,(x,y))
 
 def scene_chunks(story):
     frames=legacy.frames_from_story(story)
@@ -151,9 +238,18 @@ def render(story,output,allow_stock=True):
     for group in scene_groups:
         sid=group[0]["scene"]
         use_photo=photo is not None and sid==selected_photo_scene
-        layouts=plan_scene([f["added_text"] for f in group],photo=use_photo)
+        generated=CONCEPT_DIR/f"scene_{int(sid):02d}.png"
+        use_concept=generated.is_file()
+        # A concept drawing replaces stock for this scene; no photo collage.
+        use_photo=use_photo and not use_concept
+        layouts=plan_scene([f["added_text"] for f in group],photo=(use_photo or use_concept))
+        for i,layout in enumerate(layouts):
+            layout["highlight_seed"]=int(sid)*7+i*3
         current=base.copy()
         if use_photo:legacy.add_photo(current,photo)
+        if use_concept:
+            with Image.open(generated) as illustration:
+                add_concept_illustration(current,illustration)
         for i,f in enumerate(group):
             before=current.copy()
             render_rows(current,layouts[i])
@@ -173,6 +269,8 @@ def render(story,output,allow_stock=True):
        "brand_bold":"assets/fonts/IRANSans-Bold.ttf","previous_pixels_identical":all(
           x["previous_pixels_identical"] for x in exact_checks),
        "stock_status":stock.get("status"),"stock_photo_scene":selected_photo_scene,
+       "concept_scenes":[int(g[0]["scene"]) for g in scene_groups if (CONCEPT_DIR/f"scene_{int(g[0]['scene']):02d}.png").is_file()],
+       "centered_text":True,"organic_highlights":True,
        "novinhub_draft_count":0,"uploads":0,"scheduled":0,"published":0,
        "manual_editorial_review_required":True}
     (output/"pixel_freeze_checks.json").write_text(json.dumps(exact_checks,ensure_ascii=False,indent=2),encoding="utf8")
