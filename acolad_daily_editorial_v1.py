@@ -20,6 +20,7 @@ import acolad_luna_research_preview as news
 OUT=Path("acolad_daily_editorial_output")
 RESEARCH_OUT=Path("acolad_luna_research_preview")
 PAID_APPROVAL="APPROVED_DAILY_EDITORIAL_PREVIEW_20000_TOMAN"
+HISTORY=Path("acolad_daily_editorial_history.json")
 IRAN=ZoneInfo("Asia/Tehran")
 TOPICS={
  "iran_economy":("اقتصاد و معیشت ایران",("ایران","تورم","معیشت","خرید","هزینه","مالیات")),
@@ -178,6 +179,32 @@ def repair_unnecessary_publisher_mentions(story:dict)->tuple[dict,bool]:
         slide["text"]=text
     return out,changed
 
+def read_history(day)->list[dict]:
+    if not HISTORY.is_file():return []
+    try:
+        raw=json.loads(HISTORY.read_text(encoding="utf-8"))
+        if not isinstance(raw,list):return []
+        return [x for x in raw
+                if isinstance(x,dict)
+                and isinstance(x.get("url"),str)
+                and isinstance(x.get("date"),str)
+                and 0<=(day-dt.date.fromisoformat(x["date"])).days<=14]
+    except (ValueError,TypeError,OverflowError):
+        return []
+
+def unseen_recent_articles(sources,history,diagnostic):
+    banned={x["url"] for x in history}
+    fresh=[x for x in sources if x.get("url") not in banned]
+    candidate_news=[x for x in fresh if x.get("source_type")!="academic_doi"
+                    and x.get("evidence_depth")=="full_article"]
+    if not candidate_news:
+        diagnostic.append("No fresh complete article after dedup; preserve originals for human research and avoid making false claims.")
+        return sources
+    for i,item in enumerate(fresh,1):
+        item["id"]="S"+str(i).zfill(2)
+    diagnostic.append("Editorial duplicate URLs excluded: "+str(len(sources)-len(fresh)))
+    return fresh
+
 def run_preview(day=None,budget_usd=0.018,output=OUT):
     date=day or local_day()
     output.mkdir(parents=True,exist_ok=True)
@@ -192,7 +219,12 @@ def run_preview(day=None,budget_usd=0.018,output=OUT):
     }[pillar]
     orig_w,orig_e=news.WRITE_INSTRUCTION,news.EDIT_INSTRUCTION
     orig_select=news.SELECT_INSTRUCTION
+    orig_collect=news.collect_sources
+    history=read_history(date)
+    def _dedup_sources(focus,diagnostic):
+        return unseen_recent_articles(orig_collect(focus,diagnostic),history,diagnostic)
     try:
+        news.collect_sources=_dedup_sources
         extra=narrative_prompts(date)
         news.WRITE_INSTRUCTION=orig_w+extra
         news.EDIT_INSTRUCTION=orig_e+extra
@@ -207,6 +239,7 @@ def run_preview(day=None,budget_usd=0.018,output=OUT):
         news.WRITE_INSTRUCTION=orig_w
         news.EDIT_INSTRUCTION=orig_e
         news.SELECT_INSTRUCTION=orig_select
+        news.collect_sources=orig_collect
     source_status=RESEARCH_OUT/"status.json"
     if not source_status.is_file():
         status={"status":"RESEARCH_OUTPUT_MISSING","exit_code":code}
@@ -254,6 +287,7 @@ def run_preview(day=None,budget_usd=0.018,output=OUT):
     status["narrative_style_today"]=style
     status["narrative_hook_direction"]=hook
     status["day_tehran"]=date.isoformat()
+    status["history_urls_excluded_count"]=len(history)
     status["repeated_legacy_story_blocked"]=good and not distinct
     status["image_api_calls"]=0
     status["drafts"]=0
@@ -263,6 +297,13 @@ def run_preview(day=None,budget_usd=0.018,output=OUT):
     (output/"preview_status.json").write_text(json.dumps(status,ensure_ascii=False,indent=2),encoding="utf-8")
     if good and distinct:
         (output/"current_story.json").write_text(json.dumps(story,ensure_ascii=False,indent=2),encoding="utf-8")
+        selected_path=RESEARCH_OUT/"selected_evidence.json"
+        selected=json.loads(selected_path.read_text(encoding="utf-8")) if selected_path.exists() else []
+        for item in selected:
+            if item.get("url") and not any(x.get("url")==item["url"] for x in history):
+                history.append({"url":item["url"],"title":item.get("title",""),
+                                "date":date.isoformat()})
+    HISTORY.write_text(json.dumps(history,ensure_ascii=False,indent=2),encoding="utf-8")
     print("DAILY_DYNAMIC_STORY "+json.dumps({
         "status":original,"ready":good and distinct,"hook":style,
         "model_calls":status.get("gapgpt_requests_sent"),"publication":"NEVER"},ensure_ascii=False))
