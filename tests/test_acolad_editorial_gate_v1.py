@@ -29,7 +29,7 @@ class SafeEditorialGate(unittest.TestCase):
                 with patch.dict(os.environ,{"GAPGPT_API_KEY":"NOT_A_REAL_KEY_BUT_NEVER_SENT"}):
                     with patch.object(research,"collect_sources",return_value=items):
                         with patch.object(research,"suggested_evidence_pairs",return_value=[]):
-                            with patch.object(research,"api_call",side_effect=AssertionError("PAID_CALL_UNSAFE")):
+                            with patch.object(research,"api_call",side_effect=RuntimeError("MOCKED_PAID_CALL_NO_SPEND")) as fake:
                                 code=research.main([
                                     "--focus","auto",
                                     "--budget-usd","0.018",
@@ -37,7 +37,10 @@ class SafeEditorialGate(unittest.TestCase):
                                     "--gift-confirmation",research.GIFT])
             self.assertEqual(code,0)
             report=json.loads((Path(tmp)/"status.json").read_text(encoding="utf-8"))
-            self.assertEqual(report["status"],"EVIDENCE_PAIR_BLOCKED_NO_SPEND")
+            self.assertEqual(report["status"],"PIPELINE_ERROR_NO_PUBLICATION")
+            # The narrative is now allowed to TRY a single grounded source,
+            # while this test prevents any real paid request.
+            fake.assert_called_once()
             self.assertEqual(report["gapgpt_requests_sent"],0)
             self.assertEqual(report["publication"],"NEVER")
 
