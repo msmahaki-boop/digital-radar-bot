@@ -1,1 +1,2 @@
 One free REAL AI diffusion image attempt, 195s bounded, fallback procedural art; no paid requests or publication. 2026-11-03.
+Canonical aihorde.net REST test (previous stablehorde.net returned 403). No paid API, no publish.
