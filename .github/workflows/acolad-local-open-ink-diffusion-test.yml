@@ -1,0 +1,40 @@
+name: Acolad LOCAL TRUE DIFFUSION image — free CPU one-off (NO PUBLISH)
+
+on:
+  push:
+    paths:
+      - 'ops/acolad-local-open-ink-diffusion-test.trigger'
+
+permissions:
+  contents: read
+
+jobs:
+  local-cpu-model:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install genuine CPU PyTorch and diffusion model packages
+        run: |
+          python -m pip install --disable-pip-version-check --quiet torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install --disable-pip-version-check --quiet diffusers==0.35.2 transformers==4.51.3 accelerate==1.7.0 huggingface_hub==0.35.3 safetensors==0.6.2 Pillow==11.3.0
+      - name: Download and render one genuine CPU diffusion drawing
+        env:
+          HF_HUB_DISABLE_TELEMETRY: '1'
+          HF_HUB_DISABLE_XET: '1'
+          OMP_NUM_THREADS: '8'
+        run: |
+          python -u acolad_local_diffusion_real_image_v1.py \
+            --steps 10 \
+            --output acolad_local_real_diffusion_output
+      - name: Archive real rendered picture and model license receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-genuine-local-diffusion-single-ink-drawing
+          path: acolad_local_real_diffusion_output/
+          if-no-files-found: warn
+          retention-days: 14
