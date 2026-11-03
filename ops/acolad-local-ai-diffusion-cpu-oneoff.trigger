@@ -1,0 +1,1 @@
+One-off no-key real pretrained diffusion CPU art test, no publish/draft or paid API, bounded 17-minute process timeout.
