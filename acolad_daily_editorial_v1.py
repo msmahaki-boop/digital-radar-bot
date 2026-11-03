@@ -159,6 +159,19 @@ def repair_all_new_scenes(story:dict)->tuple[dict,bool]:
         else:i+=1
     return result,True
 
+def repair_excess_terminal_dots(story:dict)->tuple[dict,bool]:
+    """Remove ONLY redundant final full stops; no facts or figures changed."""
+    import copy
+    out=copy.deepcopy(story)
+    changed=False
+    for frame in out.get("slides",[]):
+        text=str(frame.get("text",""))
+        trimmed=text.rstrip().rstrip(" .۔").strip()
+        if trimmed!=text and text.rstrip().endswith((".", "۔")):
+            frame["text"]=trimmed
+            changed=True
+    return out,changed
+
 def repair_unnecessary_publisher_mentions(story:dict)->tuple[dict,bool]:
     """Remove outlet name-dropping without altering real claim or source IDs."""
     import copy
@@ -293,6 +306,7 @@ def run_preview(day=None,budget_usd=0.018,output=OUT):
         original=="QA_BLOCKED_HUMAN_REVIEW_REQUIRED"
         and bool(possible_cosmetic_issues)
         and all(x=="story lacks at least one progressive same-background reveal"
+                or x=="cinema: too many final periods"
                 or (x.startswith("cinema: frame ")
                     and x.endswith(" unnecessary publisher mention"))
                 for x in possible_cosmetic_issues)
@@ -301,6 +315,9 @@ def run_preview(day=None,budget_usd=0.018,output=OUT):
            (good or allowed_cosmetic_problem) else {})
     if allowed_cosmetic_problem:
         revised,copy_repaired=repair_unnecessary_publisher_mentions(story)
+        if "cinema: too many final periods" in possible_cosmetic_issues:
+            revised,period_repaired=repair_excess_terminal_dots(revised)
+        else:period_repaired=False
         if "story lacks at least one progressive same-background reveal" in possible_cosmetic_issues:
             revised,scene_repaired=repair_all_new_scenes(revised)
         else:scene_repaired=False
@@ -315,6 +332,7 @@ def run_preview(day=None,budget_usd=0.018,output=OUT):
             status["issues"]=[]
             status["editorial_scene_lock_repaired_without_text_changes"]=scene_repaired
             status["publisher_name_dropped_without_changing_source"]=copy_repaired
+            status["trailing_punctuation_repaired"]=period_repaired
             status["prior_machine_status"]=original
             status["story_scenes"]=len({s.get("scene_id") for s in story["slides"]})
             (output/"editorially_repaired_story.json").write_text(
