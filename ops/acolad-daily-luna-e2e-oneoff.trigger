@@ -1,2 +1,3 @@
 One-off 2026-11-03 approved daily Luna preview <= 4500 toman soft budget and bounded AI Horde genuine image; do not publish or create NovinHub draft.
 Second oneoff: scene-locked sourced Luna daily story and Pollinations->Horde true AI image probes; bounded 4500 toman Luna. No publish.
+Third user-authorized daily Luna preview: rotate true topic, preserve source claims, repair outlet-name-drop and scene lock, try Pollinations/Horde; never publish; <=4500t Luna soft budget.
