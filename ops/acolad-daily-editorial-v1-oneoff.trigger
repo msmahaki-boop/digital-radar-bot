@@ -1,0 +1,1 @@
+ONE TIME user-approved conceptual image <= 20000 toman; daily source intake free. Preview only: NO DRAFT, NO QUEUE, NO PUBLISH. 2026-11-03.
