@@ -525,14 +525,16 @@ SYSTEM=('تو سردبیر تحقیقی و قصه‌گوی خلاق آکولاد
         'اسم دانشگاه را فقط وقتی در متادیتای institutions موجود است بگو و بگو «پژوهشگران وابسته به» نه ادعای رسمی دانشگاه. '
         'از خبر رپورتاژی به‌عنوان خبر مستقل استفاده نکن. خروجی فقط JSON معتبر.')
 
+# Preserve sources accurately: one primary source is acceptable when no corroborated
+# cross-source match exists; uncertainty must remain clearly attributed.
 SELECT_INSTRUCTION='''تو سردبیر محتوای روایی آکولادی. قبل از ساخت استوری باید سوژه‌ای پیدا کنی که «یک سؤال ملموس درباره رفتار مشتری» داشته باشد، نه چند خبر کنار هم.
-دو سند مستقل و واقعاً مرتبط با همان سؤال انتخاب کن؛ ترجیحاً خبر تازه اقتصادی/فناوری ایران و پژوهش دارای چکیده با روش و یافته مشخص. ناهم‌موضوع بودن دو مقاله را با واژه‌های کلی «اقتصاد دیجیتال» و «رفتار مشتری» پنهان نکن.
+تا دو سند مستقل و واقعاً مرتبط با همان سؤال را ترجیح بده؛ اگر زوج سند علمی/خبری واقعاً مرتبط پیدا نشد، یک منبع اصلی دارای متن مقاله/چکیده کافی و تاریخ مشخص را انتخاب کن و کل داستان را فقط به همان نسبت بده. نبود پژوهش آزمایشی به معنی مجوز اختراع پژوهش نیست. ناهم‌موضوع بودن دو مقاله را با واژه‌های کلی «اقتصاد دیجیتال» و «رفتار مشتری» پنهان نکن.
 «تحقیق آزمایشی» به معنی تغییر شرایط یا تقسیم تصادفی/کنترل‌شده گروه‌هاست؛ پرسشنامه و خوداظهاری آزمایش نیست. اگر در چکیده روش/یافته کافی ثبت نشده، داستان آزمایش را جعل نکن. study_design_hint صرفاً سرنخ است نه سند قطعی.
 اگر یک خبر، گزارش خودِ فروشنده یا شرکت است، آن را به صاحب داده نسبت بده و به‌عنوان آمار مستقل کل ایران معرفی نکن. روزنامه و رسانه کوچک فقط لینک منبع‌اند؛ اسم‌شان را در متن نهایی بزرگ نکن. رسانه بزرگ جهانی را فقط وقتی ذکر کن که اصل همان گزارش واقعاً در مدارک انتخاب شده باشد.
 اول یک گره مشخص انسانی، سپس یک شاهد خبر، یک پژوهش مرتبط، کشف واقعی، و یک آزمایش یا تصمیم قابل‌سنجش برای آخر قصه انتخاب کن.
 هیچ عددی را از تیترهای صرف، فراداده DOI یا مثال‌های ساختگی به‌عنوان واقعیت نگو. کشور، جامعه، تاریخ، متغیر نتیجه پژوهش و محدودیت تعمیم را دقیق حفظ کن.
 شخصیت داستان فرضی است مگر شواهد مستقل درباره همان شخص وجود داشته باشد.
-اگر هیچ زوج سندی قابل دفاع وجود ندارد source_ids=[] بده؛ قصه را به زور نساز.
+اگر هیچ منبع دارای متن/چکیده برای ادعای اصلی وجود ندارد source_ids=[] بده؛ اما یک منبع محکم برای روایت کفایت می‌کند. قصه را به زور نساز.
 خروجی JSON:
 {"angle":"...","source_ids":["S01","S02"],"why_now":"...","story_tension":"...","hypothetical_example":"...",
 "grounded_claims":[{"source_id":"S01","claim":"..."},{"source_id":"S02","claim":"..."}],
@@ -708,11 +710,11 @@ def validate_plan(plan: dict, sources: list[dict]) -> list[str]:
     ids=plan.get('source_ids') or []
     if not isinstance(ids,list):ids=[]
     ids=list(dict.fromkeys(x for x in ids if isinstance(x,str)))
-    if len(ids)<2:issues.append('plan: fewer than two sources')
+    if len(ids)<1:issues.append('plan: no source chosen')
     if any(x not in valid for x in ids):issues.append('plan: invented source ID')
     known=[valid[x] for x in ids if x in valid]
     publishers={s['publisher'] for s in known}
-    if len(publishers)<2:issues.append('plan: insufficient publisher diversity')
+    if len(known)>1 and len(publishers)<2:issues.append('plan: insufficient publisher diversity')
     if unrelated_selected_subjects(known):issues.append('plan: no shared concrete topic across selected articles')
     if not any(s.get('evidence_depth') in ('full_article','abstract') for s in known):
         issues.append('plan: no full-text article excerpt or scholarly abstract')
@@ -840,7 +842,7 @@ def story_quality(story: dict, selected: list[dict]) -> list[str]:
             issues.append(f'frame {i}: Iran attribution not supported')
     if len(slides)>1 and not has_append:
         issues.append('story lacks at least one progressive same-background reveal')
-    if len(fact_sources)<2:issues.append('fewer than 2 distinct sources referenced in story frames')
+    if len(fact_sources)<1:issues.append('no grounded source referenced in story frames')
     interaction=story.get('interaction') or {}
     if not isinstance(interaction,dict) or interaction.get('type') not in ('poll','question'):
         issues.append('interaction missing / type invalid')
@@ -1036,8 +1038,8 @@ def main(argv=None):
         sources=collect_sources(opt.focus,diag)
         news=[x for x in sources if x['source_type']!='academic_doi' and age_days(x['date']) is not None and age_days(x['date'])<=21]
         substantive=[x for x in sources if x['evidence_depth'] in ('full_article','abstract')]
-        if len(news)<MIN_NEWS or len({x['publisher'] for x in news})<2 or not substantive:
-            issues.append('Insufficient diverse current news and full-text/abstract evidence; generation blocked')
+        if not news or not substantive:
+            issues.append('No timely news or substantive source body available; factual narrative blocked')
             write_outputs(sources,plan,story,issues,diag,usage,'RESEARCH_BLOCKED')
             print('RESEARCH_BLOCKED | preview only | no publication')
             return 0
@@ -1048,10 +1050,7 @@ def main(argv=None):
         # Hard no-spend guard: a busy news day without a relevant independent
         # academic/reporting pair must not trigger a forced or fabricated story.
         if not thematic_pairs:
-            issues.append('No fresh FULL ARTICLE + relevant ACADEMIC ABSTRACT pair. Luna not called.')
-            write_outputs(sources,plan,story,issues,diag,usage,'EVIDENCE_PAIR_BLOCKED_NO_SPEND')
-            print('EVIDENCE_PAIR_BLOCKED_NO_SPEND | 0 Luna calls | no publication')
-            return 0
+            diag.append('No defensible cross-source pair; continue with ONE complete, source-attributed article or scholarly abstract; never fabricate a second source.')
         plan_prompt=(SELECT_INSTRUCTION+'\n\nTHEMATIC_PAIRS (UNTRUSTED HEURISTIC; VERIFY CLAIMS):\n'+
             json.dumps(thematic_pairs,ensure_ascii=False)[:3000]+
             '\nSOURCE CANDIDATES (UNTRUSTED DATA):\n'+source_prompt)
@@ -1060,7 +1059,7 @@ def main(argv=None):
         # A valid cross-publisher pair was available but Luna selected two items
         # from one outlet. Retry the EDITORIAL PLAN once, within the paid-call
         # and soft-budget gates. Never silently replace IDs with unrelated news.
-        if any(x in issues for x in ('plan: fewer than two sources',
+        if any(x in issues for x in ('plan: no source chosen',
                                    'plan: insufficient publisher diversity',
                                    'plan: no shared concrete topic across selected articles')) and thematic_pairs:
             publishers_by_id={s['id']:s['publisher'] for s in sources}
