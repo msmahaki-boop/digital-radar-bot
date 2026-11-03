@@ -16,7 +16,7 @@ from urllib.parse import urlsplit
 import requests
 from PIL import Image
 
-API="https://stablehorde.net/api/v2"
+API="https://aihorde.net/api/v2"
 ANON="0000000000"
 TIME_LIMIT_SECONDS=225
 OUT=Path("acolad_horde_real_image_output")
