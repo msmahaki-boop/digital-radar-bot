@@ -15,21 +15,18 @@ MODEL="nota-ai/bk-sdm-tiny"
 OUTPUT=Path("acolad_local_real_diffusion_output")
 LICENSE="creativeml-openrail-m"
 PROMPT=(
- "single original whimsical conceptual editorial cartoon, bold rough black ink pen sketch "
- "on a blank pure white paper background, small expressive tired online shopper trying to "
- "walk through a huge locked doorway that blocks an easy purchase, giant padlock and tiny "
- "keyhole, visual metaphor for forced account registration in an online store, "
- "minimal charming sparse hand-drawn uneven linework, slightly absurd funny scene, "
- "simple clear idea, lots of negative space, no colors, two dimensional, "
- "original children's picture book illustration for grownups, no text or logos"
+ "Whimsical black ink pen cartoon drawing on clean white paper. "
+ "One small puzzled shopper holding a key beside a huge locked shop door. "
+ "Simple clever visual metaphor for forced signup before online purchase. "
+ "Editorial sketch, uneven hand-drawn outlines, sparse, lots of white space, "
+ "friendly funny character, 2D monochrome line art, no words."
 )
 NEGATIVE=(
- "photorealistic, hyperrealistic, 3d render, gradients, shiny, glossy, busy, "
- "realistic skin, intricate background, multiple panels, infographic, writing, "
- "letters, words, captions, signature, watermark, copyrighted characters"
+ "dark background, dark walls, black panels, shadows, photo, photorealistic, "
+ "3d, blur, color, complicated scenery, frame, typography, letters, logo, watermark"
 )
 
-def run(output=OUTPUT, steps=10):
+def run(output=OUTPUT, steps=18):
     output.mkdir(parents=True,exist_ok=True)
     report={"model":MODEL,"model_license":LICENSE,"status":"NOT_STARTED",
             "api_image_requests":0,"real_model_generated":False,
@@ -50,14 +47,14 @@ def run(output=OUTPUT, steps=10):
         result=pipeline(
             PROMPT,negative_prompt=NEGATIVE,
             num_inference_steps=steps,guidance_scale=7.0,
-            height=384,width=384,
+            height=512,width=512,
             generator=torch.Generator(device="cpu").manual_seed(12485))
         picture=result.images[0]
-        if picture.size!=(384,384):raise RuntimeError("Unexpected picture size")
+        if picture.size!=(512,512):raise RuntimeError("Unexpected picture size")
         dest=output/"original_diffusion_01.png"
         picture.convert("RGB").save(dest,optimize=True)
         report.update({"status":"REAL_LOCAL_DIFFUSION_IMAGE_SAVED",
-                       "image_file":dest.name,"size":[384,384],
+                       "image_file":dest.name,"size":[512,512],
                        "real_model_generated":True,"model_inference_steps":steps,
                        "no_named_artist_imitation":True,
                        "human_visual_quality_review_required":True})
@@ -75,8 +72,8 @@ def run(output=OUTPUT, steps=10):
 if __name__=="__main__":
     parser=argparse.ArgumentParser()
     parser.add_argument("--output",type=Path,default=OUTPUT)
-    parser.add_argument("--steps",type=int,default=10)
+    parser.add_argument("--steps",type=int,default=18)
     args=parser.parse_args()
-    if not 5<=args.steps<=20:raise SystemExit("steps out of bounds")
+    if not 5<=args.steps<=24:raise SystemExit("steps out of bounds")
     status=run(args.output,args.steps)
     raise SystemExit(0 if status["real_model_generated"] else 2)
