@@ -1,9 +1,12 @@
 name: Acolad V3 Centered Typography + ONE Budgeted Concept Image (PREVIEW ONLY)
 
 on:
-  push:
-    paths:
-      - 'ops/acolad-cinematic-v3-image-oneoff.trigger'
+  workflow_dispatch:
+    inputs:
+      approval:
+        description: 'Explicit paid image test approval; one image, max 20000 toman planning budget'
+        type: string
+        required: true
 
 permissions:
   contents: read
@@ -14,7 +17,7 @@ concurrency:
 
 jobs:
   image-and-visual-preview:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && inputs.approval == 'USER_APPROVED_ONE_IMAGE_20000_TOMAN'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
