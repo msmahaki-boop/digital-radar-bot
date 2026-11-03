@@ -13,31 +13,37 @@ class FrozenSceneTests(unittest.TestCase):
         cls.original=(v.REG,v.MEDIUM,v.BOLD)
         cls.font_issue=v.font_integrity()
         cls.story=json.loads(STORY_PATH.read_text(encoding="utf8"))
-        # TEST ONLY: substitute system fonts to validate frozen geometry while
-        # real brand files contain zero bytes. Production never substitutes.
+        cls.using_test_fallback=(cls.font_issue!="VALID")
+        # Fallback is strictly a test fixture for geometry diagnostics when
+        # the repository font is damaged. Once valid fonts are installed,
+        # ALL rendering tests use the actual brand IRANSans files.
         cls.test_font=Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")
         cls.test_bold=Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf")
-        if not cls.test_font.is_file():raise unittest.SkipTest("test-only font missing")
-        v.REG=cls.test_font
-        v.MEDIUM=cls.test_font
-        v.BOLD=cls.test_bold
+        if cls.using_test_fallback:
+            if not cls.test_font.is_file():raise unittest.SkipTest("test-only font missing")
+            v.REG=cls.test_font
+            v.MEDIUM=cls.test_font
+            v.BOLD=cls.test_bold
 
     @classmethod
     def tearDownClass(cls):
         v.REG,v.MEDIUM,v.BOLD=cls.original
 
-    def test_brand_fonts_are_corrupt_and_release_must_block(self):
-        self.assertTrue(self.original[0].as_posix().endswith("assets/fonts/IRANSans-Regular.ttf"))
-        self.assertTrue(self.original[2].as_posix().endswith("assets/fonts/IRANSans-Bold.ttf"))
-        self.assertTrue(self.font_issue.startswith("ZERO_FILLED"),self.font_issue)
-        v.REG,v.MEDIUM,v.BOLD=self.original
-        try:
-            with self.assertRaisesRegex(RuntimeError,"IRANSANS_ASSETS_NOT_READY"):
-                v.check_assets()
-        finally:
-            v.REG=self.test_font
-            v.MEDIUM=self.test_font
-            v.BOLD=self.test_bold
+    def test_brand_fonts_are_valid_and_renderer_uses_real_iransans(self):
+        self.assertEqual(self.original[0].as_posix(),
+                         "assets/fonts/IRANSans-Regular.ttf")
+        self.assertEqual(self.original[2].as_posix(),
+                         "assets/fonts/IRANSans-Bold.ttf")
+        self.assertEqual(self.font_issue,"VALID",
+                         "Real brand font files must be nonzero and valid")
+        self.assertFalse(self.using_test_fallback,
+                         "Real IRANSans must be used after installation")
+        # Header/bytes check is not enough: FreeType must truly load the
+        # regular and bold fonts, and RAQM must shape Persian correctly.
+        v.check_assets()
+        regular,bold=v.font_set(58)
+        self.assertIsNotNone(regular.getbbox("آکولاد"))
+        self.assertIsNotNone(bold.getbbox("داستان"))
 
     def test_scene_order_and_frozen_preset(self):
         groups=v.scene_chunks(self.story)
