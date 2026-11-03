@@ -1,0 +1,163 @@
+{
+  "topic": "درِ بسته خرید اینترنتی؛ هزینه پنهانِ اجبار به ثبت‌نام",
+  "date_researched": "2026-11-03",
+  "category": "small_business_growth",
+  "is_fictional_scenario": true,
+  "publication_permission": "PREVIEW_ONLY",
+  "sources": [
+    {
+      "id": "B1",
+      "name": "Baymard Institute — Cart Abandonment Rate Statistics 2026",
+      "url": "https://baymard.com/lists/cart-abandonment-rate",
+      "claim": "18% cite required account creation among abandonment reasons, excluding merely browsing; respondents US shoppers and multiple reasons possible",
+      "verification": "web checked 2026-11-03"
+    },
+    {
+      "id": "B2",
+      "name": "Baymard Institute — Account Selection Benchmark",
+      "url": "https://baymard.com/checkout-usability/benchmark/step-type/account",
+      "claim": "44% of benchmarked ecommerce sites make guest checkout needlessly hard to locate",
+      "verification": "web checked 2026-11-03"
+    },
+    {
+      "id": "B3",
+      "name": "Baymard Institute — Save Account Creation for Confirmation Step",
+      "url": "https://baymard.com/research-articles/delayed-account-creation",
+      "claim": "Recommend optional sign-up invitation after completion of order; article 2023",
+      "verification": "web checked 2026-11-03"
+    }
+  ],
+  "slides": [
+    {
+      "n": 1,
+      "scene_id": 1,
+      "visual_action": "new_scene",
+      "beat": "hook",
+      "text": "فکر کن صبح از خواب پاشدی\nو فهمیدی فروشگاهت یه **درِ قفل‌شده** جلوی مشتری گذاشته! 🔒",
+      "source_ids": [],
+      "visual_idea": "یک در بزرگ قفل‌شده وسط مسیر خرید آنلاین"
+    },
+    {
+      "n": 2,
+      "scene_id": 1,
+      "visual_action": "add_text",
+      "beat": "conflict",
+      "text": "مشتری جنس رو پسندیده\nولی درست دمِ خرید می‌شنوه:\n«**اول عضو شو!**»",
+      "source_ids": [],
+      "visual_idea": "همان در قفل‌شده و مشتری مردد"
+    },
+    {
+      "n": 3,
+      "scene_id": 2,
+      "visual_action": "new_scene",
+      "beat": "setup",
+      "text": "شاید بگی ثبت‌نام که دو دقیقه بیشتر نیست\n**پس چرا بعضی‌ها می‌رن؟**",
+      "source_ids": [],
+      "visual_idea": "کاربر در برابر کاغذ ثبت نام طولانی با ساعت بزرگ"
+    },
+    {
+      "n": 4,
+      "scene_id": 2,
+      "visual_action": "add_text",
+      "beat": "evidence",
+      "text": "در بررسی منتشرشدهٔ **Baymard**، حدود **۱۸٪** از خریداران آنلاین آمریکایی، در میان دلایل کنارگذاشتن خرید، اجبار به ساخت حساب رو هم گفتن",
+      "source_ids": [
+        "B1"
+      ],
+      "visual_idea": "همان کاربر و مسیر طولانی ساخت حساب"
+    },
+    {
+      "n": 5,
+      "scene_id": 3,
+      "visual_action": "new_scene",
+      "beat": "discovery",
+      "text": "حالا قسمت عجیب‌تر:\nبعضی فروشگاه‌ها **خرید مهمان** دارن\nاما مشتری اصلاً پیداش نمی‌کنه!",
+      "source_ids": [
+        "B2"
+      ],
+      "visual_idea": "کلید کوچک خرید مهمان پنهان پشت پرده بزرگ"
+    },
+    {
+      "n": 6,
+      "scene_id": 3,
+      "visual_action": "add_text",
+      "beat": "evidence",
+      "text": "در بنچمارک Baymard، گزینه خرید مهمان در **۴۴٪ از سایت‌های بررسی‌شده** بی‌جهت سخت پیدا می‌شد",
+      "source_ids": [
+        "B2"
+      ],
+      "visual_idea": "همان کلید خرید مهمان پنهان"
+    },
+    {
+      "n": 7,
+      "scene_id": 4,
+      "visual_action": "new_scene",
+      "beat": "experiment",
+      "text": "تصور کن کلید در واقعاً وجود داره\nاما گذاشتیش پشت یه پرده 😶",
+      "source_ids": [],
+      "visual_idea": "کلید پشت پرده جلوی در باز"
+    },
+    {
+      "n": 8,
+      "scene_id": 4,
+      "visual_action": "add_text",
+      "beat": "discovery",
+      "text": "مشتری نمی‌دونه در بازه\nو شاید **قبل از امتحان‌کردنش بره**",
+      "source_ids": [],
+      "visual_idea": "همان در و کلید پشت پرده"
+    },
+    {
+      "n": 9,
+      "scene_id": 5,
+      "visual_action": "new_scene",
+      "beat": "action",
+      "text": "حالا راهکار چیه؟\nگزینه **«خرید بدون ثبت‌نام»** رو واضح کنار ورود بذار",
+      "source_ids": [],
+      "visual_idea": "دو مسیر خرید مهمان و ورود با مسیر مهمان واضح"
+    },
+    {
+      "n": 10,
+      "scene_id": 5,
+      "visual_action": "add_text",
+      "beat": "action",
+      "text": "اگر عضویت لازم نیست، پیشنهاد ساخت حساب رو **بعد از ثبت سفارش** بیار\nنه وسط راه خرید",
+      "source_ids": [
+        "B3"
+      ],
+      "visual_idea": "همان طرح واضح خرید مهمان"
+    },
+    {
+      "n": 11,
+      "scene_id": 6,
+      "visual_action": "new_scene",
+      "beat": "payoff",
+      "text": "بعد هم دو نسخه رو مقایسه کن:\n**نرخ تکمیل خرید** و **سود سفارش**\nنه فقط تعداد کلیک‌ها",
+      "source_ids": [],
+      "visual_idea": "دو فروشگاه مقایسه A/B بدون ادعای نتیجه"
+    },
+    {
+      "n": 12,
+      "scene_id": 6,
+      "visual_action": "add_text",
+      "beat": "cta",
+      "text": "یه درِ باز می‌تونه از یه تخفیف بهتر باشه\nولی **این رو باید آزمایش کرد**\nآکولاد کمک می‌کنه ✨",
+      "source_ids": [],
+      "visual_idea": "همان دو نسخه و کلید باز کردن در"
+    }
+  ],
+  "resolution": {
+    "central_question": "آیا ثبت‌نام اجباری یا مخفی‌بودن خرید مهمان موجب انصراف برخی خریداران می‌شود؟",
+    "answer": "منابع Baymard این اصطکاک را گزارش کرده‌اند، اما اثر بر فروشگاه خاصی باید آزمایش شود.",
+    "action": "گزینه خرید مهمان را آشکار کنید و پیشنهاد ثبت‌نام اختیاری را بعد از خرید ببرید؛ نرخ تکمیل و سود را مقایسه کنید.",
+    "payoff_frame": 11
+  },
+  "interaction": {
+    "type": "poll",
+    "question": "تو از کدوم بیشتر خوشت نمیاد؟",
+    "options": [
+      "ساخت حساب اجباری",
+      "فرم‌های طولانی"
+    ]
+  },
+  "editorial_caveat": "وضعیت صرفاً پیش‌نمایش. همه درصدها به پژوهش/بنچمارک Baymard اشاره دارند؛ آمار ایران یا افزایش قطعی فروش نیستند. عدم ادعای تأثیر A/B قبل از آزمایش. استیکر بومی اینستاگرام به طور خودکار ساخته نمی‌شود."
+}
