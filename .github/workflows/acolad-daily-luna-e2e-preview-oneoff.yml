@@ -41,6 +41,7 @@ jobs:
           if [ -s acolad_daily_editorial_output/current_story.json ]; then
             python -u acolad_concept_art_pipeline_v2.py \
               --story-json acolad_daily_editorial_output/current_story.json \
+              --allow-pollinations \
               --allow-horde \
               --budget-toman 20000
             python -u acolad_narrative_visual_v2.py \
