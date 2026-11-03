@@ -68,6 +68,16 @@ class DailyEditorialTests(unittest.TestCase):
         self.assertTrue(daily.is_promotional_source(samples[1]))
         self.assertFalse(daily.is_promotional_source(samples[2]))
 
+    def test_only_promotions_never_come_back_as_default_story(self):
+        data=[{"id":"S01","title":"کمپین پاییزی برند",
+               "url":"https://example.org/marketing",
+               "excerpt":"برند تلاش دارد مشتری جدید جذب کند",
+               "source_type":"rss_summary","evidence_depth":"full_article"}]
+        diag=[]
+        remain=daily.unseen_recent_articles(data,[],diag)
+        self.assertEqual(remain,[])
+        self.assertTrue(any("advertorial" in x.lower() for x in diag))
+
     def test_missing_conflict_is_repaired_by_relabeling_only(self):
         original={"slides":[
             {"n":1,"beat":"hook","text":"فرض کن صبح از خواب پاشدی"},
