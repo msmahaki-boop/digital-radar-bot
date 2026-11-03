@@ -23,31 +23,44 @@ def run(output=OUT):
             "brand_approved":False,"published":False}
     try:
         import torch
-        from diffusers import StableDiffusionPipeline
+        from diffusers import StableDiffusionImg2ImgPipeline
+        from acolad_concept_art_pipeline_v2 import ink_sketch
         torch.set_num_threads(2)
         status["status"]="MODEL_DOWNLOAD_ATTEMPT"
-        pipe=StableDiffusionPipeline.from_pretrained(
+        pipe=StableDiffusionImg2ImgPipeline.from_pretrained(
             MODEL,revision=REVISION,torch_dtype=torch.float32,
             use_safetensors=True,safety_checker=None,requires_safety_checker=False)
         pipe=pipe.to("cpu")
         pipe.enable_attention_slicing()
         status["status"]="LOCAL_INFERENCE_ATTEMPT"
+        # Draw the real narrative symbol first, then let the pretrained
+        # diffusion model add hand-drawn irregularity without losing the plot.
+        concept="a tiny shopkeeper, an oversized padlock and a hidden key"
+        guide_path=output/"concept_guidance_source.png"
+        ink_sketch(2,"قفل بزرگ خرید و آدم کوچک کنار در",guide_path)
+        with Image.open(guide_path) as outline:
+            sketch=outline.convert("RGBA")
+            white=Image.new("RGBA",sketch.size,(255,254,251,255))
+            white.alpha_composite(sketch)
+            guide=white.convert("RGB").resize((384,384),Image.Resampling.LANCZOS)
+        guide.save(output/"guidance_white.png")
         prompt=(
-         "minimalist black ink editorial illustration, a single small bewildered "
-         "shop owner standing in front of one enormous locked door, three shoppers "
-         "walk past carrying empty baskets, witty surreal metaphor, whimsical "
-         "pen-and-ink magazine cartoon, irregular hand-drawn thin black lines, "
-         "strong symbolic concept, simple story, spare white paper background, "
-         "single lavender accent, no text, no letters, no watermark, no signature"
+         "whimsical original pen-and-ink editorial cartoon on plain white paper, "
+         "one small puzzled shopkeeper beside a single comically oversized padlock, "
+         "a tiny key is hidden nearby, silly absurd metaphor for blocked online checkout, "
+         "clean sparse hand-drawn black lines, quirky uneven pen strokes, "
+         "funny expressive person, one visual idea, lots of empty space, "
+         "delicate warm paper and one lilac accent. No letters or captions."
         )
         negative=(
-          "photo, photorealistic, 3d render, glossy, gradients, anime, manga, "
-          "typography, logo, signature, text, watermark, collage, many details"
+          "photograph, realistic architecture, building, balcony, gate, fence, bars, "
+          "3d, glossy, anime, manga, typography, logo, signature, watermark, "
+          "text, clutter, multiple panels, shadow gradients"
         )
-        g=torch.Generator(device="cpu").manual_seed(20261103)
-        raw=pipe(prompt=prompt,negative_prompt=negative,
-                 num_inference_steps=7,guidance_scale=7.0,
-                 height=384,width=384,generator=g).images[0]
+        g=torch.Generator(device="cpu").manual_seed(20261104)
+        raw=pipe(prompt=prompt,negative_prompt=negative,image=guide,
+                 strength=.51,num_inference_steps=16,guidance_scale=7,
+                 generator=g).images[0]
         raw.save(output/"model_raw.png")
         # Preserve original model generation AND provide a separate editable
         # pen-line interpretation with transparent paper, no synthetic subjects.
