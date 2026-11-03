@@ -197,6 +197,16 @@
       "message_id": 43,
       "reserved_utc": "2026-11-02T20:53:25.361566+00:00",
       "sent_utc": "2026-11-02T20:53:29.024061+00:00"
+    },
+    {
+      "slot": "2026-11-03-09",
+      "url": "https://www.searchenginejournal.com/pagespeed-insights-scores-lighthouse-update/595698",
+      "topic": "marketing",
+      "original_title": "PageSpeed Insights Scores May Rise After Lighthouse Update via @sejournal, @MattGSouthern",
+      "score": 82,
+      "status": "reserved",
+      "message_id": null,
+      "reserved_utc": "2026-11-03T05:48:53.020566+00:00"
     }
   ]
 }
