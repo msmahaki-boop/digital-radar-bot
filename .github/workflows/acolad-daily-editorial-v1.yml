@@ -1,0 +1,153 @@
+name: Acolad DAILY Seven-Pillar Editorial + Art V1 (PREVIEW ONLY)
+
+on:
+  schedule:
+    - cron: '45 3 * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'intake=free only; visual=verified demo; dynamic=live Luna story'
+        required: true
+        type: choice
+        options:
+          - intake
+          - visual
+          - dynamic
+        default: intake
+      approval:
+        description: 'Required for billable visual/dynamic: APPROVED_DAILY_EDITORIAL_PREVIEW_20000_TOMAN'
+        required: false
+        type: string
+  push:
+    paths:
+      - 'ops/acolad-daily-editorial-v1-oneoff.trigger'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: acolad-daily-editorial-safe-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  daily-free-editorial-intake:
+    if: github.event_name == 'schedule' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'intake')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Prepare free source research
+        run: python -m pip install --disable-pip-version-check requests==2.32.5 beautifulsoup4==4.14.2 Pillow==11.3.0
+      - name: Test 7 pillars, hooks and safe fallbacks
+        run: python -m unittest discover -s tests -p 'test_acolad_daily_editorial_v1.py' -v
+      - name: FREE source monitoring, topic rotation, NO model API
+        run: python -u acolad_daily_editorial_v1.py --mode intake
+      - name: Archive daily editorial research
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-daily-editorial-source-brief
+          path: acolad_daily_editorial_output/
+          if-no-files-found: warn
+          retention-days: 14
+
+  concept-visual-preview:
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'visual' && inputs.approval == 'APPROVED_DAILY_EDITORIAL_PREVIEW_20000_TOMAN')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install typography + art dependencies (no secrets in logs)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-color-emoji libharfbuzz0b libfribidi0 >/dev/null
+          python -m pip install --disable-pip-version-check requests==2.32.5 beautifulsoup4==4.14.2 Pillow==11.3.0
+      - name: Free regression gate (MUST pass before paid image)
+        run: |
+          python -m unittest discover -s tests -p 'test_acolad_daily_editorial_v1.py' -v
+          python -m unittest discover -s tests -p 'test_acolad_cinematic_v3.py' -v
+          python -m unittest discover -s tests -p 'test_acolad_narrative_visual_v2.py' -v
+      - name: Original illustration on Gemini 3.1 Flash Lite Image, then safe art fallback
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python -u acolad_concept_art_pipeline_v2.py \
+            --story-json examples/acolad_new_daily_episode_guest_checkout_20261103.json \
+            --allow-paid \
+            --approval APPROVED_ONE_GEMINI_CONCEPT_IMAGE_WITHIN_20000_TOMAN \
+            --budget-toman 20000
+      - name: Render all story frames with original IRANSans + immutable pixel reveal
+        run: |
+          python -u acolad_narrative_visual_v2.py \
+            --story-json examples/acolad_new_daily_episode_guest_checkout_20261103.json \
+            --stock off \
+            --output acolad_daily_episode_visual_output
+      - name: Archive actual story images and AI/fallback provenance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-new-guest-checkout-12-stories-with-art
+          path: |
+            acolad_daily_episode_visual_output/
+            acolad_concept_assets/
+            examples/acolad_new_daily_episode_guest_checkout_20261103.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  manual-dynamic-luna-preview:
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'dynamic' && inputs.approval == 'APPROVED_DAILY_EDITORIAL_PREVIEW_20000_TOMAN'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-color-emoji libharfbuzz0b libfribidi0 >/dev/null
+          python -m pip install --disable-pip-version-check requests==2.32.5 beautifulsoup4==4.14.2 Pillow==11.3.0
+      - name: Free tests first
+        run: python -m unittest discover -s tests -p 'test_acolad_daily_editorial_v1.py' -v
+      - name: LIVE seven-pillar research and rotating narrative Luna text preview
+        env:
+          GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
+        run: |
+          python -u acolad_daily_editorial_v1.py \
+            --mode preview \
+            --budget-usd 0.018 \
+            --approval APPROVED_DAILY_EDITORIAL_PREVIEW_20000_TOMAN
+      - name: Create story-specific art and visually render only if research QA passes
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -s acolad_daily_editorial_output/current_story.json ]; then
+            python -u acolad_concept_art_pipeline_v2.py \
+              --story-json acolad_daily_editorial_output/current_story.json \
+              --allow-paid \
+              --approval APPROVED_ONE_GEMINI_CONCEPT_IMAGE_WITHIN_20000_TOMAN \
+              --budget-toman 20000
+            python -u acolad_narrative_visual_v2.py \
+              --story-json acolad_daily_editorial_output/current_story.json \
+              --stock off --output acolad_daily_episode_visual_output
+          else
+            echo 'RESEARCH QA BLOCKED - no invented story and no image API spending.'
+          fi
+      - name: Archive research sources, narrative and visuals (never publish)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-daily-dynamic-Luna-preview-human-review
+          path: |
+            acolad_luna_research_preview/
+            acolad_daily_editorial_output/
+            acolad_daily_episode_visual_output/
+            acolad_concept_assets/
+          if-no-files-found: warn
+          retention-days: 14
