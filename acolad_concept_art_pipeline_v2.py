@@ -88,7 +88,21 @@ def ink_sketch(scene:int, metaphor:str, output:Path)->dict:
     stroke([(239,361),(253,353),(271,361)],5)
     # Dynamic editorial metaphor selected from actual story context.
     idea=metaphor.casefold()
-    if any(w in idea for w in ("ثبت","حساب","ورود","login","register","قفل","پسورد")):
+    if any(w in idea for w in ("پرده","کلید","curtain","hidden guest")):
+        # Story-specific reveal: a real key is hidden behind a heavy curtain,
+        # rather than an unrelated shopping-cart symbol.
+        curtain_x=640 if "باز" not in idea else 790
+        stroke([(curtain_x,245),(curtain_x,720)],12,color=soft)
+        for n in range(7):
+            x=curtain_x+((n%2)*11)
+            stroke([(x,280+n*58),(x-15,323+n*58),(x+6,354+n*58)],
+                   width=5,color=soft)
+        oval((490,448,580,537),width=10)
+        stroke([(575,492),(750,492)],12)
+        stroke([(705,493),(705,548),(733,548)],10)
+        stroke([(747,493),(747,531)],10)
+        stroke([(550,620),(590,585),(624,620)],5,color=soft)
+    elif any(w in idea for w in ("ثبت","حساب","ورود","login","register","قفل","پسورد")):
         # Oversized padlock as a barrier, with an open bridge further right.
         stroke([(518,421),(518,349),(560,290),(655,291),(705,346),(705,425)],13)
         draw.rounded_rectangle((487,420,730,665),radius=31,outline=dark,width=12)
