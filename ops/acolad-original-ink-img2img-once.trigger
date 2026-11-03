@@ -1,0 +1,1 @@
+One-off model-generated image-to-image from original Acolad ink sketch, no external image API and never publishes.
