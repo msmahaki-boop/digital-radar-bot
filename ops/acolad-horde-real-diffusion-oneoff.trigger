@@ -1,0 +1,1 @@
+One free REAL AI diffusion image attempt, 195s bounded, fallback procedural art; no paid requests or publication. 2026-11-03.
