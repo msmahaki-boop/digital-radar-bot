@@ -1,0 +1,1 @@
+One-off genuine open-weight CPU diffusion art generation; no NovinHub, Telegram, Instagram, or paid image APIs.
