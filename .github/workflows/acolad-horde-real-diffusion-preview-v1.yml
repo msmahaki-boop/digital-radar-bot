@@ -1,0 +1,53 @@
+name: Acolad REAL AI Illustration Horde + Frozen Story QA (one-off)
+
+on:
+  push:
+    paths:
+      - 'ops/acolad-horde-real-diffusion-oneoff.trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  no-key-image-and-story:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install image and original IRANSans rendering deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-color-emoji libharfbuzz0b libfribidi0 >/dev/null
+          python -m pip install --disable-pip-version-check requests==2.32.5 beautifulsoup4==4.14.2 Pillow==11.3.0
+      - name: Run editorial + image structure tests before external request
+        run: |
+          python -m unittest discover -s tests -p 'test_acolad_editorial_gate_v1.py' -v
+          python -m unittest discover -s tests -p 'test_acolad_daily_editorial_v1.py' -v
+          python -m unittest discover -s tests -p 'test_acolad_cinematic_v3.py' -v
+      - name: Real Diffusion AI image, one volunteer-provider request then optional code fallback
+        run: |
+          python -u acolad_concept_art_pipeline_v2.py \
+            --story-json examples/acolad_new_daily_episode_guest_checkout_20261103.json \
+            --allow-horde \
+            --budget-toman 20000
+      - name: Render entire 12-frame actual Acolad storyboard
+        run: |
+          python -u acolad_narrative_visual_v2.py \
+            --story-json examples/acolad_new_daily_episode_guest_checkout_20261103.json \
+            --stock off \
+            --output acolad_horde_story_output
+      - name: Archive provenance and actual images
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-real-AI-horde-and-cinematic-preview
+          path: |
+            acolad_horde_story_output/
+            acolad_concept_assets/
+          if-no-files-found: warn
+          retention-days: 14
