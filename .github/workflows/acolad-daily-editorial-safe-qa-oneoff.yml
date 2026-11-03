@@ -1,0 +1,45 @@
+name: Acolad DAILY Automatic Editorial FINAL QA (FREE, no publish)
+
+on:
+  push:
+    paths:
+      - 'ops/acolad-editorial-qa-oneoff.trigger'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-scheduled-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-color-emoji libharfbuzz0b libfribidi0 >/dev/null
+          python -m pip install --disable-pip-version-check -q requests==2.32.5 beautifulsoup4==4.14.2 Pillow==11.3.0
+      - name: Compile all current daily editorial and illustration production code
+        run: |
+          python -m py_compile acolad_daily_editorial_v1.py acolad_luna_research_preview.py acolad_concept_art_pipeline_v2.py acolad_pollinations_legacy_image_v1.py acolad_horde_real_image_v1.py acolad_narrative_visual_v2.py
+      - name: Offline regression with real IRANSans and duplicate source guard
+        run: |
+          python -m unittest discover -s tests -p 'test_acolad_daily_editorial_v1.py' -v
+          python -m unittest discover -s tests -p 'test_acolad_editorial_gate_v1.py' -v
+          python -m unittest discover -s tests -p 'test_acolad_cinematic_v3.py' -v
+          python -m unittest discover -s tests -p 'test_acolad_narrative_visual_v2.py' -v
+      - name: Check single publication authority and automatic Luna production schedule
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path(".github/workflows/acolad-daily-editorial-v1.yml").read_text()
+          assert "cron: '45 3 * * *'" in p
+          assert "if: github.event_name == 'schedule' ||" in p
+          assert "actions/cache/restore@v4" in p
+          assert "actions/cache/save@v4" in p
+          assert "GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}" in p
+          assert "secrets.NOVINHUB" not in p
+          print("DAILY_PREVIEW_AUTO_ENABLED / NO_PUBLISH")
+          PY
