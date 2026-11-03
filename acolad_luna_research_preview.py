@@ -415,7 +415,7 @@ def collect_sources(focus: str, diagnostic: list[str]) -> list[dict]:
     items=sorted(distinct.values(),key=lambda x:x['rank'],reverse=True)
     articles=0
     for item in items:
-        if articles>=7:break
+        if articles>=15:break
         if item.get('source_type')=='rss_summary' and is_allowed_article(item['url']):
             body=get_article_excerpt(item['url'])
             articles+=1
