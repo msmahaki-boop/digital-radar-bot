@@ -1,0 +1,1 @@
+User authorized one fresh Luna story and no Instagram/NovinHub publication. Soft budget $0.018 ~4500 toman. Research-first, editorial QA, artifacts only.
