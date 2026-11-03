@@ -12,6 +12,16 @@ STORY=Path("examples/acolad_new_daily_episode_guest_checkout_20261103.json")
 class DailyEditorialTests(unittest.TestCase):
     def setUp(self):
         self.story=json.loads(STORY.read_text(encoding="utf-8"))
+    def test_remove_unnecessary_publisher_showmanship_without_claim_changes(self):
+        story=json.loads(STORY.read_text(encoding="utf-8"))
+        story["slides"][2]["text"]="گزارش دیجیاتو می‌گه اسنپ‌مارکت این عادت رو هدف گرفت"
+        before=[frame.get("source_ids") for frame in story["slides"]]
+        revised,changed=daily.repair_unnecessary_publisher_mentions(story)
+        self.assertTrue(changed)
+        self.assertEqual(revised["slides"][2]["text"],
+            "در گزارش منتشرشده اومده که اسنپ‌مارکت این عادت رو هدف گرفت")
+        self.assertEqual(before,[frame.get("source_ids") for frame in revised["slides"]])
+
     def test_model_every_frame_new_scene_gets_genuine_frozen_text(self):
         story=json.loads(STORY.read_text(encoding="utf-8"))
         for frame in story["slides"]:
