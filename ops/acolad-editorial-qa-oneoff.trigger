@@ -1,0 +1,1 @@
+Free QA run after daily source URL dedup; no paid API or publish.
