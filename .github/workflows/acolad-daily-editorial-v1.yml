@@ -132,20 +132,19 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           if [ -s acolad_daily_editorial_output/current_story.json ]; then
-            if [ "$GITHUB_EVENT_NAME" = "schedule" ]; then
-              echo 'Scheduled daily preview: genuine no-key AI image attempts, original transparent fallback; ZERO paid image calls.'
+            echo 'LOCAL REAL IMAGE MODEL: CPU licensed safetensors with original scene-specific drawings, then PNG fallback; no third-party image API.'
+            if (python -m pip install --disable-pip-version-check --quiet torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu &&
+                python -m pip install --disable-pip-version-check --quiet diffusers==0.35.2 transformers==4.51.3 accelerate==1.7.0 huggingface_hub==0.35.3 safetensors==0.6.2); then
+              python -u acolad_daily_ai_ink_stories_v1.py \
+                --story-json acolad_daily_editorial_output/current_story.json \
+                --output acolad_concept_assets || \
               python -u acolad_concept_art_pipeline_v2.py \
                 --story-json acolad_daily_editorial_output/current_story.json \
-                --allow-pollinations \
-                --allow-horde \
                 --budget-toman 20000
             else
+              echo 'Local AI model dependency unavailable, retain original clean transparent procedural art.'
               python -u acolad_concept_art_pipeline_v2.py \
                 --story-json acolad_daily_editorial_output/current_story.json \
-                --allow-paid \
-                --approval APPROVED_ONE_GEMINI_CONCEPT_IMAGE_WITHIN_20000_TOMAN \
-                --allow-pollinations \
-                --allow-horde \
                 --budget-toman 20000
             fi
             python -u acolad_narrative_visual_v2.py \
