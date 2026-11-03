@@ -1080,9 +1080,40 @@ def main(argv=None):
             issues=validate_plan(plan,sources)
             if issues: diag.append('Corrected plan did not satisfy all source checks; stopped before storytelling.')
         if issues:
-            write_outputs(sources,plan,story,issues,diag,usage,'PLAN_QA_BLOCKED')
-            print('PLAN_QA_BLOCKED | preview only | no publication')
-            return 0
+            # Fail FORWARD without fictional evidence: use a single timely
+            # complete article, never glue unrelated findings together.
+            qualified=sorted(
+                [x for x in sources
+                 if x.get('source_type')!='academic_doi'
+                 and x.get('evidence_depth')=='full_article'
+                 and age_days(x.get('date','')) is not None
+                 and 0<=age_days(x['date'])<=21
+                 and len(x.get('excerpt',''))>=180],
+                key=lambda x:x.get('rank',0),reverse=True)
+            if qualified:
+                anchor=qualified[0]
+                plan={'angle':anchor['title'],
+                      'source_ids':[anchor['id']],
+                      'why_now':'گزارش مستند منتشرشده در '+anchor['date'],
+                      'story_tension':'یک مسئله مشخص در رفتار خرید یا رشد کسب‌وکار که متن همین منبع پشتیبانی می‌کند',
+                      'hypothetical_example':'هر مثال ساختگی باید با برچسب فرضی روایت شود',
+                      'grounded_claims':[],
+                      'limits':['فقط از متن سند انتخاب‌شده استفاده کن',
+                                'هیچ پژوهش، آمار، شخصیت یا آزمایش بیرونی اختراع نکن'],
+                      'story_chain':{
+                        'hero':'موقعیت مخاطب‌محور، نه شخصیت تکراری',
+                        'problem':'گزارش اصلی را به یک مشکل واقعی قابل‌فهم تبدیل کن',
+                        'proof':'فقط واقعیت‌های موجود در excerpt همین گزارش',
+                        'research_reveal':'اگر در منبع آزمایش واقعی نیست، هیچ آزمایشی روایت نکن',
+                        'decision':'یک اقدام کوچک قابل‌آزمایش',
+                        'ending':'پایان بسته و پاسخ‌دار'}}
+                issues=validate_plan(plan,sources)
+                diag.append('Single-primary-article fallback selected '+anchor['id']+
+                            '; unsupported academic pairing prohibited.')
+            if issues:
+                write_outputs(sources,plan,story,issues,diag,usage,'PLAN_QA_BLOCKED')
+                print('PLAN_QA_BLOCKED | preview only | no publication')
+                return 0
         chosen=[x for x in sources if x['id'] in plan['source_ids']]
         evidence=source_data_for_llm(chosen,8000)
         user=WRITE_INSTRUCTION+'\nPLAN:\n'+json.dumps(plan,ensure_ascii=False)[:3500]+'\nEVIDENCE:\n'+evidence
