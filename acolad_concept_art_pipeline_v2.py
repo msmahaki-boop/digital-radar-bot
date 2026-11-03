@@ -218,6 +218,7 @@ def create_art(story:dict,output=OUT,allow_paid=False,budget_toman=20000,allow_h
                 attempt=pollinations_run(visual,str(story.get("topic","")),
                                        output=output/"pollinations_probe")
                 status["providers"].append(attempt)
+                status["image_api_calls"]+=attempt.get("requests_sent",0)
                 if attempt.get("real_ai_image"):
                     with Image.open(output/"pollinations_probe"/attempt["image_file"]) as ai_img:
                         ai_img.convert("RGBA").save(dest,optimize=True)
@@ -234,6 +235,7 @@ def create_art(story:dict,output=OUT,allow_paid=False,budget_toman=20000,allow_h
                 attempt=horde_run(visual,str(story.get("topic","")),
                     output=output/"horde_probe",timeout_sec=195)
                 status["providers"].append(attempt)
+                status["image_api_calls"]+=attempt.get("images_attempted",0)
                 if attempt.get("generated_with_model"):
                     with Image.open(output/"horde_probe"/attempt["image_file"]) as horde_img:
                         horde_img.convert("RGBA").save(dest,optimize=True)
@@ -244,6 +246,11 @@ def create_art(story:dict,output=OUT,allow_paid=False,budget_toman=20000,allow_h
                    "status":"HORDE_UNEXPECTED_"+type(error).__name__,
                    "generated_with_model":False})
         status["providers"].append(ink_sketch(sid,visual,dest))
+    status["ai_generated_images"]=sum(
+        1 for x in status["providers"]
+        if x.get("status") in ("GENERATED_GEMINI_IMAGE","REAL_AI_IMAGE_SAVED"))
+    status["procedural_images"]=sum(
+        1 for x in status["providers"] if x.get("status")=="ORIGINAL_PROCEDURAL_PNG")
     (output/"concept_provenance.json").write_text(
         json.dumps(status,ensure_ascii=False,indent=2),encoding="utf-8")
     print("CONCEPT_ART "+json.dumps(
