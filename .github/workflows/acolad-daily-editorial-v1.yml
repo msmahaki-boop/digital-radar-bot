@@ -18,9 +18,6 @@ on:
         description: 'Required for billable visual/dynamic: APPROVED_DAILY_EDITORIAL_PREVIEW_20000_TOMAN'
         required: false
         type: string
-  push:
-    paths:
-      - 'ops/acolad-daily-editorial-v1-oneoff.trigger'
 
 permissions:
   contents: read
@@ -31,7 +28,7 @@ concurrency:
 
 jobs:
   daily-free-editorial-intake:
-    if: github.event_name == 'schedule' || github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'intake')
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'intake')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -55,7 +52,7 @@ jobs:
           retention-days: 14
 
   concept-visual-preview:
-    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'visual' && inputs.approval == 'APPROVED_DAILY_EDITORIAL_PREVIEW_20000_TOMAN')
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'visual' && inputs.approval == 'APPROVED_DAILY_EDITORIAL_PREVIEW_20000_TOMAN'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
