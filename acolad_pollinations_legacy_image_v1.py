@@ -45,9 +45,13 @@ def run(visual,topic,output=OUT,session=requests):
             bitmap=im.convert("RGBA")
         dest=output/"pollinations_original_01.png"
         bitmap.save(dest,optimize=True)
-        result.update({"status":"REAL_AI_IMAGE_SAVED","real_ai_image":True,
+        result.update({"status":"REAL_AI_IMAGE_SAVED_WATERMARKED_REVIEW_ONLY",
+                       "real_ai_image":True,
+                       "brand_safe_for_compositing":False,
+                       "watermark_observed_in_real_test":True,
                        "image_file":dest.name,"size":list(bitmap.size),
-                       "human_review_required":True})
+                       "human_review_required":True,
+                       "quality_warning":"Visible Pollinations watermark and semantically mismatched drawing in prior real preview; quarantined until verified clean"})
         return result
     except (requests.RequestException,ValueError,OSError) as e:
         result["status"]="ERROR_"+type(e).__name__
