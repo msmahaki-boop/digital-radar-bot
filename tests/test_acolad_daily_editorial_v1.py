@@ -55,6 +55,33 @@ class DailyEditorialTests(unittest.TestCase):
         self.assertNotIn("https://example.com/repeated",[s["url"] for s in result])
         self.assertEqual(result[0]["id"],"S01")
 
+    def test_reject_advertorial_and_unsourced_brand_campaign_as_independent_news(self):
+        samples=[
+            {"title":"کمپین جدید برند الف","url":"https://news.example/a",
+             "excerpt":"اجرای کمپین با مشارکت ۱۱ برند"},
+            {"title":"راهنمای خرید","url":"https://example.com/promoted/item",
+             "excerpt":"محصول و مزایا"},
+            {"title":"گزارش تست مستقل فروشگاه","url":"https://example.org/independent",
+             "excerpt":"آزمایش مستقل با سنجه واقعی"},
+        ]
+        self.assertTrue(daily.is_promotional_source(samples[0]))
+        self.assertTrue(daily.is_promotional_source(samples[1]))
+        self.assertFalse(daily.is_promotional_source(samples[2]))
+
+    def test_missing_conflict_is_repaired_by_relabeling_only(self):
+        original={"slides":[
+            {"n":1,"beat":"hook","text":"فرض کن صبح از خواب پاشدی"},
+            {"n":2,"beat":"evidence","text":"یک گزارش چیز تازه‌ای نشون داده"},
+            {"n":3,"beat":"discovery","text":"اما این گزارش نتیجه فروش نهایی رو نشون نمی‌ده"},
+            {"n":4,"beat":"action","text":"آمار سفارش رو اندازه بگیر"},
+            {"n":5,"beat":"payoff","text":"تصمیم رو با شواهد بگیر"}]}
+        repaired,changed=daily.repair_missing_conflict_beat(original)
+        self.assertTrue(changed)
+        self.assertEqual(repaired["slides"][2]["beat"],"conflict")
+        self.assertEqual([x["text"] for x in original["slides"]],
+                         [x["text"] for x in repaired["slides"]])
+        self.assertEqual(original["slides"][2]["beat"],"discovery")
+
     def test_corrupt_history_is_safe_and_no_credentials_are_stored(self):
         with tempfile.TemporaryDirectory() as tmp:
             original=daily.HISTORY
