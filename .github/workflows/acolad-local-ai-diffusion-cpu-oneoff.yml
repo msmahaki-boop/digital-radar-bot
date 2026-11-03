@@ -1,0 +1,37 @@
+name: Acolad REAL OFFLINE Diffusion GitHub CPU Oneoff (No Image API)
+
+on:
+  push:
+    paths:
+      - 'ops/acolad-local-ai-diffusion-cpu-oneoff.trigger'
+
+permissions:
+  contents: read
+
+jobs:
+  model-local-art:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install CPU-only diffusion dependencies
+        run: |
+          python -m pip install --disable-pip-version-check --quiet torch==2.4.1 --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install --disable-pip-version-check --quiet diffusers==0.31.0 transformers==4.44.2 accelerate==1.1.1 huggingface-hub==0.26.3 safetensors==0.4.5 Pillow==11.3.0
+      - name: Generate actual model diffusion image on runner CPU (bounded)
+        env:
+          HF_HUB_DISABLE_TELEMETRY: '1'
+          HF_HUB_ENABLE_HF_TRANSFER: '0'
+        run: |
+          timeout 1020s python -u acolad_local_cpu_diffusion_v1.py --output acolad_local_diffusion_output || echo 'Local model unavailable; do not claim image success.'
+      - name: Upload raw model image, transparent interpretation and provenance
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-local-REAL-diffusion-ink-drawing
+          path: acolad_local_diffusion_output/
+          if-no-files-found: warn
+          retention-days: 14
