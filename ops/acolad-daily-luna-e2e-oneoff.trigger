@@ -1,0 +1,1 @@
+One-off 2026-11-03 approved daily Luna preview <= 4500 toman soft budget and bounded AI Horde genuine image; do not publish or create NovinHub draft.
