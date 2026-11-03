@@ -192,9 +192,48 @@ def read_history(day)->list[dict]:
     except (ValueError,TypeError,OverflowError):
         return []
 
+def is_promotional_source(source):
+    """Do not turn an advertorial or brand's campaign recap into independent news."""
+    url=str(source.get("url","")).casefold()
+    title=str(source.get("title","")).casefold()
+    excerpt=str(source.get("excerpt","")).casefold()
+    if any(x in url for x in ("/promoted/","/advertorial/","/sponsored/")):
+        return True
+    if any(x in excerpt for x in (
+        "متن تبلیغاتی","رپورتاژ آگهی","سلب مسئولیت:","sponsored content",
+        "advertorial","paid partnership")):
+        return True
+    if any(x in title for x in ("رپورتاژ","تبلیغات همسان","آگهی تبلیغاتی")):
+        return True
+    if ("کمپین" in title or "campaign" in title) and not any(
+        term in excerpt for term in ("آزمایش مستقل","independent study",
+                                    "مطالعه مستقل","randomized trial")):
+        return True
+    return False
+
+def repair_missing_conflict_beat(story):
+    """Relabel an EXISTING explicit obstacle, without adding facts or words."""
+    import copy
+    slides=story.get("slides") if isinstance(story,dict) else None
+    if not isinstance(slides,list) or any(f.get("beat")=="conflict" for f in slides):
+        return story,False
+    out=copy.deepcopy(story)
+    for frame in out["slides"][1:-1]:
+        if frame.get("beat") not in ("discovery","setup","evidence"):
+            continue
+        t=str(frame.get("text",""))
+        if any(x in t for x in ("اما","ولی","مشکل","چرا","مانع","مجبور",
+                                 "نمی‌شه","نمی‌کنه","نگران","ترس","هزینه")):
+            frame["beat"]="conflict"
+            return out,True
+    return story,False
+
 def unseen_recent_articles(sources,history,diagnostic):
     banned={x["url"] for x in history}
-    fresh=[x for x in sources if x.get("url") not in banned]
+    fresh=[x for x in sources if x.get("url") not in banned and not
+           is_promotional_source(x)]
+    diagnostic.append("Self-promotional/advertorial candidate sources excluded: "+
+                      str(sum(is_promotional_source(x) for x in sources)))
     candidate_news=[x for x in fresh if x.get("source_type")!="academic_doi"
                     and x.get("evidence_depth")=="full_article"]
     if not candidate_news:
@@ -280,6 +319,25 @@ def run_preview(day=None,budget_usd=0.018,output=OUT):
                 json.dumps(story,ensure_ascii=False,indent=2),encoding="utf-8")
         else:
             status["cosmetic_repair_issues"]=fresh_issues
+    # One remaining purely structural failure need not waste a new API call.
+    # Relabel an actual, explicitly written obstacle; never synthesize conflict.
+    if not good and story and "cinema: missing conflict beat" in (
+            status.get("issues") or []):
+        from pathlib import Path
+        selected_path=RESEARCH_OUT/"selected_evidence.json"
+        selected=(json.loads(selected_path.read_text(encoding="utf-8"))
+                  if selected_path.exists() else [])
+        tentative,relabeled=repair_missing_conflict_beat(story)
+        if relabeled:
+            fresh_issues=news.story_quality(tentative,selected)+news.cinematic_quality(tentative,selected)
+            if not fresh_issues:
+                story=tentative
+                good=True
+                status["status"]="PREVIEW_NEEDS_HUMAN_REVIEW"
+                status["issues"]=[]
+                status["beat_label_repair_without_text_changes"]=True
+                (output/"editorially_repaired_story.json").write_text(
+                    json.dumps(story,ensure_ascii=False,indent=2),encoding="utf-8")
     distinct=story_is_distinct(story) if good else False
     status["dynamic_story_ready_for_design"]=bool(good and distinct)
     status["daily_editorial_pillar"]=pillar
