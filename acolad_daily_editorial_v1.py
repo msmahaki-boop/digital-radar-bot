@@ -124,6 +124,40 @@ def story_is_distinct(story):
     repetitive=("مهدی" in lead or ("سبد خرید" in lead and "روش پرداخت" in lead))
     return not repetitive
 
+def repair_all_new_scenes(story:dict)->tuple[dict,bool]:
+    """Deterministic editorial continuity fix, not a claim rewrite.
+
+    If model puts every short frame on a new background, regroup consecutive
+    beats in pairs without changing a single word, source ID or research fact.
+    """
+    import copy
+    slides=story.get("slides") if isinstance(story,dict) else None
+    if not isinstance(slides,list) or len(slides)<2:return story,False
+    if any(x.get("visual_action")=="add_text" for x in slides):
+        return story,False
+    result=copy.deepcopy(story)
+    scene=0
+    i=0
+    while i<len(slides):
+        scene+=1
+        current=slides[i]
+        upcoming=slides[i+1] if i+1<len(slides) else None
+        total_words=len(str(current.get("text","")).replace("**","").split())
+        partner_words=(len(str(upcoming.get("text","")).replace("**","").split())
+                       if upcoming else 0)
+        can_pair=(upcoming is not None and total_words+partner_words<=43)
+        target=result["slides"][i]
+        target["scene_id"]=scene
+        target["visual_action"]="new_scene"
+        if can_pair:
+            next_frame=result["slides"][i+1]
+            next_frame["scene_id"]=scene
+            next_frame["visual_action"]="add_text"
+            next_frame["visual_idea"]=target.get("visual_idea","")
+            i+=2
+        else:i+=1
+    return result,True
+
 def run_preview(day=None,budget_usd=0.018,output=OUT):
     date=day or local_day()
     output.mkdir(parents=True,exist_ok=True)
@@ -150,7 +184,31 @@ def run_preview(day=None,budget_usd=0.018,output=OUT):
     original=status.get("status","UNKNOWN")
     full=RESEARCH_OUT/"stories.json"
     good=original=="PREVIEW_NEEDS_HUMAN_REVIEW" and full.exists()
-    story=(json.loads(full.read_text(encoding="utf-8")) if good else {})
+    allowed_layout_problem=(
+        original=="QA_BLOCKED_HUMAN_REVIEW_REQUIRED"
+        and set(status.get("issues") or [])=={
+           "story lacks at least one progressive same-background reveal"}
+        and full.exists())
+    story=(json.loads(full.read_text(encoding="utf-8")) if (good or allowed_layout_problem) else {})
+    if allowed_layout_problem:
+        revised,changed=repair_all_new_scenes(story)
+        if changed:
+            selected_path=RESEARCH_OUT/"selected_evidence.json"
+            chosen=(json.loads(selected_path.read_text(encoding="utf-8"))
+                    if selected_path.exists() else [])
+            fresh_issues=news.story_quality(revised,chosen)+news.cinematic_quality(revised,chosen)
+            if not fresh_issues:
+                story=revised
+                good=True
+                status["status"]="PREVIEW_NEEDS_HUMAN_REVIEW"
+                status["issues"]=[]
+                status["editorial_scene_lock_repaired_without_text_changes"]=True
+                status["scene_lock_patch_from"]=original
+                status["story_scenes"]=len({s.get("scene_id") for s in story["slides"]})
+                (output/"scene_locked_story.json").write_text(
+                    json.dumps(story,ensure_ascii=False,indent=2),encoding="utf-8")
+            else:
+                status["scene_lock_repair_issues"]=fresh_issues
     distinct=story_is_distinct(story) if good else False
     status["dynamic_story_ready_for_design"]=bool(good and distinct)
     status["narrative_style_today"]=style
