@@ -1045,6 +1045,13 @@ def main(argv=None):
         thematic_pairs=suggested_evidence_pairs(sources)
         diag.append('Top grounded news+academic thematic pairs: '+
                     json.dumps([x['source_ids'] for x in thematic_pairs],ensure_ascii=False))
+        # Hard no-spend guard: a busy news day without a relevant independent
+        # academic/reporting pair must not trigger a forced or fabricated story.
+        if not thematic_pairs:
+            issues.append('No fresh FULL ARTICLE + relevant ACADEMIC ABSTRACT pair. Luna not called.')
+            write_outputs(sources,plan,story,issues,diag,usage,'EVIDENCE_PAIR_BLOCKED_NO_SPEND')
+            print('EVIDENCE_PAIR_BLOCKED_NO_SPEND | 0 Luna calls | no publication')
+            return 0
         plan_prompt=(SELECT_INSTRUCTION+'\n\nTHEMATIC_PAIRS (UNTRUSTED HEURISTIC; VERIFY CLAIMS):\n'+
             json.dumps(thematic_pairs,ensure_ascii=False)[:3000]+
             '\nSOURCE CANDIDATES (UNTRUSTED DATA):\n'+source_prompt)
