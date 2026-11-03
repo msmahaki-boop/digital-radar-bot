@@ -11,7 +11,7 @@ import os
 from pathlib import Path
 import time
 
-MODEL="segmind/tiny-sd"
+MODEL="nota-ai/bk-sdm-tiny"
 OUTPUT=Path("acolad_local_real_diffusion_output")
 LICENSE="creativeml-openrail-m"
 PROMPT=(
@@ -42,7 +42,7 @@ def run(output=OUTPUT, steps=10):
         report["device"]="cpu"
         report["status"]="MODEL_LOADING"
         pipeline=StableDiffusionPipeline.from_pretrained(
-            MODEL,torch_dtype=torch.float32,use_safetensors=True,
+            MODEL,torch_dtype=torch.float32,use_safetensors=True,variant="fp16",
             safety_checker=None,requires_safety_checker=False)
         pipeline.scheduler=EulerDiscreteScheduler.from_config(pipeline.scheduler.config)
         pipeline=pipeline.to("cpu")
