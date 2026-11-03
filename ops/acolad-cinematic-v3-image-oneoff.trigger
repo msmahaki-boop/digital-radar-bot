@@ -1,0 +1,1 @@
+User authorized image test <=20000 toman at 250000 toman/USD. This triggers ONE image request only if preflight passes; no NovinHub draft/queue/publish and no existing schedules touched.
