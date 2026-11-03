@@ -237,8 +237,10 @@ def unseen_recent_articles(sources,history,diagnostic):
     candidate_news=[x for x in fresh if x.get("source_type")!="academic_doi"
                     and x.get("evidence_depth")=="full_article"]
     if not candidate_news:
-        diagnostic.append("No fresh complete article after dedup; preserve originals for human research and avoid making false claims.")
-        return sources
+        # An advertorial is never restored merely to avoid an empty output.
+        # Research will use authoritative abstracts or report no defensible
+        # claim; it must not convert promotion into independent evidence.
+        diagnostic.append("No independent full-article story after exclusions; advertorials remain excluded.")
     for i,item in enumerate(fresh,1):
         item["id"]="S"+str(i).zfill(2)
     diagnostic.append("Editorial duplicate URLs excluded: "+str(len(sources)-len(fresh)))
