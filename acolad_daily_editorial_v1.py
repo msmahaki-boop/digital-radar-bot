@@ -182,6 +182,14 @@ def run_preview(day=None,budget_usd=0.018,output=OUT):
     date=day or local_day()
     output.mkdir(parents=True,exist_ok=True)
     style,hook=selected_style(date)
+    pillar=assigned_focus(date)
+    focus={
+       "iran_economy":"iran_economy",
+       "iran_platforms":"iran_platforms",
+       "ai":"tech","tech":"tech",
+       "marketing":"marketing","social":"marketing",
+       "small_business_growth":"marketing",
+    }[pillar]
     orig_w,orig_e=news.WRITE_INSTRUCTION,news.EDIT_INSTRUCTION
     orig_select=news.SELECT_INSTRUCTION
     try:
@@ -189,9 +197,11 @@ def run_preview(day=None,budget_usd=0.018,output=OUT):
         news.WRITE_INSTRUCTION=orig_w+extra
         news.EDIT_INSTRUCTION=orig_e+extra
         news.SELECT_INSTRUCTION=orig_select+(
+           "\nمحور اولویت سردبیری امروز: "+TOPICS[pillar][0]+
+           ". اگر در این محور منبع دارای بدنه و شاهد معتبر نیست، سراغ محور دیگر برو، نه ادعای ساختگی. "
            "\nبرای سوژه امروز به‌جای داستان قدیمی پرداخت و سبد خرید، "
            "یک خبر تازه با شاهد واقعی و پرسش تازه انتخاب کن. فقط با منابع مرتبط.")
-        code=news.main(["--focus","auto","--approval",news.APPROVAL,
+        code=news.main(["--focus",focus,"--approval",news.APPROVAL,
             "--gift-confirmation",news.GIFT,"--budget-usd",str(budget_usd)])
     finally:
         news.WRITE_INSTRUCTION=orig_w
@@ -239,6 +249,8 @@ def run_preview(day=None,budget_usd=0.018,output=OUT):
             status["cosmetic_repair_issues"]=fresh_issues
     distinct=story_is_distinct(story) if good else False
     status["dynamic_story_ready_for_design"]=bool(good and distinct)
+    status["daily_editorial_pillar"]=pillar
+    status["research_focus_today"]=focus
     status["narrative_style_today"]=style
     status["narrative_hook_direction"]=hook
     status["day_tehran"]=date.isoformat()
