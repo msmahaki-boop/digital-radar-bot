@@ -13,6 +13,7 @@ from acolad_editorial_trust_gate import evaluate
 from acolad_voice_v4_guard import audience_issues
 from acolad_story_image_ladder import MODELS,attempt,safe_stock,commons_stock
 from acolad_narrative_visual_v2 import render,scene_chunks,CONCEPT_DIR
+from acolad_v4_flexible_times import plan_release
 
 TZ=ZoneInfo("Asia/Tehran")
 OUT=Path("acolad_v4_daily_publication")
@@ -41,10 +42,9 @@ def report(state,**data):
     return obj
 
 def check_time():
-    now=tehran_now();day=now.date()
-    if due(day,"telegram")-now<timedelta(minutes=90):
-        raise RuntimeError("SAFE_SCHEDULING_WINDOW_MISSED")
-    return day
+    # Do not cancel the day just because GitHub or image creation ran late.
+    # plan_release() shifts targets to safe future slots before any public write.
+    return tehran_now().date()
 
 def provider_accounts(key,session=requests):
     res=session.get(API+"/account",headers=headers(key),timeout=35)
@@ -226,29 +226,39 @@ def schedule_bale(key,body,when):
 
 def submit(key,day,captions,frames):
     preflight(key,day)
+    # Upload the complete Instagram set BEFORE committing any scheduled post.
+    # This also lets us choose a future slot after slow image uploads finish.
+    media=[upload_file(key,p) for p in frames]
+    if len(media)!=len(frames):
+        raise RuntimeError("INSTAGRAM_MEDIA_SET_INCOMPLETE")
+    slots,timing_policy=plan_release(day,tehran_now())
+    target_day=slots["telegram"].date()
+    if target_day!=day:
+        # Near-midnight rollover is allowed ONLY after checking the next day
+        # has no scheduled or published content on any of the three accounts.
+        preflight(key,target_day)
     receipts=[]
     for net in ("telegram","bale","instagram"):
-        # A retry after any partial write must not send a second same-day post.
-        if posted_for_day(key,net,day):
+        if posted_for_day(key,net,target_day):
             receipts.append({"network":net,"status":"BLOCKED_ALREADY_HAS_POST"})
             continue
-        publish_at=due(day,net)
-        if publish_at-tehran_now()<timedelta(minutes=35):
-            raise RuntimeError("PUBLISH_WINDOW_TOO_CLOSE_"+net)
+        publish_at=slots[net]
+        if publish_at-tehran_now()<timedelta(minutes=5):
+            raise RuntimeError("FUTURE_TIMESTAMP_NO_LONGER_SAFE_"+net)
         epoch=int(publish_at.timestamp())
         if net=="bale":ident=schedule_bale(key,captions[net],epoch)
         elif net=="telegram":
             ident=create_post(key,net,captions[net],[],draft=False,schedule_epoch=epoch)["post_id"]
         else:
-            media=[upload_file(key,p) for p in frames]
             ident=create_post(key,net,captions[net],media,draft=False,schedule_epoch=epoch)["post_id"]
         item={"network":net,"post_id":ident,"target_local":publish_at.isoformat(),
+              "timing_policy":timing_policy,
               "status":"SCHEDULE_REQUEST_ACCEPTED_NOT_PUBLISHED"}
         receipts.append(item)
         (OUT/"partial_receipts.json").write_text(json.dumps(receipts,ensure_ascii=False,indent=2),encoding="utf-8")
         for n in range(3):
             try:
-                rows=posted_for_day(key,net,day)
+                rows=posted_for_day(key,net,target_day)
                 if any(str(p.get("id"))==str(ident) for p in rows):
                     item["status"]="SCHEDULE_VISIBLE_NOT_PUBLISHED";break
             except RuntimeError:pass
