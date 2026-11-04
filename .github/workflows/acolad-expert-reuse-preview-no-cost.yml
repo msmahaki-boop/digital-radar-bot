@@ -1,0 +1,66 @@
+name: Acolad Expert Story Full 9-frame Preview REUSE VERIFIED ART (NO PAID CALL)
+on:
+  push:
+    branches: [editorial/acolad-expert-story-drafts-20261104]
+    paths: [ops/acolad-expert-reuse-frame-preview.trigger]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  reuse-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - uses: actions/download-artifact@v4
+        with:
+          name: acolad-expert-return-story-9-frame-preview
+          run-id: 41818940026
+          github-token: ${{ github.token }}
+      - run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-core fonts-noto-color-emoji libharfbuzz0b libfribidi0 >/dev/null
+          python -m pip install Pillow==11.3.0 requests==2.32.5 beautifulsoup4==4.14.2
+      - name: Confirm three-scene full story fits frozen layout BEFORE any remote calls
+        run: |
+          python - <<'PY'
+          from acolad_expert_story_preview_20261104 import load,quality
+          from acolad_narrative_visual_v2 import scene_chunks,plan_scene,CONCEPT_DIR
+          s,e,c=load()
+          qa=quality(s,e,c)
+          assert qa["hard_pass"],qa["errors"]
+          print("SAVED_VALID_ART",[(p.name,p.stat().st_size) for p in CONCEPT_DIR.glob("scene_*.png")])
+          for group in scene_chunks(s):
+              sid=group[0]["scene"]
+              plan_scene([f["added_text"] for f in group],
+                         photo=(CONCEPT_DIR/f"scene_{sid:02d}.png").is_file())
+              print("GEOMETRY_OK",sid)
+          PY
+      - name: Render without paid images and without any social connections
+        run: python -u acolad_expert_story_preview_20261104.py --reuse-art --no-paid-images
+      - name: Nine-thumbnail review contact sheet
+        run: |
+          python - <<'PY'
+          from PIL import Image
+          from pathlib import Path
+          root=Path("acolad_expert_story_preview")
+          files=sorted((root/"frames").glob("story_*.png"))
+          assert len(files)==9
+          w,h,p=320,569,14
+          out=Image.new("RGB",(3*w+4*p,3*h+4*p),"#F5F2EB")
+          for i,x in enumerate(files):
+              im=Image.open(x).convert("RGB").resize((w,h),Image.Resampling.LANCZOS)
+              out.paste(im,(p+(i%3)*(w+p),p+(i//3)*(h+p)))
+          out.save(root/"nine_frame_contact_sheet.jpg",quality=90)
+          PY
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-expert-revised-20261104-nine-frame-review
+          path: |
+            acolad_expert_story_preview/
+            acolad_concept_assets/
+          retention-days: 14
+          if-no-files-found: warn
