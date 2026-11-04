@@ -1,0 +1,21 @@
+name: Cancel ONLY 2026-11-04 legacy Buffer Instagram story (NO PUBLISH)
+on:
+  push:
+    branches: [main]
+    paths: [ops/cancel-buffer-20261104.trigger]
+permissions:
+  contents: read
+jobs:
+  cancel-legacy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install requests==2.32.5 Pillow==11.3.0 beautifulsoup4==4.14.2
+      - name: Validate identity, post date, scheduled state and delete only target
+        env:
+          BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+        run: python acolad_cancel_legacy_buffer_today.py
