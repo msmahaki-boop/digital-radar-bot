@@ -1,0 +1,24 @@
+name: Acolad Image Provider Isolated QA (NO PUBLISH)
+on:
+  push:
+    branches:
+      - fix/acolad-image-provider-qa-20261104
+    paths:
+      - acolad_image_provider_qa.py
+      - tests/test_acolad_image_provider_qa.py
+      - docs/ACOLAD_IMAGE_PROVIDER_QA_FA.md
+      - .github/workflows/acolad-image-provider-isolated-qa.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test-offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install requests==2.32.5 Pillow==11.3.0
+      - run: python -m unittest discover -s tests -p 'test_acolad_image_provider_qa.py' -v
