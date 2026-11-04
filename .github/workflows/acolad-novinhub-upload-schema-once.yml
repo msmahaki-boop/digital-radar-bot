@@ -1,0 +1,29 @@
+name: Acolad NovinHub One File Upload Schema Only (NO POSTS)
+on:
+  push:
+    branches: [feature/acolad-gpt2-novinhub-20261104]
+    paths: [ops/acolad-novinhub-upload-schema-once.trigger]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  single-upload-schema:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: acolad-novinhub-two-real-drafts-e2e
+          run-id: 41805646848
+          github-token: ${{ github.token }}
+      - run: python -m pip install requests==2.32.5 Pillow==11.3.0
+      - name: Upload one existing generated file; show field names only
+        env:
+          NOVINHUB_API_TOKEN: ${{ secrets.NOVINHUB_API_TOKEN }}
+          NOVINHUB_TOKEN: ${{ secrets.NOVINHUB_TOKEN }}
+          NOVINHUB_ACCESS_TOKEN: ${{ secrets.NOVINHUB_ACCESS_TOKEN }}
+        run: python acolad_novinhub_upload_schema_once.py
