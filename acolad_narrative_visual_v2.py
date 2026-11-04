@@ -179,32 +179,49 @@ def render_rows(image,layout):
         y+=advance
 
 def add_concept_illustration(background,illustration):
-    """Insert a source-free conceptual sketch, preserving original brand/logo.
+    """Paste original line art safely on Acolad's background without the paper rectangle.
 
-    Image zone is intentionally separate from caption zone; new text can
-    accumulate in place underneath it.
+    Trim image-model ivory paper (not the ink), then contain the actual drawing in
+    the upper art area. Keep the lower text zone and original logo completely clear.
     """
-    from PIL import ImageOps
-    zone=(125,295,955,900)
-    im=illustration.convert("RGBA")
-    if im.width<256 or im.height<256:
+    from PIL import ImageOps, ImageFilter
+    if illustration.width<256 or illustration.height<256:
         raise ValueError("Generated concept artwork resolution too small")
-    fitted=ImageOps.contain(im,(zone[2]-zone[0],zone[3]-zone[1]),
+    # Deliberately smaller than the old (125,295,955,900) box.
+    # The editorial text starts at y=1015 for illustration scenes.
+    zone=(205,295,875,800)
+    source=illustration.convert("RGBA")
+    ink=Image.new("RGBA",source.size,(0,0,0,0))
+    src=source.load()
+    dst=ink.load()
+    for y in range(source.height):
+        for x in range(source.width):
+            red,green,blue,a=src[x,y]
+            low=min(red,green,blue)
+            chroma=max(red,green,blue)-low
+            # Remove neutral light cream/white backgrounds, NOT colored ink.
+            if chroma<=36 and low>=232:
+                alpha=0
+            elif chroma<=36 and low>=198:
+                alpha=round(a * (232-low)/34)
+            else:
+                alpha=a
+            dst[x,y]=(red,green,blue,alpha)
+    mask=ink.getchannel("A")
+    bbox=mask.point(lambda a: 255 if a>35 else 0).getbbox()
+    if not bbox:
+        raise ValueError("AI artwork contains no visible ink")
+    # Bound crop to visible drawing + 7% padding; never crop actual linework.
+    padding=max(12,round(min(source.size)*.065))
+    left=max(0,bbox[0]-padding)
+    top=max(0,bbox[1]-padding)
+    right=min(source.width,bbox[2]+padding)
+    bottom=min(source.height,bbox[3]+padding)
+    cropped=ink.crop((left,top,right,bottom))
+    fitted=ImageOps.contain(cropped,(zone[2]-zone[0],zone[3]-zone[1]),
                             method=Image.Resampling.LANCZOS)
     x=zone[0]+((zone[2]-zone[0])-fitted.width)//2
     y=zone[1]+((zone[3]-zone[1])-fitted.height)//2
-    if fitted.getextrema()[3][0]==255:
-        # Image API sometimes returns an opaque flat paper background.
-        # Fade near-white pixels gently so Acolad's original base shows through.
-        pix=fitted.load()
-        for py in range(fitted.height):
-            for px in range(fitted.width):
-                red,green,blue,alpha=pix[px,py]
-                whiteness=min(red,green,blue)
-                if whiteness>=248:
-                    pix[px,py]=(red,green,blue,0)
-                elif whiteness>=226 and max(red,green,blue)-whiteness<25:
-                    pix[px,py]=(red,green,blue,int(alpha*(248-whiteness)/22))
     background.alpha_composite(fitted,(x,y))
 
 def scene_chunks(story):
