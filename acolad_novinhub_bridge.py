@@ -76,7 +76,22 @@ def account_report(key,session=requests):
     return {"status":"CONNECTED_READ_ONLY","account_ids":acc,"recent_posts":recent}
 
 def check_story_files(folder):
-    paths=sorted(Path(folder).glob("story_*.png"))
+    folder=Path(folder)
+    manifest=folder/"manifest.json"
+    if manifest.is_file():
+        meta=json.loads(manifest.read_text(encoding="utf-8"))
+        if meta.get("publication_status")!="PREVIEW ONLY - NOTHING PUBLISHED":
+            raise RuntimeError("Not a verified preview manifest")
+        articles=meta.get("articles") or []
+        if len(articles)!=4:raise RuntimeError("Expected four editorial news slides")
+        paths=[folder/"01_intro.png"]
+        for article in articles:
+            name=Path(str(article.get("file",""))).name
+            if not re.fullmatch(r"0[2-5]_[a-z_]+_(?:photo|text_only)\\.png",name):
+                raise RuntimeError("Unexpected story filename")
+            paths.append(folder/name)
+    else:
+        paths=sorted(folder.glob("story_*.png"))
     if len(paths) not in (5,8):raise RuntimeError("Expect complete validated 5 or 8 frame story")
     for p in paths:
         if p.stat().st_size>18_000_000:raise RuntimeError("Media too large")
