@@ -10,8 +10,8 @@ on:
         default: true
         required: false
 
-  schedule:
-    - cron: '37 5,11,17 * * *'
+  # Legacy Digital Radar public-news schedule disabled on 2026-11-04.
+  # Manual preview retained for rollback; no scheduled BOT_TOKEN sends.
 
 permissions:
   contents: write
