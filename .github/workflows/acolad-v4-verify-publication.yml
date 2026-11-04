@@ -1,7 +1,8 @@
 name: Acolad V4 Verify actual NovinHub Publication — READ ONLY
 on:
   schedule:
-    - cron: '15 15 * * *'  # Tehran 18:45
+    - cron: '15 15 * * *'  # Tehran 18:45, standard publication window
+    - cron: '20 20 * * *'  # Tehran 23:50, read-only check for delayed publication
   workflow_dispatch:
 permissions:
   contents: read

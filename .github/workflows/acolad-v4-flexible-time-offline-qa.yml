@@ -1,0 +1,22 @@
+name: Acolad V4 Flexible Schedule Safety Tests (NO API, NO PUBLISH)
+on:
+  push:
+    branches: [fix/acolad-v4-flexible-publish-times-20261104]
+    paths: [ops/acolad-v4-time-qa.trigger]
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install unit-test imports only
+        run: pip install --disable-pip-version-check requests==2.32.5 Pillow==11.3.0 beautifulsoup4==4.14.2
+      - name: Compile live script and strict release-time policy
+        run: python -m py_compile acolad_v4_daily_autopublish.py acolad_v4_flexible_times.py
+      - name: Test delayed publication without secrets or social mutation
+        run: python -m unittest discover -s tests -p 'test_acolad_v4_autopublish.py' -v
