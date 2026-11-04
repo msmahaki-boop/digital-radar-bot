@@ -1,0 +1,52 @@
+name: Acolad TODAY 10-frame verified Narrative GPT Image 2 Art Preview (NO PUBLISH)
+on:
+  push:
+    branches: [feature/acolad-narrative-novinhub-20261104]
+    paths: [ops/acolad-narrative-today-art-once.trigger]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: acolad-daily-narrative-art-20261104-oneoff
+  cancel-in-progress: false
+jobs:
+  actual-narrative-art:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - uses: actions/download-artifact@v4
+        with:
+          name: acolad-2026-11-04-new-narrative-today-preview-no-publish
+          run-id: 41811643422
+          github-token: ${{ github.token }}
+      - run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-core fonts-noto-color-emoji libharfbuzz0b libfribidi0 >/dev/null
+          python -m pip install --disable-pip-version-check requests==2.32.5 beautifulsoup4==4.14.2 Pillow==11.3.0
+      - name: Validate verified today's exact story, art/text separation, no intro
+        run: |
+          python - <<'PY'
+          from acolad_narrative_today_art_and_preview import check_story,selected_scene_ids
+          story,status=check_story()
+          print("VERIFIED_NARRATIVE_READY",len(story["slides"]),"frames",len(selected_scene_ids(story)),"art-scenes")
+          PY
+      - name: Render with GPT Image 2 primary, bounded alternatives, no publishing
+        env:
+          GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+        run: |
+          python -u acolad_narrative_today_art_and_preview.py --paid yes --output acolad_today_narrative_draft
+      - name: Archive fully rendered 1080x1920 frames, story source and safe provider receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-narrative-20261104-final-artwork-preview-ten-frames
+          path: |
+            acolad_today_narrative_draft/
+            acolad_concept_assets/
+            acolad_daily_editorial_output/preview_status.json
+          retention-days: 14
+          if-no-files-found: warn
