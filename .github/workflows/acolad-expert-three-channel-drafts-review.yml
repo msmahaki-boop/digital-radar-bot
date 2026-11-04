@@ -1,0 +1,38 @@
+name: Acolad Expert Narrative Three NovinHub DRAFTS (Never Publish)
+on:
+  push:
+    branches: [editorial/acolad-expert-story-drafts-20261104]
+    paths: [ops/acolad-expert-three-novinhub-drafts.trigger]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: acolad-expert-three-review-drafts-20261104
+  cancel-in-progress: false
+jobs:
+  drafts-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - uses: actions/download-artifact@v4
+        with:
+          name: acolad-expert-revised-20261104-nine-frame-review
+          run-id: 41819393324
+          github-token: ${{ github.token }}
+      - run: python -m pip install requests==2.32.5 Pillow==11.3.0
+      - name: Create/read-back real review DRAFTS on Instagram Telegram Bale
+        env:
+          NOVINHUB_API_TOKEN: ${{ secrets.NOVINHUB_API_TOKEN }}
+          NOVINHUB_TOKEN: ${{ secrets.NOVINHUB_TOKEN }}
+          NOVINHUB_ACCESS_TOKEN: ${{ secrets.NOVINHUB_ACCESS_TOKEN }}
+        run: python -u acolad_expert_novinhub_drafts_20261104.py
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-expert-three-novinhub-draft-receipts
+          path: acolad_expert_novinhub_draft_receipts/status.json
+          if-no-files-found: warn
+          retention-days: 14
