@@ -1,8 +1,8 @@
 name: Acolad DAILY Seven-Pillar Editorial + Art V1 (PREVIEW ONLY)
 
+# OLD PAID DAILY PREVIEW schedule retired for single V4 daily orchestration.
+# Manual preview remains available for rollback.
 on:
-  schedule:
-    - cron: '45 3 * * *'
   workflow_dispatch:
     inputs:
       mode:
