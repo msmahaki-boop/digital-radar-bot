@@ -38,6 +38,10 @@ USER_AGENT = 'AcoladResearchPreview/1.0 (editorial preview; no publishing)'
 
 # Fixed source list. Feed discovery is not permission to trust article claims.
 RSS_FEEDS = [
+    # Public expert blog feeds verified on 2026-11-04.
+    # Public feed discovery never grants access to paywalled content.
+    ("Seth Godin (first-party blog)", "https://seths.blog/feed/"),
+    ("Lenny Rachitsky (first-party newsletter)", "https://www.lennysnewsletter.com/feed"),
     ('پیوست', 'https://peivast.com/feed/'),
     ('دیجیاتو', 'https://digiato.com/feed'),
     ('زومیت', 'https://www.zoomit.ir/feed/'),
@@ -61,6 +65,7 @@ ACADEMIC_QUERIES = [
     'online shopping price framing randomized consumer experiment',
 ]
 ALLOWED_ARTICLE_HOSTS = (
+    'seths.blog', 'lennysnewsletter.com',
     'peivast.com', 'digiato.com', 'zoomit.ir', 'tejaratnews.com',
     'techcrunch.com', 'searchenginejournal.com', 'bbc.com', 'bbc.co.uk',
     'nytimes.com',
@@ -377,7 +382,12 @@ def score_source(item: dict, focus: str) -> int:
                  'marketing':['مشتری','فروش','بازاریابی','سئو'],
                  'tech':['هوش','گوگل','جستجو','دیجیتال']}.get(focus,[])
     focus_bonus = 2 * sum(1 for word in focus_words if word in body)
-    return min(relevant,7)*2 + quality + freshness + focus_bonus
+    # Prefer a directly sourced expert article over a reposted headline.
+    # Only boost substantive, actually fetched/visible content, never a title alone.
+    host=urllib.parse.urlsplit(item.get('url') or '').hostname or ''
+    expert_direct=host in ('seths.blog','www.lennysnewsletter.com','lennysnewsletter.com')
+    expert_bonus=12 if expert_direct and item.get('evidence_depth')=='full_article' else 0
+    return min(relevant,7)*2 + quality + freshness + focus_bonus + expert_bonus
 
 
 def diversified_source_sample(items: list[dict], count: int, max_each: int = 2) -> list[dict]:
