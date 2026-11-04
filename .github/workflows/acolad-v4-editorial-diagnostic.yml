@@ -1,0 +1,40 @@
+name: Acolad V4 inspect rejected daily editorial — READ ONLY
+on:
+  push:
+    branches: [feature/acolad-v4-autopublish-20261104]
+    paths: [ops/acolad-v4-editorial-diagnose.trigger]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  inspect-source-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: acolad-v4-publication-report
+          run-id: 41861708539
+          github-token: ${{ github.token }}
+      - name: Report safe editorial reasons, not full private source content
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          for filename in [
+            'acolad_luna_research_preview/status.json',
+            'acolad_daily_editorial_output/preview_status.json',
+            'acolad_v4_daily_publication/status.json'
+          ]:
+            p=Path(filename)
+            if not p.exists():continue
+            d=json.loads(p.read_text(encoding='utf8'))
+            print('DAILY_EDITORIAL_DIAGNOSTIC',filename,{
+              k:d.get(k) for k in (
+                'status','issues','cosmetic_repair_issues','voice_v4_gate',
+                'independent_editorial_gate','story_frames',
+                'chosen_source_ids','dynamic_story_ready_for_design'
+              ) if k in d
+            })
+          PY
