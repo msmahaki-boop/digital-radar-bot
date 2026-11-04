@@ -51,6 +51,11 @@ def check_story(story_path=STORY,status_path=STATUS):
         raise ValueError("Invalid original evidence URL")
     # The editor stores evidence separately from the storyboard JSON.
     story["sources"]=evidence
+    from acolad_editorial_trust_gate import evaluate
+    check=evaluate(story,evidence)
+    if not check["passed"]:
+        raise ValueError("Editorial hard veto: "+",".join(check["hard_vetoes"]))
+    # Passing this gate never means published or approved.
     return story,status
 
 def selected_scene_ids(story):
