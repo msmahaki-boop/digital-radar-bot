@@ -87,7 +87,11 @@ def main():
                          f"got old={old_count}, new={new_count}. Safe skip.")
     present_topics = {story.topic for story in stories}
     print("EDITOR SELECTED: " + ", ".join(story.topic for story in stories), flush=True)
-    populate_images(stories)
+    if __import__('os').getenv('ACOLAD_IMAGE_LADDER_ENABLED') == 'true':
+        from acolad_story_image_ladder import enrich_images
+        enrich_images(stories,allow_billable=__import__('os').getenv('ACOLAD_IMAGE_API_PAID_ENABLED') == 'true')
+    else:
+        populate_images(stories)
     render_intro()
     manifest = {
         "generated_utc": datetime.now(timezone.utc).isoformat(),
