@@ -1,0 +1,72 @@
+{
+  "format": "ACOLAD_1080x1920_PROGRESSIVE_3_SCENES_9_FRAMES",
+  "voice": "colloquial_literate_fa_IR",
+  "draft_only": true,
+  "human_score": null,
+  "frames": [
+    {
+      "n": 1,
+      "scene_id": 1,
+      "action": "new_scene",
+      "added_text": "رفت توی حسابش، سفارشش رو پیدا کرد و بازش کرد...",
+      "source_type": "verified_event"
+    },
+    {
+      "n": 2,
+      "scene_id": 1,
+      "action": "add_text",
+      "added_text": "اما هرچی گشت، **دکمه‌ای برای مرجوعی ندید!**",
+      "source_type": "verified_event"
+    },
+    {
+      "n": 3,
+      "scene_id": 1,
+      "action": "add_text",
+      "added_text": "آخر سر رفت پایین سایت، دنبال قوانین مرجوعی",
+      "source_type": "verified_event"
+    },
+    {
+      "n": 4,
+      "scene_id": 2,
+      "action": "new_scene",
+      "added_text": "حالا چرا گزینه مرجوعی توی سفارش نبود!",
+      "source_type": "interpretation_or_testable_advice"
+    },
+    {
+      "n": 5,
+      "scene_id": 2,
+      "action": "add_text",
+      "added_text": "**مهلت مرجوعیِ سفارش تموم شده بود**",
+      "source_type": "verified_event"
+    },
+    {
+      "n": 6,
+      "scene_id": 2,
+      "action": "add_text",
+      "added_text": "سایت دکمه رو برداشته بود، اما همون‌جا دلیلش رو نگفته بود",
+      "source_type": "verified_event"
+    },
+    {
+      "n": 7,
+      "scene_id": 3,
+      "action": "new_scene",
+      "added_text": "توی چشم مشتری، دکمه انگار آب شده بود و رفته بود توی زمین!",
+      "source_type": "interpretation_or_testable_advice"
+    },
+    {
+      "n": 8,
+      "scene_id": 3,
+      "action": "add_text",
+      "added_text": "شاید با خودش فکر کنه: «نکنه نمی‌خوان جوابم رو بدن؟»",
+      "source_type": "interpretation_or_testable_advice"
+    },
+    {
+      "n": 9,
+      "scene_id": 3,
+      "action": "add_text",
+      "added_text": "یه راه بهتر برای امتحان: همون‌جا بگو مهلت تموم شده و مسیر پشتیبانی رو نشون بده؛ **مشتری رو وسط سؤالش تنها نذار!**",
+      "source_type": "interpretation_or_testable_advice"
+    }
+  ],
+  "caveat": "No proven emotional reaction attributed to the observed participant; hypothetical viewer thought is labeled as such."
+}

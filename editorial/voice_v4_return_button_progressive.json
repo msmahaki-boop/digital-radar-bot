@@ -1,0 +1,77 @@
+{
+  "version": "V4",
+  "format": "PROGRESSIVE_STORY",
+  "status": "PREVIEW_ONLY",
+  "approved_by_owner": false,
+  "character": {
+    "name": "محمد",
+    "fictional": true
+  },
+  "frames": [
+    {
+      "n": 1,
+      "scene_id": 1,
+      "action": "new_scene",
+      "added_text": "😕 محمد از خریدش راضی نبود\nمی‌خواست بدون دردسر مرجوعش کنه...",
+      "claim_layer": "fictional_reconstruction"
+    },
+    {
+      "n": 2,
+      "scene_id": 1,
+      "action": "add_text",
+      "added_text": "🔎 رفت توی حسابش، سفارشش رو پیدا کرد و بازش کرد",
+      "claim_layer": "fictional_reconstruction"
+    },
+    {
+      "n": 3,
+      "scene_id": 1,
+      "action": "add_text",
+      "added_text": "😤 هرچی گشت، دکمه مرجوعی رو پیدا نکرد!",
+      "claim_layer": "fictional_reconstruction"
+    },
+    {
+      "n": 4,
+      "scene_id": 2,
+      "action": "new_scene",
+      "added_text": "محمد فقط یه راه داشت!",
+      "claim_layer": "grounded_reveal"
+    },
+    {
+      "n": 5,
+      "scene_id": 2,
+      "action": "add_text",
+      "added_text": "بره تهِ تهِ ده‌کوره‌های سایت، سراغ قوانین مرجوعی",
+      "claim_layer": "grounded_reveal"
+    },
+    {
+      "n": 6,
+      "scene_id": 2,
+      "action": "add_text",
+      "added_text": "😳 ولی اصل ماجرا این بود: مهلت مرجوعی تموم شده بود",
+      "claim_layer": "grounded_reveal"
+    },
+    {
+      "n": 7,
+      "scene_id": 3,
+      "action": "new_scene",
+      "added_text": "سایت دکمه رو برداشته بود، بی‌اینکه دلیلش رو بگه",
+      "claim_layer": "grounded_reveal"
+    },
+    {
+      "n": 8,
+      "scene_id": 3,
+      "action": "add_text",
+      "added_text": "شاید مشتری با خودش بگه: «من فقط یه جواب روشن می‌خوام!»",
+      "claim_layer": "hypothesis_or_proposal"
+    },
+    {
+      "n": 9,
+      "scene_id": 3,
+      "action": "add_text",
+      "added_text": "💡 راه قابل آزمایش: دلیل رو همون‌جا بنویس و مسیر پشتیبانی رو نشون بده",
+      "claim_layer": "hypothesis_or_proposal"
+    }
+  ],
+  "human_review_needed": true,
+  "remark": "Narrative/film character is fictitious; source is a separate first-hand observation. Never turn fictional feelings into measured findings."
+}

@@ -1,0 +1,24 @@
+name: Acolad Voice V4 Founder Reference Tests (NO PUBLISH)
+on:
+  push:
+    branches: [feature/acolad-voice-v3-20261104]
+    paths: [ops/acolad-voice-v4-verification.trigger]
+permissions:
+  contents: read
+jobs:
+  language-safe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile changed story-writing safety scripts
+        run: python -m py_compile acolad_voice_v4_guard.py acolad_luna_research_preview.py acolad_daily_editorial_v1.py
+      - name: Founder-style tests without secrets or publication
+        run: |
+          python -m unittest discover -s tests -p 'test_acolad_voice_v4.py' -v
+          python acolad_voice_v4_guard.py
+          grep -q 'VOICE_V4_ADDENDUM' acolad_luna_research_preview.py
+          grep -q 'voice_v4_gate' acolad_daily_editorial_v1.py

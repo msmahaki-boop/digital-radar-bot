@@ -1,0 +1,97 @@
+{
+  "version": "V4",
+  "format": "INDEPENDENT_CAROUSEL",
+  "status": "PREVIEW_ONLY",
+  "approved_by_owner": false,
+  "editorial_score": null,
+  "title": "محمد از خریدش راضی نبود",
+  "character": {
+    "name": "محمد",
+    "fictional": true,
+    "not_original_research_participant": true,
+    "disclosure": "بذار اسم این مشتری فرضی رو محمد بذاریم"
+  },
+  "slides": [
+    {
+      "n": 1,
+      "headline": "😕 محمد از خریدش راضی نبود",
+      "body": "بذار اسم این مشتری فرضی رو محمد بذاریم. محمد فقط می‌خواست بدونه از کجای سایت می‌تونه درخواست مرجوعی بده. نه می‌خواست با کسی دعوا کنه، نه دنبال کار عجیب‌غریبی بود. ولی هیچ‌جا راه روشنی جلوش نبود!",
+      "beat": "wants_return",
+      "claim_layer": "fictional_reconstruction"
+    },
+    {
+      "n": 2,
+      "headline": "🔎 رفت سراغ سفارش‌ها",
+      "body": "سفارشش رو پیدا کرد، روی «جزئیات» زد و همه‌جا رو گشت. از اونجاهایی که مطمئنی باید یه دکمه باشه، ولی نیست! تازه باید فکر می‌کرد قدم بعدی چیه...",
+      "beat": "opens_order",
+      "claim_layer": "observed_pattern"
+    },
+    {
+      "n": 3,
+      "headline": "😤 محمد فقط یه راه داشت!",
+      "body": "بره تهِ تهِ ده‌کوره‌های سایت، سراغ صفحه قوانین مرجوعی. یعنی برای فهمیدن وضعیت سفارش خودش، مجبور شد از صفحه سفارش بیاد بیرون و دنبال جواب بگرده!",
+      "beat": "checks_policy",
+      "claim_layer": "observed_pattern"
+    },
+    {
+      "n": 4,
+      "headline": "😳 اما اصل ماجرا یه چیز دیگه بود",
+      "body": "مهلت مرجوعیِ اون سفارش تموم شده بود! سایت هم دکمه شروع مرجوعی رو برداشته بود. از نظر فنی شاید تصمیم قابل‌فهمی باشه؛ ولی یه جای داستان حسابی می‌لنگید...",
+      "beat": "reveals_cause",
+      "claim_layer": "observed_pattern"
+    },
+    {
+      "n": 5,
+      "headline": "😕 جای محمد بودی، چی فکر می‌کردی!",
+      "body": "نه دکمه‌ای بود، نه همون‌جا نوشته بودن چرا نمی‌شه کالا رو پس داد. شاید با خودت می‌گفتی: «من فقط یه جواب روشن می‌خوام!» این فکر، واکنش احتمالیِ یه مشتریه؛ نه حرفی که پژوهشگرها از اون شرکت‌کننده نقل کرده باشن.",
+      "beat": "hypothetical_emotion",
+      "claim_layer": "hypothesis"
+    },
+    {
+      "n": 6,
+      "headline": "💥 مشکل، نبودِ دکمه نبود",
+      "body": "سایت می‌دونست مهلت تموم شده، ولی اینو به مشتری نمی‌گفت. همین بی‌خبری ممکنه مشتری رو کلافه کنه و حتی پای پشتیبانی رو وسط بکشه. می‌گم «ممکنه»، چون اثرش رو باید توی همون فروشگاه امتحان کرد.",
+      "beat": "business_tension",
+      "claim_layer": "interpretation"
+    },
+    {
+      "n": 7,
+      "headline": "🛠️ چهار کار کوچیک، قبل از یه دردسر بزرگ",
+      "body": "دکمه رو یه‌دفعه غیب نکن!\nاگه مهلت گذشته، همون‌جا دلیلش رو بگو!\nراه تماس با پشتیبانی رو دمِ دست بذار!\nبا چند نفر تست کن ببین بدون کمک می‌فهمن چه خبره!\nاین‌ها نسخه جادویی نیستن؛ ایده‌هایی برای آزمایش واقعی‌ان.",
+      "beat": "testable_actions",
+      "claim_layer": "proposal"
+    },
+    {
+      "n": 8,
+      "headline": "🤔 دو تا سایت رو تصور کن",
+      "body": "توی اولی، مشتری فقط جای خالی دکمه رو می‌بینه. توی دومی هم شاید نتونه کالا رو پس بده، ولی همون‌جا می‌فهمه چرا و از کجا باید پیگیری کنه. کدومش کمتر آدم رو سردرگم می‌کنه؟ جواب رو باید با کاربرهای خودت بسنجی.",
+      "beat": "compare_experiences",
+      "claim_layer": "hypothesis"
+    },
+    {
+      "n": 9,
+      "headline": "❤️‍🔥 مخلص کلام اینکه...",
+      "body": "وقتی جواب یه درخواست «نه» باشه، لازم نیست دلیلش هم قایم بشه.\n\n«دکمه رو می‌شه برداشت؛ توضیح رو نه.»\n\nتو جای محمد بودی، دلت می‌خواست سایت چی بهت بگه؟ 🌱",
+      "beat": "payoff",
+      "claim_layer": "proposal"
+    }
+  ],
+  "evidence": {
+    "original_article": "Baymard Institute primary research 2026-09-09",
+    "url": "https://baymard.com/research-articles/accounts-and-self-service-ux-research-2026",
+    "true_observation": [
+      "participant looked at order list/details",
+      "Start Return not available after eligibility window",
+      "participant looked for returns policy"
+    ],
+    "unsupported_as_fact": [
+      "participant named Mohammad",
+      "participant dissatisfied with product",
+      "15 minute search",
+      "seven day return window",
+      "participant felt cheated",
+      "increase in support calls or loss of sales"
+    ]
+  },
+  "safety": "Evidence stays private; customer quotations are hypothetical unless genuinely in original study."
+}
