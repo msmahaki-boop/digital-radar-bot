@@ -226,9 +226,10 @@
       "topic": "marketing",
       "original_title": "AI traffic drives 83% more revenue per visit",
       "score": 85,
-      "status": "reserved",
-      "message_id": null,
-      "reserved_utc": "2026-11-04T06:23:31.555076+00:00"
+      "status": "sent",
+      "message_id": 46,
+      "reserved_utc": "2026-11-04T06:23:31.555076+00:00",
+      "sent_utc": "2026-11-04T06:23:34.764463+00:00"
     }
   ]
 }
