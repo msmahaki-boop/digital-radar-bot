@@ -51,7 +51,7 @@ def brief_for(story,scene):
         summary_fa=(idea+". "+" ".join(s["text"].replace("**","") for s in frames)+
           " Ensure a single clean original black ink metaphor, 75% airy space. No wording."))
 
-def run(paid=True):
+def run(paid=True,reuse_existing=False):
     OUT.mkdir(parents=True,exist_ok=True)
     report={"mode":"PREVIEW_ONLY","network_post_requests":0,"network_drafts":0,"published":0,
             "scheduled":0,"not_a_breaking_news_claim":True,
@@ -67,10 +67,21 @@ def run(paid=True):
         print("ACOLAD_EXPERT_PREVIEW "+json.dumps(report,ensure_ascii=False),flush=True)
         return report
     CONCEPT_DIR.mkdir(parents=True,exist_ok=True)
-    for old in CONCEPT_DIR.glob("scene_[0-9][0-9].png"):
-        old.unlink()
+    if not reuse_existing:
+        for old in CONCEPT_DIR.glob("scene_[0-9][0-9].png"):
+            old.unlink()
     for scene in SCENES:
         item=brief_for(story,scene)
+        existing=CONCEPT_DIR/f"scene_{scene:02d}.png"
+        if reuse_existing:
+            if existing.is_file():
+                with Image.open(existing) as im:
+                    if min(im.size)<512:raise ValueError("Existing preview art too small")
+                    im.verify()
+                report["images"].append({"scene_id":scene,"result":"REUSED_VERIFIED_PREVIEW_ART","attempts":[]})
+            else:
+                report["images"].append({"scene_id":scene,"result":"TEXT_ONLY_NO_RELEVANT_IMAGE","attempts":[]})
+            continue
         image=None; attempts=[]
         if paid:
             for model in MODELS:
@@ -111,5 +122,5 @@ def run(paid=True):
     return report
 
 if __name__=="__main__":
-    r=run(paid="--no-paid-images" not in sys.argv)
+    r=run(paid="--no-paid-images" not in sys.argv,reuse_existing="--reuse-art" in sys.argv)
     raise SystemExit(0 if r["status"]=="NINE_FRAME_VISUAL_PREVIEW_FOR_OWNER_REVIEW" else 2)
