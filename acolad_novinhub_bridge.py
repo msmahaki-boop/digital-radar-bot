@@ -13,7 +13,7 @@ from PIL import Image
 API="https://api.novinhub.com/token/v2"
 OUT=Path("acolad_novinhub_e2e")
 TEHRAN=ZoneInfo("Asia/Tehran")
-NETWORKS={"instagram":230527,"telegram":233472}
+NETWORKS={"instagram":230527,"telegram":233472,"bale":233497}
 CAPTION_MARKER="ACOLAD-NOVINHUB-VERIFY-20261104"
 def token():
     items=[os.getenv(k,"").strip() for k in ("NOVINHUB_API_TOKEN","NOVINHUB_TOKEN","NOVINHUB_ACCESS_TOKEN")]
