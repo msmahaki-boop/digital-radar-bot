@@ -131,14 +131,20 @@ def run(mode="read",story_dir="stories_output",session=requests):
         elif mode=="draft":
             if os.getenv("ACOLAD_NOVINHUB_DRAFT_APPROVAL")!="APPROVED_CREATE_TEST_DRAFTS":
                 raise RuntimeError("Draft write not approved")
+            existing_obj=get_json("/post/draft",key,session)
+            existing=as_items(existing_obj)
+            if existing is None:raise RuntimeError("Cannot verify existing drafts; refuse to create")
+            if any(CAPTION_MARKER in str(row.get("caption","")) or CAPTION_MARKER in str(row.get("text",""))
+                   for row in existing if isinstance(row,dict)):
+                raise RuntimeError("Identical NovinHub test draft already exists")
             paths=check_story_files(story_dir)
             # Only create drafts; never post public stories or Telegram messages.
             media_ids=[]
             for path in paths:media_ids.append(upload_file(key,path,session))
-            story=create_post(key,"instagram","آکولاد | پیش‌نویس آزمایشی استوری",media_ids,session,draft=True)
+            story=create_post(key,"instagram","آکولاد | پیش‌نویس آزمایشی استوری | " + CAPTION_MARKER,media_ids,session,draft=True)
             result["instagram"]=story
             result["drafts_created"]+=1
-            telegram=create_post(key,"telegram","آکولاد | پیش‌نویس آزمایشی اتصال تلگرام (بدون انتشار)",[],session,draft=True)
+            telegram=create_post(key,"telegram","آکولاد | پیش‌نویس آزمایشی اتصال تلگرام (بدون انتشار) | " + CAPTION_MARKER,[],session,draft=True)
             result["telegram"]=telegram
             result["drafts_created"]+=1
             result["status"]="NOVINHUB_TWO_DRAFTS_CREATED"
