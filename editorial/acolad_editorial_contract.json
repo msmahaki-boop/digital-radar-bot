@@ -1,0 +1,44 @@
+{
+  "version": "acolad-editorial-v1.0",
+  "publication_mode": "BLOCK_UNTIL_INDEPENDENT_EDITORIAL_REVIEW",
+  "source_policy": {
+    "priority": "first-party specialist articles, original expert blogs, studies with methods, primary business documents",
+    "secondary_media_use": "discovery only; verify primary before using as sole factual basis",
+    "curated_from": "Acolad_Research_Sources_and_AI_Models_2026-11-01.zip",
+    "automatic_ingestion_approved": false,
+    "priority_sources": [
+      {"name":"Mark Ritson","domain":"thedrum.com","role":"expert_commentary"},
+      {"name":"April Dunford","domain":"aprildunford.substack.com","role":"expert_commentary"},
+      {"name":"Lenny Rachitsky","domain":"lennysnewsletter.com","role":"expert_commentary"},
+      {"name":"Brian Balfour / Reforge","domain":"reforge.com","role":"expert_commentary"},
+      {"name":"Andrew Chen","domain":"andrewchen.substack.com","role":"expert_commentary"},
+      {"name":"Harry Dry / Marketing Examples","domain":"marketingexamples.com","role":"expert_commentary"},
+      {"name":"Baymard Institute","domain":"baymard.com","role":"research"},
+      {"name":"Growth.Design","domain":"growth.design","role":"research_comics"},
+      {"name":"CXL / Peep Laja","domain":"cxl.com","role":"research_practice"},
+      {"name":"Seth Godin","domain":"seths.blog","role":"expert_commentary"},
+      {"name":"عادل طالبی","domain":"atalebi.com","role":"expert_commentary"},
+      {"name":"محمدرضا شعبانعلی","domain":"mrshabanali.com","role":"expert_commentary"}
+    ],
+    "allow_original_first_party_source": true,
+    "minimum_evidence_depth": ["full_article","abstract"]
+  },
+  "public_output": {
+    "source_urls": "Never printed as raw URL to the audience; retained privately for fact checking",
+    "publisher_name": "Do not name reporting outlets for decoration; real study author/brand may be relevant if grounded",
+    "technical_identifiers": "Never printed",
+    "narrative_format": "Separate crafted channel copy, never concatenate arbitrary story frames or fixed indices"
+  },
+  "approval_rubric": {
+    "fidelity_to_sources": 25,
+    "business_insight": 20,
+    "iran_market_context_without_fabrication": 20,
+    "human_persian_and_responsible_humor": 15,
+    "story_arc_and_scene_progress": 10,
+    "useful_conclusion_or_cta": 10
+  },
+  "min_human_score": 85,
+  "min_independent_human_reviewers": 2,
+  "deployment": "No recurring publish or NovinHub queue before user sign-off and week-long shadow evaluation",
+  "note": "The registry is an editorial preference list, not permission to scrape paid blogs or proof a specific article was read."
+}
