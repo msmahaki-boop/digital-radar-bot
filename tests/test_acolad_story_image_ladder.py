@@ -25,7 +25,7 @@ class TestVisual(unittest.TestCase):
         self.assertEqual([i for i,s in enumerate(rows) if s.image is not None],[0,2])
     def test_all_models_fail_then_text(self):
         rows=[Story(str(i)) for i in range(4)]
-        with TemporaryDirectory() as d,patch.object(m,"OUTPUT",Path(d)),patch.object(m,"attempt",return_value=(None,{"status":"API_HTTP_ERROR","http_status":503})),patch.object(m,"safe_stock",return_value=(None,{"status":"NO_MATCH"})):
+        with TemporaryDirectory() as d,patch.object(m,"OUTPUT",Path(d)),patch.object(m,"attempt",return_value=(None,{"status":"API_HTTP_ERROR","http_status":503})),patch.object(m,"safe_stock",return_value=(None,{"status":"NO_MATCH"})),patch.object(m,"commons_stock",return_value=(None,{"status":"COMMONS_NO_MATCH"})):
             result=m.enrich_images(rows)
         self.assertEqual(result["images_used"],0)
         self.assertEqual(rows[0].image_status,"TEXT_ONLY_NO_RELEVANT_IMAGE")
