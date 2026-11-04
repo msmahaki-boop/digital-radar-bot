@@ -4,7 +4,7 @@ import json,os,requests
 from acolad_novinhub_bridge import token,headers,API,as_items
 KEY=token()
 session=requests.Session()
-result={"mode":"READ_ONLY","targets":{"instagram":3692845,"telegram":3692852},
+result={"mode":"READ_ONLY","targets":{"instagram":3692949,"telegram":3692937,"bale":3692942},
         "bale_account_id":233497,"social_writes":0}
 for path in ("/post/draft","/post","/account"):
     try:
@@ -21,7 +21,7 @@ for path in ("/post/draft","/post","/account"):
                                              "login_required":bool(x.get("login_required"))}
                                             for x in rows if str(x.get("id")) in ("233497","233472","230527")]
                 else:
-                    wanted=[x for x in rows if str(x.get("id")) in ("3692845","3692852")]
+                    wanted=[x for x in rows if str(x.get("id")) in ("3692949","3692937","3692942")]
                     row["target_drafts"]=[{"id":x.get("id"),"type":x.get("type"),
                         "caption_length":len(str(x.get("caption") or "")),
                         "caption_sample":str(x.get("caption") or "")[:120],
