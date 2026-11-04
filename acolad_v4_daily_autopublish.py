@@ -259,8 +259,10 @@ def submit(key,day,captions,frames):
 
 def run(mode):
     try:
-        day=check_time();key=token()
-        preflight(key,day)
+        day=check_time() if mode=="auto" else tehran_now().date()
+        key=token()
+        if mode=="auto":preflight(key,day)
+        else:provider_accounts(key)
         story,evidence=generate_editorial(day)
         if not story:return report("SKIPPED_EDITORIAL_QA_NO_GOOD_STORY",scheduled_count=0)
         copies=make_channel_copies(story,evidence)
