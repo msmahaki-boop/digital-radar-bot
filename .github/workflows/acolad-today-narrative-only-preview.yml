@@ -1,0 +1,56 @@
+name: Acolad TODAY verified narrative research and 8-15 frame preview (NO PUBLISH)
+on:
+  push:
+    branches: [feature/acolad-narrative-novinhub-20261104]
+    paths: [ops/acolad-narrative-today-preview.trigger]
+permissions:
+  contents: read
+jobs:
+  narrative-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 32
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-core fonts-noto-color-emoji libharfbuzz0b libfribidi0 >/dev/null
+          python -m pip install --disable-pip-version-check requests==2.32.5 beautifulsoup4==4.14.2 Pillow==11.3.0
+      - name: Test factual editorial constraints before live request
+        run: |
+          python -m unittest discover -s tests -p 'test_acolad_daily_editorial_v1.py' -v
+          python -m unittest discover -s tests -p 'test_acolad_narrative_visual_v2.py' -v
+      - name: Create TODAY fact-checked narrative through original Luna research
+        env:
+          GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
+        run: |
+          python -u acolad_daily_editorial_v1.py --mode preview --budget-usd 0.018 --approval APPROVED_DAILY_EDITORIAL_PREVIEW_20000_TOMAN
+      - name: Check editorial status; render actual full narrative without stock or paid image
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("acolad_daily_editorial_output/preview_status.json")
+          if not p.exists():raise SystemExit("EDITORIAL_STATUS_MISSING")
+          j=json.loads(p.read_text(encoding="utf8"))
+          if not j.get("dynamic_story_ready_for_design"):
+              print("EDITORIAL_QA_BLOCKED; no invented/old story substituted",flush=True)
+          else:
+              import subprocess,sys
+              subprocess.run([sys.executable,"acolad_narrative_visual_v2.py",
+                "--story-json","acolad_daily_editorial_output/current_story.json",
+                "--stock","off","--output","acolad_narrative_today_preview"],check=True)
+              print("NARRATIVE_PREVIEW_REAL_FRAMES_READY; intro card is absent",flush=True)
+          PY
+      - name: Attach source material, narrative JSON, final frames and report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-2026-11-04-new-narrative-today-preview-no-publish
+          path: |
+            acolad_luna_research_preview/
+            acolad_daily_editorial_output/
+            acolad_narrative_today_preview/
+          if-no-files-found: warn
+          retention-days: 14

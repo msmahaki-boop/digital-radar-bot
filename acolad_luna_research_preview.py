@@ -38,6 +38,10 @@ USER_AGENT = 'AcoladResearchPreview/1.0 (editorial preview; no publishing)'
 
 # Fixed source list. Feed discovery is not permission to trust article claims.
 RSS_FEEDS = [
+    # Public expert blog feeds verified on 2026-11-04.
+    # Public feed discovery never grants access to paywalled content.
+    ("Seth Godin (first-party blog)", "https://seths.blog/feed/"),
+    ("Lenny Rachitsky (first-party newsletter)", "https://www.lennysnewsletter.com/feed"),
     ('پیوست', 'https://peivast.com/feed/'),
     ('دیجیاتو', 'https://digiato.com/feed'),
     ('زومیت', 'https://www.zoomit.ir/feed/'),
@@ -61,6 +65,7 @@ ACADEMIC_QUERIES = [
     'online shopping price framing randomized consumer experiment',
 ]
 ALLOWED_ARTICLE_HOSTS = (
+    'seths.blog', 'lennysnewsletter.com',
     'peivast.com', 'digiato.com', 'zoomit.ir', 'tejaratnews.com',
     'techcrunch.com', 'searchenginejournal.com', 'bbc.com', 'bbc.co.uk',
     'nytimes.com',
@@ -377,7 +382,12 @@ def score_source(item: dict, focus: str) -> int:
                  'marketing':['مشتری','فروش','بازاریابی','سئو'],
                  'tech':['هوش','گوگل','جستجو','دیجیتال']}.get(focus,[])
     focus_bonus = 2 * sum(1 for word in focus_words if word in body)
-    return min(relevant,7)*2 + quality + freshness + focus_bonus
+    # Prefer a directly sourced expert article over a reposted headline.
+    # Only boost substantive, actually fetched/visible content, never a title alone.
+    host=urllib.parse.urlsplit(item.get('url') or '').hostname or ''
+    expert_direct=host in ('seths.blog','www.lennysnewsletter.com','lennysnewsletter.com')
+    expert_bonus=12 if expert_direct and item.get('evidence_depth')=='full_article' else 0
+    return min(relevant,7)*2 + quality + freshness + focus_bonus + expert_bonus
 
 
 def diversified_source_sample(items: list[dict], count: int, max_each: int = 2) -> list[dict]:
@@ -527,7 +537,7 @@ SYSTEM=('تو سردبیر تحقیقی و قصه‌گوی خلاق آکولاد
 
 # Preserve sources accurately: one primary source is acceptable when no corroborated
 # cross-source match exists; uncertainty must remain clearly attributed.
-SELECT_INSTRUCTION='''تو سردبیر محتوای روایی آکولادی. قبل از ساخت استوری باید سوژه‌ای پیدا کنی که «یک سؤال ملموس درباره رفتار مشتری» داشته باشد، نه چند خبر کنار هم.
+SELECT_INSTRUCTION='''تو سردبیر محتوای روایی آکولادی. قبل از ساخت استوری بهترین سوژه را از میان مقاله‌ها و تحلیل‌های اصیل استادان، پژوهش‌های دست‌اول و اسناد رسمی برگزین. پرسش مرکزی باید در خود سند ریشه داشته باشد؛ هر خبر فنی را به زور به خرید مشتری نچسبان. اگر سوژه ارزش قصه‌گویی مستقل ندارد آن را رد کن، حتی اگر تازه و معتبر باشد.
 تا دو سند مستقل و واقعاً مرتبط با همان سؤال را ترجیح بده؛ اگر زوج سند علمی/خبری واقعاً مرتبط پیدا نشد، یک منبع اصلی دارای متن مقاله/چکیده کافی و تاریخ مشخص را انتخاب کن و کل داستان را فقط به همان نسبت بده. نبود پژوهش آزمایشی به معنی مجوز اختراع پژوهش نیست. ناهم‌موضوع بودن دو مقاله را با واژه‌های کلی «اقتصاد دیجیتال» و «رفتار مشتری» پنهان نکن.
 «تحقیق آزمایشی» به معنی تغییر شرایط یا تقسیم تصادفی/کنترل‌شده گروه‌هاست؛ پرسشنامه و خوداظهاری آزمایش نیست. اگر در چکیده روش/یافته کافی ثبت نشده، داستان آزمایش را جعل نکن. study_design_hint صرفاً سرنخ است نه سند قطعی.
 اگر یک خبر، گزارش خودِ فروشنده یا شرکت است، آن را به صاحب داده نسبت بده و به‌عنوان آمار مستقل کل ایران معرفی نکن. روزنامه و رسانه کوچک فقط لینک منبع‌اند؛ اسم‌شان را در متن نهایی بزرگ نکن. رسانه بزرگ جهانی را فقط وقتی ذکر کن که اصل همان گزارش واقعاً در مدارک انتخاب شده باشد.
@@ -542,7 +552,7 @@ SELECT_INSTRUCTION='''تو سردبیر محتوای روایی آکولادی. 
 
 WRITE_INSTRUCTION='''تو کارگردان یک مینی‌سریال محاوره‌ای آکولادی. فقط با داده‌های تأییدشده، یک قصه انسانی بساز؛ نه اسلاید آموزشی، نه مجموعه گزاره‌های بی‌ربط
 باید **یک سؤال مرکزی و یک رشتهٔ پیوسته** داشته باشی: آدم مشخص → مانع ملموس → مشاهده/شاهد → آزمایش علمی واقعی اگر مستند است → کشف و پیشنهاد → تصمیم عملی و پایان بسته
-شخصیت فرضی را با «فرض کن» در شروع معرفی کن. خبر واقعی و ماجرای ساختگی را قاطی نکن. نمی‌توانی نتیجهٔ خرید در آینده را تضمین کنی
+فقط وقتی شخصیت فرضی واقعاً به فهم سازوکار خبر کمک می‌کند، او را با «فرض کن» معرفی کن؛ برای پرکردن روایت شخصیت تخیلی نساز. به‌جای وصله‌زدن موضوع به خرید مشتری، روایت را از یک جزئیات واقعی، تضاد انسانی یا نمونه مستند شروع کن. خبر واقعی و ماجرای ساختگی را قاطی نکن. نمی‌توانی نتیجهٔ خرید در آینده را تضمین کنی
 تعداد قاب‌ها آزاد است؛ اما **هر قاب هزینه توجه مخاطب دارد**. اگر حذفش کنی و داستان هیچ‌چیز از دست ندهد، حذف/ادغامش کن. از یک سؤالِ «حالا چی؟» یا مکث بی‌محتوا استوری مستقل نساز
 فریم جدید باید حداقل یکی از این‌ها را بدهد: اتفاق، شاهد، تعارض، فهم تازه، تصمیم، پاسخ. دلیل رفتن از قاب قبلی به بعدی باید برای مخاطب بدون توضیح بیرونی روشن باشد. هر قاب همان سؤالی را پیش ببرد که قصه از ابتدا ساخته است
 جمله‌ها انسانی، کوتاه و روشن باشند، با «یه»، «ولی»، «تا اینکه» وقتی طبیعی است؛ مثل کسی که برای دوستش ماجرای جالبی تعریف می‌کند. خبری از «در چارچوب این تحلیل»، ادبیات متکلف و نقطه گذاشتن ته همه جمله‌ها نیست
@@ -578,7 +588,7 @@ EDIT_INSTRUCTION='''تو تدوینگر سخت‌گیر سینما و سردبی
 کلمات کوتاه، گفتاری، تصویری، کم‌نقطه؛ بولد و ایموجیِ انتخابی، نه تزئینی
 پایان باید پاسخ/تصمیم مشخص بدهد، بعد اگر لازم است CTA آکولاد بیاید. با «هنوز نمی‌دونه»، «آخرش چی شد» یا تکرار پرسش ابتدا تمام نکن
 پس از هر حذف، شماره n، scene_id، visual_action و resolution.payoff_frame را دقیق اصلاح کن. متن جدید هر فریم تنها اضافهٔ تازه است و اگر بک‌گراند ثابت ماند نوشته قبلی باید قابل نمایش باشد
-تعداد قاب‌ها آزاد است اما ریتمِ قصه برنده است نه طول داستان؛ نسخه جدید را تنها زمانی برگردان که بهتر و کوتاه‌تر بدون از دست دادن سند و معنا باشد
+تعداد قاب‌ها آزاد است اما ریتمِ قصه برنده است نه طول داستان؛ اگر سوژه به ۵ قاب محکم نمی‌رسد، به جای ساخت ۱۰ قاب بی‌روح کل سوژه را رد کن. جمله‌های خبر می‌گوید، حالا مشخص نیست، برای فروشگاه آزمایش کنیم، اگر در آن‌ها رویداد یا کشف تازه نیست، باید حذف شوند. نسخه جدید را تنها زمانی برگردان که بهتر و کوتاه‌تر بدون از دست دادن سند و معنا باشد
 خروجی همان JSON ورودی با beat, scene_id, visual_action, text, source_ids, resolution, interaction. هیچ اطلاعاتی بیرون از مدارک اضافه نکن'''
 
 

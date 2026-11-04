@@ -1,0 +1,41 @@
+name: Acolad Editorial Trust Gate Regression (NO SOCIAL NETWORK WRITES)
+on:
+  push:
+    branches: [feature/acolad-narrative-novinhub-20261104]
+    paths:
+      - ops/acolad-editorial-gate-audit.trigger
+permissions:
+  contents: read
+  actions: read
+jobs:
+  editorial-red-team:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile changed production scripts without network or secrets
+        run: python -m py_compile acolad_editorial_trust_gate.py acolad_luna_research_preview.py acolad_daily_editorial_v1.py acolad_narrative_today_art_and_preview.py
+      - name: Test gate without API keys or model costs
+        run: python -m unittest discover -s tests -p 'test_acolad_editorial_trust_gate.py' -v
+      - uses: actions/download-artifact@v4
+        with:
+          name: acolad-2026-11-04-new-narrative-today-preview-no-publish
+          run-id: 41811643422
+          github-token: ${{ github.token }}
+      - name: Assess yesterday's rejected creative example with exact historic evidence
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from acolad_editorial_trust_gate import evaluate
+          story=json.loads(Path("acolad_daily_editorial_output/current_story.json").read_text(encoding="utf-8"))
+          evidence=json.loads(Path("acolad_luna_research_preview/selected_evidence.json").read_text(encoding="utf-8"))
+          result=evaluate(story,evidence)
+          print("REJECTED_STORY_GATE",json.dumps(result,ensure_ascii=False))
+          assert not result["passed"],"Known editorial failure must not pass"
+          assert "ONLY_SECONDARY_MEDIA" in result["hard_vetoes"]
+          assert result["publish_allowed"] is False
+          PY
