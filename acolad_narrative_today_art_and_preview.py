@@ -38,8 +38,19 @@ def check_story(story_path=STORY,status_path=STATUS):
     if story.get("topic","").strip().casefold() in ("خبرهای داغ امروز","اخبار داغ امروز"):
         raise ValueError("Generic hot-news intro is forbidden")
     # Never pad an unfinished news story or silently replace it with a demo.
-    sources=story.get("sources") or []
-    if not sources:raise ValueError("No verified source records")
+    src_file=Path("acolad_luna_research_preview/selected_evidence.json")
+    if not src_file.is_file():raise ValueError("Selected source evidence missing")
+    evidence=json.loads(src_file.read_text(encoding="utf-8"))
+    if not isinstance(evidence,list) or not evidence:
+        raise ValueError("No verified source records")
+    ids={str(x.get("id")) for x in evidence}
+    for frame in slides:
+        if not set(frame.get("source_ids") or []).issubset(ids):
+            raise ValueError("Slide cited a source not present in selected evidence")
+    if any(not str(x.get("url","")).startswith("https://") for x in evidence):
+        raise ValueError("Invalid original evidence URL")
+    # The editor stores evidence separately from the storyboard JSON.
+    story["sources"]=evidence
     return story,status
 
 def selected_scene_ids(story):
