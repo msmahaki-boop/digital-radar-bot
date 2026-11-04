@@ -1,0 +1,23 @@
+name: Acolad NovinHub One-Image Story & Telegram Draft HTTP Validation
+on:
+  push:
+    branches: [feature/acolad-gpt2-novinhub-20261104]
+    paths: [ops/acolad-novinhub-single-drafts-probe.trigger]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install requests==2.32.5 Pillow==11.3.0
+      - name: Validate one-image Instagram story and text Telegram drafts
+        env:
+          NOVINHUB_API_TOKEN: ${{ secrets.NOVINHUB_API_TOKEN }}
+          NOVINHUB_TOKEN: ${{ secrets.NOVINHUB_TOKEN }}
+          NOVINHUB_ACCESS_TOKEN: ${{ secrets.NOVINHUB_ACCESS_TOKEN }}
+        run: python acolad_novinhub_single_draft_diagnostic.py
