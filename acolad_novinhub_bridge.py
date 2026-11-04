@@ -107,9 +107,10 @@ def upload_file(key,path,session=requests):
     if r.status_code not in (200,201):raise RuntimeError("NovinHub file upload HTTP "+str(r.status_code))
     obj=r.json()
     data=obj.get("data",obj) if isinstance(obj,dict) else {}
-    if not isinstance(data,dict) or not isinstance(data.get("id"),int):
-        raise RuntimeError("File upload returned no numeric ID")
-    return data["id"]
+    raw_id=data.get("id") if isinstance(data,dict) else None
+    if not isinstance(raw_id,(int,str)) or not str(raw_id).isdigit():
+        raise RuntimeError("File upload returned no decimal ID")
+    return int(raw_id)
 
 def create_post(key,network,caption,media_ids,session=requests,draft=True,schedule_epoch=None):
     if network not in NETWORKS:raise ValueError("Unknown network")
