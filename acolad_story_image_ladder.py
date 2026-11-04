@@ -108,6 +108,47 @@ def safe_stock(story,session=requests):
     except (ValueError,OSError,requests.RequestException,TypeError) as exc:
         return None,{"status":"STOCK_ERROR_"+type(exc).__name__}
 
+def commons_stock(story,session=requests):
+    """Open-license Wikimedia stock fallback; only semantic and CC0/public domain matches."""
+    words=re.findall(r"[A-Za-z][a-zA-Z-]{3,}",str(story.original_title))
+    skip={"that","from","with","this","after","about","their","today","could","more","will","have"}
+    terms=[w.lower() for w in words if w.lower() not in skip][:5]
+    if len(terms)<2:return None,{"status":"COMMONS_NO_QUERY"}
+    try:
+        r=session.get("https://commons.wikimedia.org/w/api.php",
+            params={"action":"query","generator":"search",
+                    "gsrsearch":"filetype:bitmap "+" ".join(terms),
+                    "gsrnamespace":6,"gsrlimit":6,"prop":"imageinfo",
+                    "iiprop":"url|extmetadata","iiurlwidth":1200,"format":"json"},
+            headers={"User-Agent":"AcoladNewsEditorial/1.0 (https://acolad.ir)"},
+            timeout=30)
+        if r.status_code!=200:return None,{"status":"COMMONS_SEARCH_HTTP","http_status":r.status_code}
+        pages=(r.json().get("query") or {}).get("pages") or {}
+        for page in pages.values():
+            title=str(page.get("title") or "").lower()
+            ii=(page.get("imageinfo") or [])
+            if not ii:continue
+            info=ii[0];meta=info.get("extmetadata") or {}
+            license_name=str((meta.get("LicenseShortName") or {}).get("value") or "").lower()
+            if not ("cc0" in license_name or "public domain" in license_name or "pd-" in license_name):
+                continue
+            description=re.sub(r"<[^>]+>"," ",str((meta.get("ImageDescription") or {}).get("value") or "")).lower()
+            hay=title+" "+description
+            if sum(1 for t in terms if t in hay)<2:continue
+            url=info.get("thumburl") or info.get("url")
+            if not isinstance(url,str) or not url.startswith("https://upload.wikimedia.org/"):continue
+            photo=session.get(url,headers={"User-Agent":"AcoladNewsEditorial/1.0"},
+                              timeout=45,allow_redirects=False)
+            if photo.status_code!=200:continue
+            return check_image(photo.content),{"status":"PUBLIC_DOMAIN_STOCK_CANDIDATE",
+                    "provider":"Wikimedia Commons","title":page.get("title"),
+                    "source_url":info.get("descriptionurl"),
+                    "license":license_name,
+                    "note":"Illustrative stock, not evidence of this news event"}
+        return None,{"status":"COMMONS_NO_RELEVANT_PD_MATCH"}
+    except (ValueError,OSError,requests.RequestException,TypeError,AttributeError) as exc:
+        return None,{"status":"COMMONS_ERROR_"+type(exc).__name__}
+
 def enrich_images(stories,session=requests,allow_billable=True):
     """Only images for stories 0 and 2; other two are text-only. Never publish."""
     OUTPUT.mkdir(parents=True,exist_ok=True)
@@ -127,6 +168,9 @@ def enrich_images(stories,session=requests,allow_billable=True):
         if image is None:
             image,stock=safe_stock(story,session)
             attempts.append(stock)
+        if image is None:
+            image,commons=commons_stock(story,session)
+            attempts.append(commons)
         if image is None:
             story.image_status="TEXT_ONLY_NO_RELEVANT_IMAGE"
             status="TEXT_ONLY"
