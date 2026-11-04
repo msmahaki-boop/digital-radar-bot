@@ -16,6 +16,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Compile changed production scripts without network or secrets
+        run: python -m py_compile acolad_editorial_trust_gate.py acolad_luna_research_preview.py acolad_daily_editorial_v1.py acolad_narrative_today_art_and_preview.py
       - name: Test gate without API keys or model costs
         run: python -m unittest discover -s tests -p 'test_acolad_editorial_trust_gate.py' -v
       - uses: actions/download-artifact@v4
