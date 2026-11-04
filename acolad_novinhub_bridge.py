@@ -5,7 +5,7 @@ This does not edit active Telegram/Buffer workflows or published media.
 from __future__ import annotations
 import argparse,json,os,re,sys
 from pathlib import Path
-from datetime import datetime,timedelta
+from datetime import datetime,timedelta,timezone
 from zoneinfo import ZoneInfo
 import requests
 from PIL import Image
@@ -122,7 +122,9 @@ def create_post(key,network,caption,media_ids,session=requests,draft=True,schedu
              "account_ids":[NETWORKS[network]],"caption":caption,
              "media_ids":media_ids,"is_draft":1 if draft else 0,
              "is_scheduled":0 if draft else 1}
-    if schedule_epoch is not None:payload["schedule_date"]=schedule_epoch
+    # NovinHub v2 validated schedule_date as required even for is_draft=1.
+    # For drafts this field is only schema fulfilment, never a publish trigger.
+    payload["schedule_date"]=schedule_epoch if schedule_epoch is not None else int((datetime.now(timezone.utc)+timedelta(days=1)).timestamp())
     r=session.post(API+"/post",json=payload,headers={**headers(key),"Content-Type":"application/json"},
                    timeout=70)
     if r.status_code not in (200,201):raise RuntimeError("NovinHub post HTTP "+str(r.status_code))
