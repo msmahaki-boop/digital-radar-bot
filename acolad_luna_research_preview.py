@@ -38,6 +38,7 @@ USER_AGENT = 'AcoladResearchPreview/1.0 (editorial preview; no publishing)'
 
 # Fixed source list. Feed discovery is not permission to trust article claims.
 RSS_FEEDS = [
+    ("Baymard Institute original UX research", "https://feeds.baymard.com/baymard"),
     # Public expert blog feeds verified on 2026-11-04.
     # Public feed discovery never grants access to paywalled content.
     ("Seth Godin (first-party blog)", "https://seths.blog/feed/"),
@@ -65,6 +66,7 @@ ACADEMIC_QUERIES = [
     'online shopping price framing randomized consumer experiment',
 ]
 ALLOWED_ARTICLE_HOSTS = (
+    'baymard.com', 'feeds.baymard.com',
     'seths.blog', 'lennysnewsletter.com',
     'peivast.com', 'digiato.com', 'zoomit.ir', 'tejaratnews.com',
     'techcrunch.com', 'searchenginejournal.com', 'bbc.com', 'bbc.co.uk',
