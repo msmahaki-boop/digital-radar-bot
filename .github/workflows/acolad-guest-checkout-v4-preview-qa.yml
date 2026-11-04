@@ -1,0 +1,27 @@
+name: Acolad Guest Checkout V4 Preview QA — NO PUBLISH
+on:
+  push:
+    branches: [feature/acolad-guest-checkout-v4-preview-20261104]
+    paths:
+      - ops/acolad-guest-checkout-preview-qa.trigger
+permissions:
+  contents: read
+jobs:
+  editorial-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s tests -p 'test_acolad_guest_checkout_v4_preview.py' -v
+      - run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path("editorial/previews/acolad_guest_checkout_v4_20261104.json").read_text(encoding="utf8"))
+          assert d["publication_allowed"] is False
+          assert d["novinhub_drafts_created"] == d["published"] == d["scheduled"] == 0
+          print("GUEST_CHECKOUT_EDITORIAL_PREVIEW_OK, NO EXTERNAL NETWORK MUTATIONS")
+          PY
