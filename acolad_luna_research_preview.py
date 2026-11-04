@@ -38,6 +38,11 @@ USER_AGENT = 'AcoladResearchPreview/1.0 (editorial preview; no publishing)'
 
 # Fixed source list. Feed discovery is not permission to trust article claims.
 RSS_FEEDS = [
+    ("Baymard Institute original UX research", "https://feeds.baymard.com/baymard"),
+    # Public expert blog feeds verified on 2026-11-04.
+    # Public feed discovery never grants access to paywalled content.
+    ("Seth Godin (first-party blog)", "https://seths.blog/feed/"),
+    ("Lenny Rachitsky (first-party newsletter)", "https://www.lennysnewsletter.com/feed"),
     ('پیوست', 'https://peivast.com/feed/'),
     ('دیجیاتو', 'https://digiato.com/feed'),
     ('زومیت', 'https://www.zoomit.ir/feed/'),
@@ -61,6 +66,8 @@ ACADEMIC_QUERIES = [
     'online shopping price framing randomized consumer experiment',
 ]
 ALLOWED_ARTICLE_HOSTS = (
+    'baymard.com', 'feeds.baymard.com',
+    'seths.blog', 'lennysnewsletter.com',
     'peivast.com', 'digiato.com', 'zoomit.ir', 'tejaratnews.com',
     'techcrunch.com', 'searchenginejournal.com', 'bbc.com', 'bbc.co.uk',
     'nytimes.com',
@@ -377,7 +384,12 @@ def score_source(item: dict, focus: str) -> int:
                  'marketing':['مشتری','فروش','بازاریابی','سئو'],
                  'tech':['هوش','گوگل','جستجو','دیجیتال']}.get(focus,[])
     focus_bonus = 2 * sum(1 for word in focus_words if word in body)
-    return min(relevant,7)*2 + quality + freshness + focus_bonus
+    # Prefer a directly sourced expert article over a reposted headline.
+    # Only boost substantive, actually fetched/visible content, never a title alone.
+    host=urllib.parse.urlsplit(item.get('url') or '').hostname or ''
+    expert_direct=host in ('seths.blog','www.lennysnewsletter.com','lennysnewsletter.com')
+    expert_bonus=12 if expert_direct and item.get('evidence_depth')=='full_article' else 0
+    return min(relevant,7)*2 + quality + freshness + focus_bonus + expert_bonus
 
 
 def diversified_source_sample(items: list[dict], count: int, max_each: int = 2) -> list[dict]:
@@ -527,7 +539,7 @@ SYSTEM=('تو سردبیر تحقیقی و قصه‌گوی خلاق آکولاد
 
 # Preserve sources accurately: one primary source is acceptable when no corroborated
 # cross-source match exists; uncertainty must remain clearly attributed.
-SELECT_INSTRUCTION='''تو سردبیر محتوای روایی آکولادی. قبل از ساخت استوری باید سوژه‌ای پیدا کنی که «یک سؤال ملموس درباره رفتار مشتری» داشته باشد، نه چند خبر کنار هم.
+SELECT_INSTRUCTION='''تو سردبیر محتوای روایی آکولادی. قبل از ساخت استوری بهترین سوژه را از میان مقاله‌ها و تحلیل‌های اصیل استادان، پژوهش‌های دست‌اول و اسناد رسمی برگزین. پرسش مرکزی باید در خود سند ریشه داشته باشد؛ هر خبر فنی را به زور به خرید مشتری نچسبان. اگر سوژه ارزش قصه‌گویی مستقل ندارد آن را رد کن، حتی اگر تازه و معتبر باشد.
 تا دو سند مستقل و واقعاً مرتبط با همان سؤال را ترجیح بده؛ اگر زوج سند علمی/خبری واقعاً مرتبط پیدا نشد، یک منبع اصلی دارای متن مقاله/چکیده کافی و تاریخ مشخص را انتخاب کن و کل داستان را فقط به همان نسبت بده. نبود پژوهش آزمایشی به معنی مجوز اختراع پژوهش نیست. ناهم‌موضوع بودن دو مقاله را با واژه‌های کلی «اقتصاد دیجیتال» و «رفتار مشتری» پنهان نکن.
 «تحقیق آزمایشی» به معنی تغییر شرایط یا تقسیم تصادفی/کنترل‌شده گروه‌هاست؛ پرسشنامه و خوداظهاری آزمایش نیست. اگر در چکیده روش/یافته کافی ثبت نشده، داستان آزمایش را جعل نکن. study_design_hint صرفاً سرنخ است نه سند قطعی.
 اگر یک خبر، گزارش خودِ فروشنده یا شرکت است، آن را به صاحب داده نسبت بده و به‌عنوان آمار مستقل کل ایران معرفی نکن. روزنامه و رسانه کوچک فقط لینک منبع‌اند؛ اسم‌شان را در متن نهایی بزرگ نکن. رسانه بزرگ جهانی را فقط وقتی ذکر کن که اصل همان گزارش واقعاً در مدارک انتخاب شده باشد.
@@ -542,7 +554,7 @@ SELECT_INSTRUCTION='''تو سردبیر محتوای روایی آکولادی. 
 
 WRITE_INSTRUCTION='''تو کارگردان یک مینی‌سریال محاوره‌ای آکولادی. فقط با داده‌های تأییدشده، یک قصه انسانی بساز؛ نه اسلاید آموزشی، نه مجموعه گزاره‌های بی‌ربط
 باید **یک سؤال مرکزی و یک رشتهٔ پیوسته** داشته باشی: آدم مشخص → مانع ملموس → مشاهده/شاهد → آزمایش علمی واقعی اگر مستند است → کشف و پیشنهاد → تصمیم عملی و پایان بسته
-شخصیت فرضی را با «فرض کن» در شروع معرفی کن. خبر واقعی و ماجرای ساختگی را قاطی نکن. نمی‌توانی نتیجهٔ خرید در آینده را تضمین کنی
+فقط وقتی شخصیت فرضی واقعاً به فهم سازوکار خبر کمک می‌کند، او را با «فرض کن» معرفی کن؛ برای پرکردن روایت شخصیت تخیلی نساز. به‌جای وصله‌زدن موضوع به خرید مشتری، روایت را از یک جزئیات واقعی، تضاد انسانی یا نمونه مستند شروع کن. خبر واقعی و ماجرای ساختگی را قاطی نکن. نمی‌توانی نتیجهٔ خرید در آینده را تضمین کنی
 تعداد قاب‌ها آزاد است؛ اما **هر قاب هزینه توجه مخاطب دارد**. اگر حذفش کنی و داستان هیچ‌چیز از دست ندهد، حذف/ادغامش کن. از یک سؤالِ «حالا چی؟» یا مکث بی‌محتوا استوری مستقل نساز
 فریم جدید باید حداقل یکی از این‌ها را بدهد: اتفاق، شاهد، تعارض، فهم تازه، تصمیم، پاسخ. دلیل رفتن از قاب قبلی به بعدی باید برای مخاطب بدون توضیح بیرونی روشن باشد. هر قاب همان سؤالی را پیش ببرد که قصه از ابتدا ساخته است
 جمله‌ها انسانی، کوتاه و روشن باشند، با «یه»، «ولی»، «تا اینکه» وقتی طبیعی است؛ مثل کسی که برای دوستش ماجرای جالبی تعریف می‌کند. خبری از «در چارچوب این تحلیل»، ادبیات متکلف و نقطه گذاشتن ته همه جمله‌ها نیست
@@ -578,8 +590,44 @@ EDIT_INSTRUCTION='''تو تدوینگر سخت‌گیر سینما و سردبی
 کلمات کوتاه، گفتاری، تصویری، کم‌نقطه؛ بولد و ایموجیِ انتخابی، نه تزئینی
 پایان باید پاسخ/تصمیم مشخص بدهد، بعد اگر لازم است CTA آکولاد بیاید. با «هنوز نمی‌دونه»، «آخرش چی شد» یا تکرار پرسش ابتدا تمام نکن
 پس از هر حذف، شماره n، scene_id، visual_action و resolution.payoff_frame را دقیق اصلاح کن. متن جدید هر فریم تنها اضافهٔ تازه است و اگر بک‌گراند ثابت ماند نوشته قبلی باید قابل نمایش باشد
-تعداد قاب‌ها آزاد است اما ریتمِ قصه برنده است نه طول داستان؛ نسخه جدید را تنها زمانی برگردان که بهتر و کوتاه‌تر بدون از دست دادن سند و معنا باشد
+تعداد قاب‌ها آزاد است اما ریتمِ قصه برنده است نه طول داستان؛ اگر سوژه به ۵ قاب محکم نمی‌رسد، به جای ساخت ۱۰ قاب بی‌روح کل سوژه را رد کن. جمله‌های خبر می‌گوید، حالا مشخص نیست، برای فروشگاه آزمایش کنیم، اگر در آن‌ها رویداد یا کشف تازه نیست، باید حذف شوند. نسخه جدید را تنها زمانی برگردان که بهتر و کوتاه‌تر بدون از دست دادن سند و معنا باشد
 خروجی همان JSON ورودی با beat, scene_id, visual_action, text, source_ids, resolution, interaction. هیچ اطلاعاتی بیرون از مدارک اضافه نکن'''
+
+
+# Voice V4 override (founder rewrite, 2026-11-04). Applied to the LIVE prompt
+# builder on this isolated draft branch; NOT approved for the production cron.
+VOICE_V4_ADDENDUM = """
+زبان معیار انتشار آکولاد «محاوره‌ای باسواد با شخصیت و طنز تصویری» است؛
+مثل آدمی که برای رفیقش یک ماجرای واقعی را تعریف می‌کند.
+قواعد اصلی:
+۱) از تیترک کوتاه، کنش و شخصیت استفاده کن. گره را به ترتیب واقعی باز کن:
+خواستن → باز کردن سفارش/شروع عمل → مانع → تلاش → کشف علت → پایان مرتبط.
+۲) لحن را از اولین تا آخرین قاب یکدست نگه دار. «نشون بده»، «گشت»،
+«هیچی گیرش نیومد»، «تهِ تهِ ده‌کوره‌های سایت» وقتی طبیعی است؛ نه «دیده شد»،
+«از نگاه سیستم» یا عبارت‌های ترجمه‌زده.
+۳) ایموجی سنجاق 📌 کاملاً ممنوع. فقط ایموجی احساس متناسب مثل 😕 😤 😳 🔎 💡
+در جای اثرگذار و به‌ندرت (حداکثر یکی دو تا در یک قاب)؛ ایموجی اجباری نیست.
+۴) اسم خودمانی مثل «محمد» می‌تواند شخصیت **نمایشی** قصه باشد،
+اما اگر سند هویت واقعی ندارد حتماً در متن بگو «فرض کن» یا «بذار اسمش رو محمد بذاریم»
+و در editorial_caveat شخصیت را fictional علامت بزن؛ نقل‌قول/احساس ساختگی را
+به شرکت‌کننده واقعی پژوهش نسبت نده.
+۵) یک جمله تیترمانندِ تنها یا بند کوتاه می‌تواند ضربه داستانی داشته باشد.
+قانون ۳۵ تا ۶۵ کلمه برای Carousel مستقل است و برای Story پیشرونده اصلاً اجباری نیست؛
+طول را به‌جای پرکردنِ فریم، بر اساس خوانایی و تازگی کنش تعیین کن.
+۶) وقتی از رفتار مشتری، ریزش فروش یا تماس پشتیبانی نتیجه می‌گیری، اگر پژوهش
+نسنجیده با «ممکنه» و «ارزش آزمودن داره» بیان کن؛ آمار و زمان اختراع نکن.
+۷) پایان باید به مانع دقیق اول قصه برگردد و یک جمله ماندگار، اما اصیل داشته باشد.
+۸) متن برای Instagram/TG/Bale باید در مرحله مخصوص همان شبکه جداگانه بازنویسی شود؛
+فریم‌ها را به‌هم نچسبان. URL و شناسه فنی در کپشن مخاطب نباشد.
+برای متن تصویری فقط متن تازهٔ هر فریم را خروجی بده؛ در قاب‌های پیشرونده جمعِ متن
+خوانا و زیر تصویر بماند. فقط JSON تعریف‌شده را برگردان.
+"""
+WRITE_INSTRUCTION += "\n\n" + VOICE_V4_ADDENDUM
+EDIT_INSTRUCTION += "\n\n" + VOICE_V4_ADDENDUM + """
+تدوین V4: هر واژه رسمیِ بیرون‌زده، سنجاق 📌، صحنهٔ اضافی، جهش زمانی،
+شوخی بی‌ربط، ادعای بی‌سند درباره احساس شخصیتِ واقعی و جملهٔ نچسب را اصلاح کن.
+به‌خصوص متن را فقط با تبدیل «می‌شود» به «می‌شه» محاوره‌ای فرض نکن.
+"""
 
 
 def source_data_for_llm(arr: list[dict], max_chars: int = 19000) -> str:
@@ -1136,6 +1184,23 @@ def main(argv=None):
         # Bold is editorial emphasis, not a per-frame requirement. Never
         # inject emphasis mechanically into a conversational reveal.
         issues=story_quality(story,chosen)+cinematic_quality(story,chosen)
+        # V4 final rewrite: spend one bounded additional call only when the
+        # original two versions demonstrably failed, never weaken validation.
+        if issues and usage['requests_sent'] < MAX_CALLS:
+            try:
+                final_prompt=(EDIT_INSTRUCTION+
+                  '\nدومین بازنویسی فشرده و مستقل. به جای پرکردن قاب، یک روایت منسجم و گفتاری بساز. '+
+                  'فقط خطاهای دقیق زیر را اصلاح کن؛ ادعای جدید یا پژوهش ساختگی ممنوع.\n'+
+                  'HARD_ERRORS:\n'+json.dumps(issues,ensure_ascii=False)+
+                  '\nFULL_STORY:\n'+json.dumps(story,ensure_ascii=False)+
+                  '\nVERIFIED_EVIDENCE:\n'+evidence)
+                candidate=api_call(key,SYSTEM,final_prompt,5900,usage)
+                candidate_issues=story_quality(candidate,chosen)+cinematic_quality(candidate,chosen)
+                if len(candidate_issues)<len(issues):
+                    story,issues=candidate,candidate_issues
+                    diag.append('Final V4 evidence-locked editorial retry reduced QA violations')
+            except (RuntimeError,ValueError,TypeError) as ex:
+                diag.append('Final QA retry could not run: '+type(ex).__name__)
         status='PREVIEW_NEEDS_HUMAN_REVIEW' if not issues else 'QA_BLOCKED_HUMAN_REVIEW_REQUIRED'
     except (RuntimeError,ValueError,KeyError,TypeError) as ex:
         issues.append('Pipeline interrupted: '+str(ex)[:160])
