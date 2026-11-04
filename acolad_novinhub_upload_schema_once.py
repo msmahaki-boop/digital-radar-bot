@@ -15,6 +15,8 @@ if res.status_code in (200,201):
         report["top_type"]=type(obj).__name__
         if isinstance(obj,dict):
             report["top_keys"]=sorted(obj.keys())[:20]
+            report["root_id_type"]=type(obj.get("id")).__name__
+            report["root_id_is_decimal"]=str(obj.get("id","")).isdigit()
             d=obj.get("data")
             report["data_type"]=type(d).__name__
             if isinstance(d,dict):
