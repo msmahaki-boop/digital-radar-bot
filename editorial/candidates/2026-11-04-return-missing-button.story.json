@@ -9,7 +9,7 @@
       "scene_id": 1,
       "visual_action": "new_scene",
       "beat": "hook",
-      "text": "برای پس‌دادن خریدش برگشت به سایت؛ اما **دکمه مرجوعی** پیدا نمی‌شد",
+      "text": "برای پس‌دادن خریدش برگشت؛ اما **دکمه مرجوعی** نبود",
       "source_ids": [
         "S01"
       ],
@@ -20,7 +20,7 @@
       "scene_id": 1,
       "visual_action": "add_text",
       "beat": "setup",
-      "text": "سفارش را باز کرد، بعد «جزئیات» را. خبری از آن گزینه نبود",
+      "text": "سفارش را باز کرد؛ گزینه‌ای پیدا نکرد",
       "source_ids": [
         "S01"
       ],
@@ -31,7 +31,7 @@
       "scene_id": 1,
       "visual_action": "add_text",
       "beat": "conflict",
-      "text": "آخر سر، برای پیدا کردن جواب، رفت سراغ قوانین مرجوعی ته صفحه",
+      "text": "آخر سر رفت ته صفحه، دنبال قوانین مرجوعی",
       "source_ids": [
         "S01"
       ],
@@ -42,7 +42,7 @@
       "scene_id": 2,
       "visual_action": "new_scene",
       "beat": "evidence",
-      "text": "این صحنه در یک آزمون واقعی تجربه کاربری دیده شده",
+      "text": "این صحنه در یک آزمون واقعی دیده شد",
       "source_ids": [
         "S01"
       ],
@@ -53,7 +53,7 @@
       "scene_id": 2,
       "visual_action": "add_text",
       "beat": "discovery",
-      "text": "ماجرا این بود: **مهلت مرجوعی آن سفارش تمام شده بود.**",
+      "text": "**مهلت مرجوعی تمام شده بود**",
       "source_ids": [
         "S01"
       ],
@@ -64,7 +64,7 @@
       "scene_id": 2,
       "visual_action": "add_text",
       "beat": "conflict",
-      "text": "سایت دکمه را حذف کرده بود؛ اما به مشتری نگفته بود چرا",
+      "text": "سایت دکمه را حذف کرده بود؛ **بی‌توضیح**",
       "source_ids": [
         "S01"
       ],
@@ -75,7 +75,7 @@
       "scene_id": 3,
       "visual_action": "new_scene",
       "beat": "action",
-      "text": "سایت می‌گفت: گزینه‌ای نداریم. مشتری می‌پرسید: **پس چرا؟**",
+      "text": "برای سایت، گزینه‌ای حذف شد؛ برای مشتری، یک سؤال ماند: **چرا؟**",
       "source_ids": [],
       "visual_idea": "A tiny shopkeeper offering a clear signpost and a lantern next to an enormous empty button-shaped frame; no text in drawing, whimsy, airy monochrome ink, tiny lilac accent"
     },
@@ -84,7 +84,7 @@
       "scene_id": 3,
       "visual_action": "add_text",
       "beat": "action",
-      "text": "پیشنهاد آزمودنی: پایان مهلت را همان‌جا توضیح بده و مسیر پشتیبانی را نشان بده",
+      "text": "پیشنهاد: علت را روشن بگو و راه پشتیبانی را نشان بده",
       "source_ids": [],
       "visual_idea": "Same empty button illustration with one clean sign, only next text revealed"
     },
@@ -93,7 +93,7 @@
       "scene_id": 3,
       "visual_action": "add_text",
       "beat": "payoff",
-      "text": "با چند نفر امتحان کن. جواب را بدون کمک پیدا می‌کنند؟ **گاهی شفافیت از دکمه مهم‌تره.**",
+      "text": "با چند نفر امتحان کن: جواب را بی‌کمک پیدا می‌کنند؟ **شفافیت مهمه**",
       "source_ids": [],
       "visual_idea": "Same static illustration and final payoff text"
     }
