@@ -15,10 +15,37 @@ class Safety(unittest.TestCase):
   self.assertEqual(p.due(d,"telegram").strftime("%H:%M"),"17:30")
   self.assertEqual(p.due(d,"bale").strftime("%H:%M"),"17:35")
   self.assertEqual(p.due(d,"instagram").strftime("%H:%M"),"18:00")
- def test_window_closes_before_publication(self):
-  with patch.object(p,"tehran_now",return_value=datetime(2026,11,5,17,1,tzinfo=ZoneInfo("Asia/Tehran"))):
-   with self.assertRaisesRegex(RuntimeError,"SAFE_SCHEDULING_WINDOW"):
-    p.check_time()
+ def test_late_start_does_not_cancel_daily_run(self):
+  now=datetime(2026,11,5,17,1,tzinfo=ZoneInfo("Asia/Tehran"))
+  with patch.object(p,"tehran_now",return_value=now):
+   self.assertEqual(p.check_time(),date(2026,11,5))
+  slots,mode=p.plan_release(date(2026,11,5),now)
+  self.assertEqual(mode,"DELAYED_SAME_DAY")
+  self.assertEqual(slots["telegram"].strftime("%H:%M"),"17:51")
+  self.assertEqual(slots["bale"].strftime("%H:%M"),"17:56")
+  self.assertEqual(slots["instagram"].strftime("%H:%M"),"18:21")
+ def test_regular_start_retains_original_times(self):
+  slots,mode=p.plan_release(date(2026,11,5),
+   datetime(2026,11,5,11,15,tzinfo=ZoneInfo("Asia/Tehran")))
+  self.assertEqual(mode,"NORMAL")
+  self.assertEqual(slots["telegram"].strftime("%H:%M"),"17:30")
+  self.assertEqual(slots["instagram"].strftime("%H:%M"),"18:00")
+ def test_evening_delayed_slots_keep_all_three_together(self):
+  now=datetime(2026,11,5,21,45,tzinfo=ZoneInfo("Asia/Tehran"))
+  slots,mode=p.plan_release(date(2026,11,5),now)
+  self.assertEqual(mode,"DELAYED_SAME_DAY")
+  self.assertEqual(slots["telegram"].strftime("%H:%M"),"22:35")
+  self.assertEqual(slots["instagram"].strftime("%H:%M"),"23:05")
+ def test_near_midnight_rolls_safely_to_next_day(self):
+  slots,mode=p.plan_release(date(2026,11,5),
+   datetime(2026,11,5,22,50,tzinfo=ZoneInfo("Asia/Tehran")))
+  self.assertEqual(mode,"NEXT_DAY_ROLLOVER")
+  self.assertEqual(slots["telegram"].isoformat(),"2026-11-06T17:30:00+03:30")
+  self.assertEqual(slots["instagram"].isoformat(),"2026-11-06T18:00:00+03:30")
+ def test_stale_content_is_not_scheduled_later(self):
+  with self.assertRaisesRegex(ValueError,"too stale"):
+   p.plan_release(date(2026,11,5),
+     datetime(2026,11,7,12,tzinfo=ZoneInfo("Asia/Tehran")))
  def test_real_bale_submission_not_a_draft(self):
   payload={}
   def fake(url,headers,json,timeout):
