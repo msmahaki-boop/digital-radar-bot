@@ -32,7 +32,16 @@ def bale_draft(key,text):
              "schedule_date":int((datetime.now(timezone.utc)+timedelta(days=1)).timestamp())}
     res=requests.post(API+"/post",headers={**headers(key),"Content-Type":"application/json"},
                       json=payload,timeout=65)
-    if res.status_code not in (200,201):raise RuntimeError("Bale DRAFT HTTP "+str(res.status_code))
+    if res.status_code not in (200,201):
+        try:
+            raw=res.json()
+            err=(raw.get("error") or {}) if isinstance(raw,dict) else {}
+            message=str(err.get("message") or "") if isinstance(err,dict) else ""
+            message=re.sub(r"(?i)(?:bearer|sk-|token|api[_ -]?key)[\s:=]*[A-Za-z0-9_-]{6,}","[REDACTED]",message)
+            message=re.sub(r"https?://[^\s]+","[URL]",message)
+        except (ValueError,AttributeError):
+            message="UNAVAILABLE"
+        raise RuntimeError("Bale DRAFT HTTP "+str(res.status_code)+" validation="+message[:200])
     body=res.json()
     obj=body.get("data",body) if isinstance(body,dict) else None
     if not isinstance(obj,dict) or not obj.get("id"):raise RuntimeError("No Bale draft receipt ID")
