@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Diagnose NovinHub POST /post with one story image + Telegram text test DRAFTS only."""
-import json,os,requests
+import json,os,re,requests
 from acolad_novinhub_bridge import API,token,headers,as_items,CAPTION_MARKER
 def keys_only(obj):
     if isinstance(obj,dict):
@@ -11,6 +11,12 @@ def keys_only(obj):
                 if isinstance(val,dict): safe[key]=sorted(val.keys())[:10]
                 elif isinstance(val,list):safe[key]=[type(x).__name__ for x in val[:3]]
                 else:safe[key]=type(val).__name__
+            message=err.get("message")
+            if isinstance(message,str):
+                message=re.sub(r"(?i)(?:Bearer|sk-|key|token)[\\s:=]*[A-Za-z0-9_\\-]{6,}","[REDACTED]",message)
+                message=re.sub(r"https?://\\S+","[URL]",message)
+                safe["message_excerpt"]=message[:240]
+            safe["provider_error_type"]=str(err.get("type") or "")[:70]
             return {"top_keys":sorted(obj.keys())[:15],"error_shape":safe}
         return {"top_keys":sorted(obj.keys())[:15],
                 "error_type":type(err).__name__,
