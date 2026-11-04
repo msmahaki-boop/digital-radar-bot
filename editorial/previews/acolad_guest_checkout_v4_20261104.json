@@ -1,0 +1,96 @@
+{
+  "status": "PREVIEW_ONLY_OWNER_REVIEW_REQUIRED",
+  "publication_allowed": false,
+  "human_quality_score": "UNASSESSED",
+  "created_local": "2026-11-04",
+  "title": "مشتری اومده خرید کنه، نه فرم عضویت پر کنه!",
+  "narrative_type": "Instagram 3 scenes x 3 progressive frames",
+  "frames": [
+    {
+      "frame": 1,
+      "scene": 1,
+      "added_text": "😌 بذار اسمش رو رها بذاریم؛ فقط می‌خواست خریدش رو تموم کنه",
+      "evidence_layer": "fictional_setup"
+    },
+    {
+      "frame": 2,
+      "scene": 1,
+      "added_text": "توی صفحه پرداخت، «ادامه به‌عنوان مهمان» رو انتخاب کرد",
+      "evidence_layer": "verified_pattern"
+    },
+    {
+      "frame": 3,
+      "scene": 1,
+      "added_text": "با خودش گفت: «خب! دیگه لازم نیست ثبت‌نام کنم»",
+      "evidence_layer": "fictional_dialogue"
+    },
+    {
+      "frame": 4,
+      "scene": 2,
+      "added_text": "😳 اما وسط پرداخت، سایت دوباره پرسید: «حساب نمی‌سازی؟»",
+      "evidence_layer": "verified_pattern"
+    },
+    {
+      "frame": 5,
+      "scene": 2,
+      "added_text": "این بار گزینه «مهمان» کم‌رنگ‌تر از دعوت به ثبت‌نام بود",
+      "evidence_layer": "verified_observation"
+    },
+    {
+      "frame": 6,
+      "scene": 2,
+      "added_text": "توی تست واقعی، خریدار شروع کرد رمز گذاشتن؛ بعد تازه راه «مهمان» رو دید!",
+      "evidence_layer": "verified_observation"
+    },
+    {
+      "frame": 7,
+      "scene": 3,
+      "added_text": "🤦‍♀️ مشتری یه بار گفته «نه»؛ چرا سایت دوباره عضویت رو جلوش می‌ذاره؟",
+      "evidence_layer": "interpretation"
+    },
+    {
+      "frame": 8,
+      "scene": 3,
+      "added_text": "💡 خرید مهمان رو واضح بذار؛ پیشنهاد عضویت رو ببر بعدِ ثبت سفارش",
+      "evidence_layer": "testable_proposal"
+    },
+    {
+      "frame": 9,
+      "scene": 3,
+      "added_text": "❤️‍🔥 مشتری اومده خرید کنه؛ نه اینکه دوباره جواب «عضو می‌شی؟» بده! 😅",
+      "evidence_layer": "payoff"
+    }
+  ],
+  "captions": {
+    "instagram": "😳 وقتی مشتری «خرید مهمان» رو انتخاب کرده، چرا وسط پرداخت دوباره ازش دعوت می‌کنیم عضو بشه؟\n\nاین یه گره واقعی در طراحی تجربه خرید آنلاینه؛ نه مشکل رمز عبور، نه قیمت محصول. فقط یه سؤال، در وقت اشتباه.\n\n💡 راهکار رو توی استوری ببین و بگو: توی فروشگاه خودت خرید بدون عضویت چقدر جلوی چشم مشتریه؟\n\nآکولاد | شریک رشد دیجیتال",
+    "telegram": "🛒 بذار اسمش رو رها بذاریم. فقط می‌خواست خریدش رو تموم کنه؛ نه عضو یه باشگاه جدید بشه!\n\nتوی صفحه پرداخت، «ادامه به‌عنوان مهمان» رو انتخاب کرد. خیال کرد دیگه خبری از ساخت حساب نیست.\n\n😳 اما وسط خرید، سایت دوباره پرید جلوش: «حساب نمی‌سازی؟» این بار گزینه ادامه بدون ثبت‌نام هم حسابی کم‌رنگ‌تر بود.\n\nجالبش اینه که این گیر فقط مال قصه رها نیست؛ توی یه تست واقعی فروشگاه اینترنتی، خریدار بعد از انتخاب مهمان با همین دعوت دوباره روبه‌رو شد. حتی شروع کرد رمز عبور ساختن؛ بعد تازه فهمید هنوز می‌تونه بدون حساب خرید کنه!\n\nمشکل این نیست که فروشگاه دوست داره مشتری عضو بشه. مشکل اینه که وسط پرداخت، مشتری رو دوباره از مسیر اصلیش می‌کشه بیرون.\n\n💡 اگه فروشگاه اینترنتی داری، اینو امتحان کن: گزینه «خرید مهمان» رو واضح بذار، دعوت به عضویت رو ببر به صفحه «سفارشت ثبت شد» و با چند کاربر ببین مسیر خرید چقدر روشنه.\n\n**مشتری اومده خرید کنه، نه توی آزمون صبرِ فرم ثبت‌نام شرکت کنه!** 😅\n\n🌐 [acolad.ir](https://acolad.ir/)\n📢 کانال تلگرام: [@acoladagency](https://t.me/acoladagency)\nارتباط و مشاوره: [@acolad_agency](https://t.me/acolad_agency)",
+    "bale": "😳 فرض کن رها فقط می‌خواد خریدش رو تموم کنه. «ادامه به‌عنوان مهمان» رو می‌زنه، اما وسط پرداخت، سایت دوباره ازش می‌خواد حساب بسازه!\n\nاین گیر توی تست واقعی خرید اینترنتی هم دیده شده: یه خریدار حتی شروع کرد رمز عبور ساختن، بعد تازه گزینه کم‌رنگِ «ادامه به‌عنوان مهمان» رو پیدا کرد.\n\nمشکل عضویت نیست؛ **زمانِ پیشنهاد عضویته!**\n\n💡 اگه فروشگاه داری، راه خرید مهمان رو واضح بذار و دعوت به ثبت‌نام رو ببر بعد از تأیید سفارش. بعد با چند نفر تست کن ببین بدون مکث مسیر رو پیدا می‌کنن یا نه.\n\n**بذار اول خریدش تموم شه؛ بعد دعوتش کن عضو بشه!** 🙌\n\n🌐 [acolad.ir](https://acolad.ir/)\n📢 کانال تلگرام: [@acoladagency](https://t.me/acoladagency)\nارتباط و مشاوره: [@acolad_agency](https://t.me/acolad_agency)",
+    "footer": "🌐 [acolad.ir](https://acolad.ir/)\n📢 کانال تلگرام: [@acoladagency](https://t.me/acoladagency)\nارتباط و مشاوره: [@acolad_agency](https://t.me/acolad_agency)"
+  },
+  "provenance": {
+    "original_study": "Baymard Institute first-party usability research",
+    "title": "Save Account Creation for the Confirmation Step",
+    "author": "Edward Scott",
+    "published": "2023-09-19",
+    "source_url_internal_only": "https://baymard.com/research-articles/delayed-account-creation",
+    "observation": "An Etsy study participant chose continue as guest but encountered a repeated account-creation invitation mid-checkout and began password creation before noticing subdued guest option.",
+    "fictional_character": "رها",
+    "fictional_character_disclosed": true,
+    "unsupported_claims_excluded": [
+      "that Raha was the real test participant",
+      "that this participant abandoned checkout",
+      "guaranteed sales uplift",
+      "Iranian prevalence or numerical claims"
+    ]
+  },
+  "illustration_state": {
+    "three_original_images_created_in_current_review_package": true,
+    "one_per_three_frames": true,
+    "art_available_in_repo": false,
+    "needs_approved_asset_upload_before_automation": true
+  },
+  "social_writes": 0,
+  "novinhub_drafts_created": 0,
+  "published": 0,
+  "scheduled": 0
+}

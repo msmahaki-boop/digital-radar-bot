@@ -1,0 +1,37 @@
+name: Acolad Guest V4 EXACT Telegram & Bale NovinHub Drafts (No Publish)
+on:
+  push:
+    branches: [feature/acolad-guest-checkout-v4-preview-20261104]
+    paths: [ops/acolad-guest-v4-novinhub-text-drafts.trigger]
+permissions:
+  contents: read
+concurrency:
+  group: acolad-guest-v4-novinhub-exact-drafts
+  cancel-in-progress: false
+jobs:
+  text-drafts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install requests==2.32.5 Pillow==11.3.0
+      - name: Check preview contract
+        run: python -m unittest discover -s tests -p 'test_acolad_guest_checkout_v4_preview.py' -v
+      - name: Check accounts and create only explicitly approved DRAFT text posts
+        env:
+          NOVINHUB_API_TOKEN: ${{ secrets.NOVINHUB_API_TOKEN }}
+          NOVINHUB_TOKEN: ${{ secrets.NOVINHUB_TOKEN }}
+          NOVINHUB_ACCESS_TOKEN: ${{ secrets.NOVINHUB_ACCESS_TOKEN }}
+          ACOLAD_GUEST_DRAFT_APPROVAL: ${{ contains(github.event.head_commit.message, '[APPROVED_GUEST_TWO_TEXT_DRAFTS]') && 'APPROVED_ONLY_TWO_TEXT_DRAFTS' || 'READ_ONLY' }}
+          MODE: ${{ contains(github.event.head_commit.message, '[APPROVED_GUEST_TWO_TEXT_DRAFTS]') && 'draft' || 'read' }}
+        run: python -u acolad_guest_checkout_novinhub_drafts.py --mode "$MODE"
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-guest-v4-novinhub-text-drafts-receipts
+          path: acolad_guest_checkout_novinhub_draft_receipts/status.json
+          retention-days: 14
+          if-no-files-found: warn
