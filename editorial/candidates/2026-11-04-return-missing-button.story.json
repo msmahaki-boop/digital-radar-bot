@@ -1,0 +1,115 @@
+{
+  "topic": "دکمه‌ای که نبود، سؤالی که بی‌جواب ماند",
+  "editorial_date": "2026-11-04",
+  "publication_permission": "PREVIEW_ONLY",
+  "article_origin": "Baymard Institute, Sally Collins, 2026-09-09; original usability study anecdote; not a new 2026-11-04 event",
+  "slides": [
+    {
+      "n": 1,
+      "scene_id": 1,
+      "visual_action": "new_scene",
+      "beat": "hook",
+      "text": "برای پس‌دادن خریدش برگشت به سایت؛ اما **دکمه مرجوعی** پیدا نمی‌شد.",
+      "source_ids": [
+        "S01"
+      ],
+      "visual_idea": "A small shopper peering at one giant, blank order-card shaped like a doorway, looking for a missing handle; whimsical minimal monochrome ink on ivory, single lavender accent, no text"
+    },
+    {
+      "n": 2,
+      "scene_id": 1,
+      "visual_action": "add_text",
+      "beat": "setup",
+      "text": "سفارش را باز کرد، بعد «جزئیات» را. خبری از آن گزینه نبود.",
+      "source_ids": [
+        "S01"
+      ],
+      "visual_idea": "Continue exactly same static drawing and background; only reveal new line of Persian narration"
+    },
+    {
+      "n": 3,
+      "scene_id": 1,
+      "visual_action": "add_text",
+      "beat": "conflict",
+      "text": "آخر سر، برای پیدا کردن جواب، رفت سراغ قوانین مرجوعی ته صفحه.",
+      "source_ids": [
+        "S01"
+      ],
+      "visual_idea": "Continue same background, no new image; reveal final line of scene"
+    },
+    {
+      "n": 4,
+      "scene_id": 2,
+      "visual_action": "new_scene",
+      "beat": "evidence",
+      "text": "این صحنه در یک آزمون واقعی تجربه کاربری دیده شده.",
+      "source_ids": [
+        "S01"
+      ],
+      "visual_idea": "A gigantic calendar and tiny baffled shopper examining an empty return slot; hand-drawn black line, minimal, ivory and a restrained lavender dot, no text"
+    },
+    {
+      "n": 5,
+      "scene_id": 2,
+      "visual_action": "add_text",
+      "beat": "discovery",
+      "text": "ماجرا این بود: **مهلت مرجوعی آن سفارش تمام شده بود.**",
+      "source_ids": [
+        "S01"
+      ],
+      "visual_idea": "Continue the same calendar illustration, no new image"
+    },
+    {
+      "n": 6,
+      "scene_id": 2,
+      "visual_action": "add_text",
+      "beat": "conflict",
+      "text": "سایت دکمه را حذف کرده بود؛ اما به مشتری نگفته بود چرا.",
+      "source_ids": [
+        "S01"
+      ],
+      "visual_idea": "Continue same background and reveal text progressively"
+    },
+    {
+      "n": 7,
+      "scene_id": 3,
+      "visual_action": "new_scene",
+      "beat": "action",
+      "text": "سایت می‌گفت: گزینه‌ای نداریم. مشتری می‌پرسید: **پس چرا؟**",
+      "source_ids": [],
+      "visual_idea": "A tiny shopkeeper offering a clear signpost and a lantern next to an enormous empty button-shaped frame; no text in drawing, whimsy, airy monochrome ink, tiny lilac accent"
+    },
+    {
+      "n": 8,
+      "scene_id": 3,
+      "visual_action": "add_text",
+      "beat": "action",
+      "text": "پیشنهاد آزمودنی: پایان مهلت را همان‌جا توضیح بده و مسیر پشتیبانی را نشان بده.",
+      "source_ids": [],
+      "visual_idea": "Same empty button illustration with one clean sign, only next text revealed"
+    },
+    {
+      "n": 9,
+      "scene_id": 3,
+      "visual_action": "add_text",
+      "beat": "payoff",
+      "text": "با چند نفر امتحان کن. جواب را بدون کمک پیدا می‌کنند؟ **گاهی شفافیت از دکمه مهم‌تره.**",
+      "source_ids": [],
+      "visual_idea": "Same static illustration and final payoff text"
+    }
+  ],
+  "resolution": {
+    "central_question": "وقتی مهلت مرجوعی گذشته، چرا مشتری در صفحه سفارش سردرگم می‌شود؟",
+    "answer": "چون سایت امکان شروع مرجوعی را بی‌توضیح پنهان کرده؛ برای مشتری دلیل ناپدیدشدن گزینه روشن نیست.",
+    "action": "پیشنهاد آزمودنی: وضعیت پایان مهلت، دلیل نبود گزینه و مسیر پشتیبانی را در صفحه سفارش واضح نشان بده؛ با مشاهده کاربران آزمایش کن.",
+    "payoff_frame": 9
+  },
+  "interaction": {
+    "type": "question",
+    "question": "تا حالا توی یک سایت دنبال گزینه‌ای گشتی که بی‌توضیح ناپدید شده باشد؟",
+    "options": []
+  },
+  "story_link": "",
+  "editorial_caveat": "واقعیت مستند: شرکت‌کننده‌ای در آزمون کاربردپذیری Baymard هنگام تلاش برای مرجوعی در سایت Wayfair دکمه شروع بازگشت را نیافت و به صفحه سیاست مرجوعی رفت؛ مهلت برگشت تمام شده بود. برداشت: حذف بدون توضیح می‌تواند سردرگمی بسازد. پیشنهاد آکولاد درباره پیام توضیحی و مسیر پشتیبانی هنوز آزمایش نشده و درباره تمام فروشگاه‌های ایران تعمیم ندارد. منبع صرفاً برای بررسی داخلی است، نه متن مخاطب.",
+  "publication_state": "NOT_APPROVED_REQUIRES_USER_EDITORIAL_REVIEW"
+}
