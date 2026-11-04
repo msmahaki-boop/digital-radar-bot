@@ -1,0 +1,40 @@
+name: Acolad OpenAI Image Access Preflight (NO PAID CALL)
+on:
+  push:
+    branches:
+      - fix/acolad-image-provider-qa-20261104
+    paths:
+      - ops/acolad-openai-preflight-20261104.trigger
+permissions:
+  contents: read
+jobs:
+  check-access:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check presence and free model read-only probe
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+        run: |
+          python - <<'PY'
+          import json, os, urllib.request, urllib.error
+          result={"mode":"PREFLIGHT_READ_ONLY_NO_IMAGE_GENERATION",
+                  "openai_key_present":bool(os.getenv("OPENAI_API_KEY")),
+                  "gapgpt_key_present":bool(os.getenv("GAPGPT_API_KEY")),
+                  "pexels_key_present":bool(os.getenv("PEXELS_API_KEY")),
+                  "paid_requests":0,"published":0}
+          if result["openai_key_present"]:
+              req=urllib.request.Request(
+                  "https://api.openai.com/v1/models/gpt-image-2",
+                  headers={"Authorization":"Bearer "+os.environ["OPENAI_API_KEY"]})
+              try:
+                  with urllib.request.urlopen(req, timeout=15) as res:
+                      result["openai_model_get_http_status"]=res.status
+              except urllib.error.HTTPError as exc:
+                  result["openai_model_get_http_status"]=exc.code
+              except Exception as exc:
+                  result["openai_model_get_error"]=type(exc).__name__
+          print("SAFE_IMAGE_PREFLIGHT "+json.dumps(result,ensure_ascii=False))
+          PY
