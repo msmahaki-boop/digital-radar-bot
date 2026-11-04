@@ -1,0 +1,30 @@
+name: Acolad Expert-First Narrative Editorial QA (NO API COST, NO PUBLISH)
+on:
+  push:
+    branches: [editorial/acolad-expert-story-drafts-20261104]
+    paths: [ops/acolad-expert-copy-qa-20261104.trigger]
+permissions:
+  contents: read
+jobs:
+  offline-editorial:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python -m pip install Pillow==11.3.0 requests==2.32.5 beautifulsoup4==4.14.2
+      - name: Offline structure, firsthand source and public-copy leakage tests
+        run: |
+          python -m py_compile acolad_expert_story_preview_20261104.py
+          python - <<'PY'
+          from acolad_expert_story_preview_20261104 import load,quality
+          story,evidence,copies=load()
+          result=quality(story,evidence,copies)
+          print("ACOLAD_SOURCE_FIRST_NARRATIVE_QA",result)
+          assert result["hard_pass"],result["errors"]
+          assert len(story["slides"])==9
+          assert [s["scene_id"] for s in story["slides"]]==[1,1,1,2,2,2,3,3,3]
+          assert result["human_release_approved"] is False
+          PY
+          python -m unittest discover -s tests -p 'test_acolad_editorial_trust_gate.py' -v
