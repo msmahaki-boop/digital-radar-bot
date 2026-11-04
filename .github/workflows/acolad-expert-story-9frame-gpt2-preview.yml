@@ -1,0 +1,63 @@
+name: Acolad Expert Narrative 9-Frame GPT2 Art (REVIEW ONLY)
+on:
+  push:
+    branches: [editorial/acolad-expert-story-drafts-20261104]
+    paths: [ops/acolad-expert-visual-preview-20261104.trigger]
+permissions:
+  contents: read
+concurrency:
+  group: acolad-expert-visual-preview-20261104
+  cancel-in-progress: false
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Install Persian typesetting
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-core fonts-noto-color-emoji libharfbuzz0b libfribidi0 >/dev/null
+          python -m pip install --disable-pip-version-check requests==2.32.5 Pillow==11.3.0 beautifulsoup4==4.14.2
+      - name: Check source contract and channel copy before any billed image call
+        run: |
+          python - <<'PY'
+          from acolad_expert_story_preview_20261104 import load,quality
+          story,evidence,copies=load()
+          q=quality(story,evidence,copies)
+          assert q["hard_pass"],q["errors"]
+          assert q["human_release_approved"] is False
+          print("EDITORIAL_GATE_PASSED_HUMAN_REVIEW_STILL_REQUIRED")
+          PY
+      - name: Three distinct ink art scenes - GPT2 then bounded fallback - render nine story frames
+        env:
+          GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+        run: python -u acolad_expert_story_preview_20261104.py
+      - name: Build nine-slide readable contact sheet
+        run: |
+          python - <<'PY'
+          from PIL import Image,ImageDraw
+          from pathlib import Path
+          root=Path("acolad_expert_story_preview")
+          files=sorted((root/"frames").glob("story_*.png"))
+          assert len(files)==9
+          w,h,pad=320,569,16
+          board=Image.new("RGB",(3*w+4*pad,3*h+4*pad),"#F5F2EB")
+          for i,p in enumerate(files):
+              im=Image.open(p).convert("RGB").resize((w,h),Image.Resampling.LANCZOS)
+              board.paste(im,(pad+(i%3)*(w+pad),pad+(i//3)*(h+pad)))
+          board.save(root/"nine_frame_contact_sheet.jpg",quality=90)
+          print("STORY_CONTACT_SHEET_READY")
+          PY
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-expert-return-story-9-frame-preview
+          path: |
+            acolad_expert_story_preview/
+            acolad_concept_assets/
+          retention-days: 14
+          if-no-files-found: warn
