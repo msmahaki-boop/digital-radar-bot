@@ -1184,6 +1184,23 @@ def main(argv=None):
         # Bold is editorial emphasis, not a per-frame requirement. Never
         # inject emphasis mechanically into a conversational reveal.
         issues=story_quality(story,chosen)+cinematic_quality(story,chosen)
+        # V4 final rewrite: spend one bounded additional call only when the
+        # original two versions demonstrably failed, never weaken validation.
+        if issues and usage['requests_sent'] < MAX_CALLS:
+            try:
+                final_prompt=(EDIT_INSTRUCTION+
+                  '\nدومین بازنویسی فشرده و مستقل. به جای پرکردن قاب، یک روایت منسجم و گفتاری بساز. '+
+                  'فقط خطاهای دقیق زیر را اصلاح کن؛ ادعای جدید یا پژوهش ساختگی ممنوع.\n'+
+                  'HARD_ERRORS:\n'+json.dumps(issues,ensure_ascii=False)+
+                  '\nFULL_STORY:\n'+json.dumps(story,ensure_ascii=False)+
+                  '\nVERIFIED_EVIDENCE:\n'+evidence)
+                candidate=api_call(key,SYSTEM,final_prompt,5900,usage)
+                candidate_issues=story_quality(candidate,chosen)+cinematic_quality(candidate,chosen)
+                if len(candidate_issues)<len(issues):
+                    story,issues=candidate,candidate_issues
+                    diag.append('Final V4 evidence-locked editorial retry reduced QA violations')
+            except (RuntimeError,ValueError,TypeError) as ex:
+                diag.append('Final QA retry could not run: '+type(ex).__name__)
         status='PREVIEW_NEEDS_HUMAN_REVIEW' if not issues else 'QA_BLOCKED_HUMAN_REVIEW_REQUIRED'
     except (RuntimeError,ValueError,KeyError,TypeError) as ex:
         issues.append('Pipeline interrupted: '+str(ex)[:160])
