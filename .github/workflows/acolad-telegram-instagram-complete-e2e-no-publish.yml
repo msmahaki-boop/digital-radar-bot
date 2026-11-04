@@ -1,0 +1,84 @@
+name: Acolad FULL Telegram + Instagram and NovinHub Read-only E2E Test (NO PUBLISH)
+on:
+  push:
+    branches: [feature/acolad-gpt2-novinhub-20261104]
+    paths:
+      - ops/acolad-full-crosschannel-e2e-20261104.trigger
+permissions:
+  contents: read
+concurrency:
+  group: acolad-crosschannel-e2e-test-20261104
+  cancel-in-progress: false
+jobs:
+  test-tg-ig:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Packages and right-to-left text support
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-core fonts-noto-color-emoji libharfbuzz0b libfribidi0 >/dev/null
+          python -m pip install --disable-pip-version-check -r requirements.txt
+      - name: Unit tests - no network writes
+        run: |
+          python -m unittest discover -s tests -p 'test_acolad_story_image_ladder.py' -v
+          python -m unittest discover -s tests -p 'test_acolad_novinhub_bridge.py' -v
+          python -m unittest discover -s tests -p 'test_acolad_crosschannel_preflight.py' -v
+      - name: Telegram admin preflight (never send)
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          TELEGRAM_CHANNEL_ID: ${{ vars.TELEGRAM_CHANNEL_ID }}
+        run: |
+          python - <<'PY'
+          import os
+          from telegram_send import preflight
+          result=preflight(os.getenv("BOT_TOKEN",""),os.getenv("TELEGRAM_CHANNEL_ID",""))
+          print("TELEGRAM_ADMIN_PREFLIGHT_OK: "+str(bool(result)))
+          PY
+      - name: Read NovinHub Instagram and Telegram accounts and post history
+        env:
+          NOVINHUB_API_TOKEN: ${{ secrets.NOVINHUB_API_TOKEN }}
+          NOVINHUB_TOKEN: ${{ secrets.NOVINHUB_TOKEN }}
+          NOVINHUB_ACCESS_TOKEN: ${{ secrets.NOVINHUB_ACCESS_TOKEN }}
+        run: python acolad_novinhub_bridge.py --mode read
+      - name: Read Buffer today's queue and Telegram publication receipts
+        env:
+          NOVINHUB_API_TOKEN: ${{ secrets.NOVINHUB_API_TOKEN }}
+          NOVINHUB_TOKEN: ${{ secrets.NOVINHUB_TOKEN }}
+          NOVINHUB_ACCESS_TOKEN: ${{ secrets.NOVINHUB_ACCESS_TOKEN }}
+          BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+        run: python acolad_crosschannel_preflight.py
+      - name: Generate today fresh editorial story with two stock/illustration positions (preview)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ACOLAD_IMAGE_LADDER_ENABLED: 'true'
+          ACOLAD_IMAGE_API_PAID_ENABLED: 'false'
+          ACOLAD_MAX_AGE_HOURS: '48'
+          ACOLAD_REQUIRE_DATED_NEWS: '1'
+        run: python story_test.py
+      - name: Verify output count and no write
+        run: |
+          python - <<'PY'
+          from PIL import Image
+          from pathlib import Path
+          files=sorted(Path("stories_output").glob("*.png"))
+          assert len(files)==5, [str(p) for p in files]
+          for p in files:
+              with Image.open(p) as im:assert im.size==(1080,1920)
+          print("FULL Instagram 5-slide preview verified; Telegram preflight done; social writes=0")
+          PY
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-crosschannel-test-previews-and-receipts
+          path: |
+            stories_output/
+            acolad_visual_provenance/
+            acolad_novinhub_e2e/
+            acolad_crosschannel_health/
+          retention-days: 14
+          if-no-files-found: warn

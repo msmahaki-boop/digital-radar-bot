@@ -1,0 +1,63 @@
+name: Acolad NovinHub Instagram GPT Image 2 Daily (Verified News + 2 Images)
+on:
+  schedule:
+    - cron: '41 10 * * *'  # 14:11 Tehran, 10:41 UTC
+  push:
+    branches: [feature/acolad-gpt2-novinhub-20261104]
+    paths: [ops/acolad-novinhub-scheduler-preflight-20261104.trigger]
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        required: true
+        default: preview
+        options: [preview]
+permissions:
+  contents: read
+concurrency:
+  group: acolad-novinhub-daily-instagram
+  cancel-in-progress: false
+jobs:
+  daily-novinhub:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Dependencies and Persian typesetting
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-core fonts-noto-color-emoji libharfbuzz0b libfribidi0 >/dev/null
+          python -m pip install --disable-pip-version-check -r requirements.txt
+      - name: Fail-closed offline regression checks
+        run: |
+          python -m unittest discover -s tests -p 'test_acolad_story_image_ladder.py' -v
+          python -m unittest discover -s tests -p 'test_acolad_novinhub_bridge.py' -v
+          python -m unittest discover -s tests -p 'test_acolad_novinhub_daily.py' -v
+      - name: Read Buffer / NovinHub, then optionally produce daily story schedule
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          NOVINHUB_API_TOKEN: ${{ secrets.NOVINHUB_API_TOKEN }}
+          NOVINHUB_TOKEN: ${{ secrets.NOVINHUB_TOKEN }}
+          NOVINHUB_ACCESS_TOKEN: ${{ secrets.NOVINHUB_ACCESS_TOKEN }}
+          BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+          ACOLAD_MAX_AGE_HOURS: '48'
+          ACOLAD_REQUIRE_DATED_NEWS: '1'
+          ACOLAD_NOVINHUB_AUTO_APPROVAL: ${{ github.event_name == 'schedule' && 'AUTO_INSTAGRAM_SCHEDULE_APPROVED' || 'PREVIEW_ONLY' }}
+          RUN_MODE: ${{ github.event_name == 'schedule' && 'auto' || 'preview' }}
+        run: python -u acolad_novinhub_daily.py --mode "$RUN_MODE"
+      - name: Preserve generated source, image provenance and NovinHub schedule receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-novinhub-daily-gpt2-preview-receipts
+          path: |
+            acolad_novinhub_daily/
+            acolad_visual_provenance/
+            stories_output/
+          retention-days: 14
+          if-no-files-found: warn
