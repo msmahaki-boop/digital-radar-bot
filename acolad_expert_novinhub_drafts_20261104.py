@@ -59,7 +59,17 @@ def bale_draft(key,message):
     r=requests.post(API+"/post",headers={**headers(key),"Content-Type":"application/json"},
                     json=payload,timeout=65)
     if r.status_code not in (200,201):
-        raise RuntimeError("Bale draft HTTP "+str(r.status_code))
+        # The provider's validation details are diagnostic. Never expose token,
+        # network URLs, or the submitted full audience text in public CI logs.
+        try:
+            error=r.json().get("error") or {}
+            raw=str(error.get("message") or "") if isinstance(error,dict) else ""
+            import re
+            safe=re.sub(r"(?i)(?:bearer|sk-|token|api[_ -]?key)[\\s:=]*[A-Za-z0-9_-]{6,}","[REDACTED]",raw)
+            safe=re.sub(r"https?://\\S+","[URL]",safe)[:200]
+        except (ValueError,TypeError,AttributeError):
+            safe=""
+        raise RuntimeError("Bale draft HTTP "+str(r.status_code)+" provider_validation="+safe)
     obj=r.json();data=obj.get("data",obj) if isinstance(obj,dict) else {}
     if not isinstance(data,dict) or not data.get("id"):
         raise RuntimeError("Bale draft receipt ID missing")
