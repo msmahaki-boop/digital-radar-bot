@@ -1,0 +1,34 @@
+name: Acolad Today True 10-frame Instagram Narrative NovinHub DRAFT (NO PUBLISH)
+on:
+  push:
+    branches: [feature/acolad-narrative-novinhub-20261104]
+    paths: [ops/acolad-today-instagram-narrative-draft.trigger]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  ig-draft:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - uses: actions/download-artifact@v4
+        with:
+          name: acolad-narrative-20261104-final-artwork-preview-ten-frames
+          run-id: 41812181131
+          github-token: ${{ github.token }}
+      - run: pip install requests==2.32.5 Pillow==11.3.0
+      - name: Validate 10 real frames then create ONE review-only Instagram story draft
+        env:
+          NOVINHUB_API_TOKEN: ${{ secrets.NOVINHUB_API_TOKEN }}
+          NOVINHUB_TOKEN: ${{ secrets.NOVINHUB_TOKEN }}
+          NOVINHUB_ACCESS_TOKEN: ${{ secrets.NOVINHUB_ACCESS_TOKEN }}
+        run: python acolad_today_instagram_narrative_draft.py
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-today-novinhub-instagram-narrative-draft-receipt
+          path: acolad_today_instagram_narrative_draft/status.json
+          retention-days: 14
