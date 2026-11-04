@@ -1,0 +1,15 @@
+[
+  {
+    "id": "S01",
+    "title": "Accounts & Self-Service UX Research Update and Expansion: 3 Key Takeaways",
+    "publisher": "Baymard Institute",
+    "author": "Sally Collins",
+    "date": "2026-09-09",
+    "url": "https://baymard.com/research-articles/accounts-and-self-service-ux-research-2026",
+    "source_type": "first_party_research",
+    "evidence_depth": "full_article",
+    "is_original_research": true,
+    "excerpt": "During usability testing at Wayfair, a participant could not find a Start Return action on the order list or details. The return window had closed; removing the button without an explanation caused uncertainty and led her to seek the return policy from the site footer.",
+    "scope": "Specific observed usability test interaction; not a quantified prevalence across Iranian consumers."
+  }
+]
