@@ -1,0 +1,42 @@
+name: Acolad NovinHub Two-channel Drafts from Verified Saved Story (NO PUBLISH)
+on:
+  push:
+    branches: [feature/acolad-gpt2-novinhub-20261104]
+    paths: [ops/acolad-novinhub-draft-retry-from-artifact.trigger]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: acolad-novinhub-one-time-two-drafts
+  cancel-in-progress: false
+jobs:
+  create-two-drafts:
+    if: contains(github.event.head_commit.message, '[TWO_DRAFTS_FROM_EXISTING_ARTIFACT_APPROVED]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: acolad-novinhub-two-real-drafts-e2e
+          run-id: 41805646848
+          github-token: ${{ github.token }}
+      - run: python -m pip install requests==2.32.5 Pillow==11.3.0
+      - run: python -m unittest discover -s tests -p 'test_acolad_novinhub_bridge.py' -v
+      - name: Create one Instagram and one Telegram NovinHub draft, no published posts
+        env:
+          NOVINHUB_API_TOKEN: ${{ secrets.NOVINHUB_API_TOKEN }}
+          NOVINHUB_TOKEN: ${{ secrets.NOVINHUB_TOKEN }}
+          NOVINHUB_ACCESS_TOKEN: ${{ secrets.NOVINHUB_ACCESS_TOKEN }}
+          ACOLAD_NOVINHUB_DRAFT_APPROVAL: APPROVED_CREATE_TEST_DRAFTS
+        run: python acolad_novinhub_bridge.py --mode draft --story-dir stories_output
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-novinhub-two-channel-draft-receipts
+          path: acolad_novinhub_e2e/status.json
+          retention-days: 14
+          if-no-files-found: warn
