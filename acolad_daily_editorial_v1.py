@@ -359,7 +359,43 @@ def run_preview(day=None,budget_usd=0.018,output=OUT):
                 (output/"editorially_repaired_story.json").write_text(
                     json.dumps(story,ensure_ascii=False,indent=2),encoding="utf-8")
     distinct=story_is_distinct(story) if good else False
-    status["dynamic_story_ready_for_design"]=bool(good and distinct)
+    # A "good" JSON/beat structure is not a good editorial story.
+    # Fail closed when only secondary reportage is selected, or the audience
+    # copy leaks source links or is plain boilerplate.
+    from acolad_editorial_trust_gate import evaluate
+    selected_path=RESEARCH_OUT/"selected_evidence.json"
+    evidence=(json.loads(selected_path.read_text(encoding="utf-8"))
+              if selected_path.exists() else [])
+    editorial_gate=evaluate(story,evidence) if good and distinct else {
+       "passed":False,"hard_vetoes":["UPSTREAM_RESEARCH_OR_STORY_FAILED"],
+       "human_approved":False,"publish_allowed":False}
+    status["independent_editorial_gate"]=editorial_gate
+    # Voice V4 is an ADDITIONAL veto, not an aesthetic auto-approval.
+    # Evaluate only public slide copy; source evidence stays internal.
+    from acolad_voice_v4_guard import audience_issues
+    voice_issues=[]
+    if good and distinct and editorial_gate["passed"] and isinstance(story,dict):
+        for slide in story.get("slides") or []:
+            if not isinstance(slide,dict):
+                voice_issues.append("INVALID_SLIDE")
+                continue
+            n=slide.get("n")
+            voice_issues.extend(f"SLIDE_{n}_{x}" for x in audience_issues(slide.get("text","")))
+    else:
+        voice_issues=["UPSTREAM_EDITORIAL_GATE_FAILED"]
+    status["voice_v4_gate"]={
+        "passed":not voice_issues,
+        "issues":voice_issues,
+        "quality_score":"UNASSESSED",
+        "human_approved":False,
+        "publish_allowed":False,
+    }
+    status["dynamic_story_ready_for_design"]=bool(
+        good and distinct and editorial_gate["passed"] and not voice_issues)
+    status["editorial_result"]=(
+        "VETO" if not status["dynamic_story_ready_for_design"]
+        else "NEEDS_HUMAN_QUALITY_REVIEW")
+    status["publish_allowed"]=False
     status["daily_editorial_pillar"]=pillar
     status["research_focus_today"]=focus
     status["narrative_style_today"]=style
@@ -373,7 +409,7 @@ def run_preview(day=None,budget_usd=0.018,output=OUT):
     status["published"]=0
     status["editorial_permission"]="REVIEW_ONLY"
     (output/"preview_status.json").write_text(json.dumps(status,ensure_ascii=False,indent=2),encoding="utf-8")
-    if good and distinct:
+    if status["dynamic_story_ready_for_design"]:
         (output/"current_story.json").write_text(json.dumps(story,ensure_ascii=False,indent=2),encoding="utf-8")
         selected_path=RESEARCH_OUT/"selected_evidence.json"
         selected=json.loads(selected_path.read_text(encoding="utf-8")) if selected_path.exists() else []
@@ -381,11 +417,14 @@ def run_preview(day=None,budget_usd=0.018,output=OUT):
             if item.get("url") and not any(x.get("url")==item["url"] for x in history):
                 history.append({"url":item["url"],"title":item.get("title",""),
                                 "date":date.isoformat()})
+    # Do not keep a stale successful story if today's topic was vetoed.
+    if not status["dynamic_story_ready_for_design"]:
+        (output/"current_story.json").unlink(missing_ok=True)
     HISTORY.write_text(json.dumps(history,ensure_ascii=False,indent=2),encoding="utf-8")
     print("DAILY_DYNAMIC_STORY "+json.dumps({
-        "status":original,"ready":good and distinct,"hook":style,
+        "status":original,"ready":status["dynamic_story_ready_for_design"],"hook":style,
         "model_calls":status.get("gapgpt_requests_sent"),"publication":"NEVER"},ensure_ascii=False))
-    return good and distinct
+    return status["dynamic_story_ready_for_design"]
 
 def main():
     ap=argparse.ArgumentParser()
