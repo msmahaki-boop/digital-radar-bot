@@ -87,7 +87,7 @@ def check_story_files(folder):
         paths=[folder/"01_intro.png"]
         for article in articles:
             name=Path(str(article.get("file",""))).name
-            if not re.fullmatch(r"0[2-5]_[a-z_]+_(?:photo|text_only)\\.png",name):
+            if not re.fullmatch(r"0[2-5]_[a-z_]+_(?:photo|text_only)[.]png",name):
                 raise RuntimeError("Unexpected story filename")
             paths.append(folder/name)
     else:
