@@ -1,0 +1,91 @@
+{
+  "topic": "سبد خرید خالی؛ ایراد شاید در مسیر پرداخت باشد",
+  "publication_permission": "NONE_PREVIEW_ONLY",
+  "is_fictional_character": true,
+  "sources": [],
+  "slides": [
+    {
+      "n": 1,
+      "scene_id": 1,
+      "visual_action": "new_scene",
+      "beat": "hook",
+      "text": "مشتری میاد تو سایت\nاما **خریدش رو نیمه‌کاره می‌ذاره**",
+      "source_ids": [],
+      "visual_idea": "یک فروشگاه خالی و صاحب فروشگاه متعجب"
+    },
+    {
+      "n": 2,
+      "scene_id": 1,
+      "visual_action": "add_text",
+      "beat": "conflict",
+      "text": "فرض کن مهدی هر روز بازدید می‌گیره\nولی **سبد خریدها خالی می‌مونن**",
+      "source_ids": [],
+      "visual_idea": "سبد خرید خالی"
+    },
+    {
+      "n": 3,
+      "scene_id": 2,
+      "visual_action": "new_scene",
+      "beat": "setup",
+      "text": "مهدی اول می‌گه:\n**یه تخفیف تازه بذارم؟**",
+      "source_ids": [],
+      "visual_idea": "فروشنده کوچک کنار یک سبد خیلی بزرگ"
+    },
+    {
+      "n": 4,
+      "scene_id": 2,
+      "visual_action": "add_text",
+      "beat": "discovery",
+      "text": "بعد خودش خرید رو امتحان می‌کنه\nو می‌بینه **روش پرداخت سخت پیدا می‌شه**",
+      "source_ids": [],
+      "visual_idea": "فروشنده با ذره‌بین دنبال گزینه پرداخت می‌گردد"
+    },
+    {
+      "n": 5,
+      "scene_id": 3,
+      "visual_action": "new_scene",
+      "beat": "insight",
+      "text": "اینجا هنوز **هیچ علتی ثابت نشده**\nفقط یه فرضیه خوب پیدا کردیم",
+      "source_ids": [],
+      "visual_idea": "علامت سوال بزرگ و صاحب فروشگاه"
+    },
+    {
+      "n": 6,
+      "scene_id": 3,
+      "visual_action": "add_text",
+      "beat": "action",
+      "text": "مهدی گزینه‌های پرداخت موجود رو\n**کنار قیمت و واضح‌تر** نشون می‌ده",
+      "source_ids": [],
+      "visual_idea": "صفحه محصول ساده و گزینه پرداخت واضح"
+    },
+    {
+      "n": 7,
+      "scene_id": 4,
+      "visual_action": "new_scene",
+      "beat": "experiment",
+      "text": "دو نسخه از صفحه رو امتحان می‌کنه\nو **سبد، خرید نهایی و سود** رو می‌سنجه",
+      "source_ids": [],
+      "visual_idea": "دو صفحه برای مقایسه آزمایشی"
+    },
+    {
+      "n": 8,
+      "scene_id": 4,
+      "visual_action": "add_text",
+      "beat": "cta",
+      "text": "سؤال برای فروشگاه تو:\n**کدوم قدم خرید برای مشتری مبهمه؟**",
+      "source_ids": [],
+      "visual_idea": "صاحب فروشگاه در حال تصمیم‌گیری"
+    }
+  ],
+  "interaction": {
+    "type": "question",
+    "question": "توی خرید آنلاین، بیشتر کجا گیر می‌کنی؟"
+  },
+  "editorial_caveat": "تمام شخصیت‌ها و رخدادها فرضی هستند؛ هیچ یافته پژوهشی، نتیجه قطعی یا افزایش فروش ادعا نشده. پیش‌نویس محلی برای تأیید هنری. بدون draft یا انتشار خارجی.",
+  "resolution": {
+    "central_question": "چرا بعضی مشتریان مسیر خرید را کامل نمی‌کنند؟",
+    "answer": "شفاف‌کردن گزینه‌های پرداخت یک فرضیه است، نه علت اثبات‌شده.",
+    "action": "مقایسه کنترل‌شده دو نسخه و سنجش سبد، خرید نهایی و سود",
+    "payoff_frame": 7
+  }
+}

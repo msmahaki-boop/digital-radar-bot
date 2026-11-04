@@ -1,0 +1,58 @@
+name: Acolad GapGPT Gemini 2.5 Flash Image ONE TEST (NO PUBLISH)
+on:
+  push:
+    branches: [fix/acolad-image-provider-qa-20261104]
+    paths:
+      - ops/acolad-gemini25-preflight-20261104.trigger
+      - ops/acolad-gemini25-once-20261104.trigger
+permissions:
+  contents: read
+concurrency:
+  group: acolad-gemini25-one-image-lab
+  cancel-in-progress: false
+jobs:
+  preflight:
+    if: contains(github.event.head_commit.message, '[GEMINI25_PREFLIGHT_ONLY]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check requests==2.32.5 Pillow==11.3.0
+      - run: python -m unittest discover -s tests -p 'test_acolad_gapgpt_gemini25_one_image.py' -v
+      - name: Read-only model catalogue (no image requests)
+        env:
+          GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
+        run: python acolad_gapgpt_gemini25_one_image.py --mode preflight
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-gemini25-preflight-only
+          path: acolad_gemini25_image_preview/status.json
+          retention-days: 7
+  one-image:
+    if: contains(github.event.head_commit.message, '[GEMINI25_ONE_IMAGE_APPROVED]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check requests==2.32.5 Pillow==11.3.0
+      - name: Offline safety tests before one paid call
+        run: python -m unittest discover -s tests -p 'test_acolad_gapgpt_gemini25_one_image.py' -v
+      - name: Exactly one GapGPT image request - NO queue, draft or publication
+        env:
+          GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
+        run: |
+          python acolad_gapgpt_gemini25_one_image.py --mode generate --approval GEMINI25_ONE_IMAGE_PREVIEW_APPROVED
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-gemini25-gapgpt-preview-and-status
+          path: acolad_gemini25_image_preview/
+          retention-days: 14
+          if-no-files-found: warn

@@ -1,0 +1,43 @@
+name: Acolad Full Story Draft - Gemini Retry Then GPT Image 2 (NEVER PUBLISH)
+on:
+  push:
+    branches:
+      - fix/acolad-image-provider-qa-20261104
+    paths:
+      - ops/acolad-gemini-gpt2-full-draft-once.trigger
+permissions:
+  contents: read
+concurrency:
+  group: acolad-gemini-gpt2-full-story-once
+  cancel-in-progress: false
+jobs:
+  full-draft:
+    if: contains(github.event.head_commit.message, '[GEMINI_GPT2_FULL_DRAFT_APPROVED]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Persian text shaping and Pillow
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-color-emoji libharfbuzz0b libfribidi0 >/dev/null
+          python -m pip install --disable-pip-version-check requests==2.32.5 Pillow==11.3.0
+      - name: Test no publish, no unapproved calls, fallback only on 503
+        run: |
+          python -m unittest discover -s tests -p 'test_acolad_gemini_then_gpt2_story_preview.py' -v
+      - name: Retry Gemini once; only 503 permits GPT2; render 8-frame local story
+        env:
+          GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
+        run: |
+          python acolad_gemini_then_gpt2_story_preview.py --approval ACOLAD_ONE_GEMINI_THEN_GPT2_STORY_PREVIEW_APPROVED
+      - name: Upload local story preview and trace
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-full-story-draft-gemini-or-gpt2
+          path: acolad_gemini_gpt2_story_preview/
+          if-no-files-found: warn
+          retention-days: 14
