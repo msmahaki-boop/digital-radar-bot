@@ -5,9 +5,9 @@ name: Acolad Daily Story Pipeline V2.8
 # that GitHub starts every cron event. All cron values are in UTC.
 # A queued or sent batch exits before image generation, so repeats are cheap.
 # If 18:00 Tehran has passed, schedule the batch for a safe future time.
+# Original Buffer workflow remains available for manual rollback only.
+# NovinHub becomes the sole scheduled Instagram provider after merge.
 on:
-  schedule:
-    - cron: '41 * * * *'  # :41 UTC = :11 Tehran (Iran UTC+03:30) every hour
   workflow_dispatch:
     inputs:
       mode:
