@@ -1,10 +1,6 @@
 name: Acolad NovinHub Instagram GPT Image 2 Daily (Verified News + 2 Images)
+# OLD NEWS SCHEDULE DISABLED 2026-11-04; safety backup branch safety/acolad-before-narrative-switch-20261104
 on:
-  schedule:
-    - cron: '41 10 * * *'  # 14:11 Tehran, 10:41 UTC
-  push:
-    branches: [feature/acolad-gpt2-novinhub-20261104]
-    paths: [ops/acolad-novinhub-scheduler-preflight-20261104.trigger]
   workflow_dispatch:
     inputs:
       mode:
