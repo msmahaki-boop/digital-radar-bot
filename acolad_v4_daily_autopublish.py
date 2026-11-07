@@ -135,7 +135,7 @@ def channel_copy_issues(net,message,minimum,maximum):
 
 def make_channel_copies(story,evidence):
     rubric=("تو نویسنده آکولاد هستی. با زبان یکدست و محاوره‌ایِ ایرانی "
-      "دو متن مستقل تلگرام و بله و یک کپشن اینستاگرام تولید کن. "
+      "دو متن مستقل تلگرام و بله و یک کپشن اینستاگرام تولید کن. برای رعایت دقیق محدودیت‌های انتشار، متن تلگرام ۶۰۰ تا ۱۰۰۰ کاراکتر، بله ۲۵۰ تا ۴۵۰ کاراکتر، و اینستاگرام فقط ۱۸۰ تا ۳۲۰ کاراکتر باشد؛ برای اینستاگرام هرگز بیش از ۴۰۰ کاراکتر ننویس. "
       "به ترتیب ماجرا، گره، کشف و راهکار قابل آزمون وفادار باش؛ "
       "قهرمان فرضی را به عنوان آدم واقعی پژوهش معرفی نکن. "
       "هیچ آمار یا پیامد قطعی بی‌سند نساز. 📌، URL، نام رسانه واسطه، "
@@ -155,7 +155,9 @@ def make_channel_copies(story,evidence):
             instruction=("تو ویراستار فارسی محاوره‌ای آکولاد هستی. فقط متن "+net+
                 " رو اصلاح کن. ایرادها: "+", ".join(issues)+". "
                 "به همون داستان و منابع اصلی وفادار بمون. "
-                "بین "+str(minimum)+" تا "+str(maximum)+" کاراکتر بنویس. "
+                "بازه مجاز "+str(minimum)+" تا "+str(maximum)+" کاراکتر است؛ برای اطمینان "+
+                ("دقیقاً ۱۸۰ تا ۳۲۰ کاراکتر بنویس." if net=="instagram" else
+                 "در میانه بازه مجاز بنویس؛ از پرگویی خودداری کن.")+" "
                 "بدون لینک، برچسب منبع، 📌، فعل رسمی، شناسه فنی یا ادعای بی‌سند. "
                 "فقط JSON با کلید "+net+" برگردون.")
             data=model_json(instruction,{"story":story,
@@ -167,6 +169,7 @@ def make_channel_copies(story,evidence):
             message=data.get(net)
             issues=channel_copy_issues(net,message,minimum,maximum)
         if issues:
+            print("CAPTION_QA_VETO",{"network":net,"length":len(message) if isinstance(message,str) else None,"issues":issues},flush=True)
             raise RuntimeError("LOW_QUALITY_OR_INVALID_COPY_"+net+"_"+",".join(issues))
         captions[net]=message.strip()+("\n\n"+FOOTER if net in ("telegram","bale") else "")
     return captions
