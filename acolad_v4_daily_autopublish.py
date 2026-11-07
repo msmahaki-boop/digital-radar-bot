@@ -123,6 +123,24 @@ def model_json(system,data):
     usage={"requests_sent":0,"cost_estimated_usd":0.0,"budget_usd":0.018,"stages":[]}
     return news.api_call(key,system,user,2500,usage)
 
+def colloquialize_safe_inflections(message):
+    """Grammar-only variants, no factual, numerical or source claim rewrites."""
+    if not isinstance(message,str):
+        return message
+    variants=(
+        (r"می[‌ ]شود\\b","می‌شه"),
+        (r"می[‌ ]کنند\\b","می‌کنن"),
+        (r"می[‌ ]گردد\\b","می‌شه"),
+        (r"می[‌ ]باشد\\b","هست"),
+        (r"می[‌ ]تواند\\b","می‌تونه"),
+        (r"در نهایت\\b","آخرش"),
+        (r"در دنیای امروز\\b","امروز"),
+    )
+    for pattern,change in variants:
+        message=re.sub(pattern,change,message,flags=re.I)
+    return message
+
+
 def channel_copy_issues(net,message,minimum,maximum):
     if not isinstance(message,str):return ["MISSING"]
     text=message.strip()
@@ -146,7 +164,7 @@ def make_channel_copies(story,evidence):
     result=model_json(rubric,{"story":story,"evidence":evidence_safe})
     captions={}
     for net,minimum,maximum in (("telegram",400,1800),("bale",180,700),("instagram",60,500)):
-        message=result.get(net)
+        message=colloquialize_safe_inflections(result.get(net))
         issues=channel_copy_issues(net,message,minimum,maximum)
         # Only the failing channel is rewritten, at most twice, against
         # UNCHANGED primary evidence and unchanged story. Do not loosen rules.
@@ -166,7 +184,7 @@ def make_channel_copies(story,evidence):
                 "evidence":[{"title":s.get("title"),
                              "excerpt":str(s.get("excerpt") or "")[:500]}
                             for s in evidence[:3]]})
-            message=data.get(net)
+            message=colloquialize_safe_inflections(data.get(net))
             issues=channel_copy_issues(net,message,minimum,maximum)
         if issues:
             print("CAPTION_QA_VETO",{"network":net,"length":len(message) if isinstance(message,str) else None,"issues":issues},flush=True)
