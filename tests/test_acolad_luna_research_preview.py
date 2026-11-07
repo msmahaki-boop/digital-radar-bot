@@ -151,9 +151,11 @@ class LunaResearchTests(unittest.TestCase):
         self.assertEqual(e.suggested_evidence_pairs([news,other]),[])
 
     def test_replan_call_count_gate(self):
-        usage={'requests_sent':4,'cost_estimated_usd':0.0,'budget_usd':0.02}
-        with self.assertRaisesRegex(RuntimeError,'MAX_CALLS reached'):
-            e.api_call('never_sent','sys','user',100,usage)
+        usage={'requests_sent':e.MAX_CALLS,'cost_estimated_usd':0.0,'budget_usd':0.02}
+        with patch.object(e.requests,'post') as external:
+            with self.assertRaisesRegex(RuntimeError,'MAX_CALLS reached'):
+                e.api_call('never_sent','sys','user',100,usage)
+            external.assert_not_called()
 
     def test_json_extraction(self):
         self.assertEqual(e.json_from_model('```json\n{"a":1}\n```'),{'a':1})
@@ -313,6 +315,6 @@ class LunaResearchTests(unittest.TestCase):
 
     def test_model_luna_only(self):
         self.assertEqual(e.MODEL,'gpt-6-luna')
-        self.assertEqual(e.MAX_CALLS,4)
+        self.assertEqual(e.MAX_CALLS,6)
 
 if __name__=='__main__':unittest.main()
