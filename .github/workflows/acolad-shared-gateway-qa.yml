@@ -1,0 +1,19 @@
+name: Acolad unified GapGPT Luna adapter regression NO PAID CALL
+on:
+  push:
+    branches: [fix/acolad-shared-gapgpt-adapter-20261107]
+    paths: [ops/acolad-shared-luna-qa.trigger]
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python -m pip install requests==2.32.5 Pillow==11.3.0 beautifulsoup4==4.14.2
+      - run: python -m py_compile acolad_v4_daily_autopublish.py acolad_luna_research_preview.py
+      - run: python -m unittest discover -s tests -p 'test_acolad_unified_gateway.py' -v
+      - run: python -m unittest discover -s tests -p 'test_acolad_caption_repair.py' -v
