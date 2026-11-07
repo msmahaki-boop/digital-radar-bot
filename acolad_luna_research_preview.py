@@ -1092,6 +1092,17 @@ padding:19px;box-sizing:border-box;border-top:7px solid #7B2CBF;position:relativ
     (ROOT/'story_preview.html').write_text(page,encoding='utf-8')
 
 
+def select_plan_or_verified_source_fallback(key,prompt,usage,diag):
+    """Only malformed JSON falls back; auth, billing, network failures remain fatal."""
+    try:
+        return api_call(key,SYSTEM,prompt,1500,usage)
+    except RuntimeError as ex:
+        if 'GapGPT invalid JSON/shape' not in str(ex):
+            raise
+        diag.append('Luna selector JSON malformed; fallback to validated single ORIGINAL source.')
+        return {'source_ids':[]}
+
+
 def main(argv=None):
     p=argparse.ArgumentParser()
     p.add_argument('--focus',choices=['auto','iran_economy','iran_platforms','marketing','tech'],default='auto')
@@ -1132,16 +1143,7 @@ def main(argv=None):
         plan_prompt=(SELECT_INSTRUCTION+'\n\nTHEMATIC_PAIRS (UNTRUSTED HEURISTIC; VERIFY CLAIMS):\n'+
             json.dumps(thematic_pairs,ensure_ascii=False)[:3000]+
             '\nSOURCE CANDIDATES (UNTRUSTED DATA):\n'+source_prompt)
-        try:
-            plan=api_call(key,SYSTEM,plan_prompt,1500,usage)
-        except RuntimeError as ex:
-            # Malformed model JSON is a TRANSPORT/FORMAT error, not permission
-            # to fabricate evidence. Resume the existing deterministic
-            # single-source fallback using already collected original studies.
-            if 'GapGPT invalid JSON/shape' not in str(ex):
-                raise
-            plan={'source_ids':[]}
-            diag.append('Luna plan JSON malformed; use verified ONE-source plan fallback only.')
+        plan=select_plan_or_verified_source_fallback(key,plan_prompt,usage,diag)
         issues=validate_plan(plan,sources)
         # A valid cross-publisher pair was available but Luna selected two items
         # from one outlet. Retry the EDITORIAL PLAN once, within the paid-call
