@@ -1332,6 +1332,17 @@ def main(argv=None):
                 except (RuntimeError,ValueError,TypeError) as ex:
                     diag.append('Numerical claim correction failed: '+type(ex).__name__)
                     break
+        # Mixed soft-structure + hard-numeric failures need one coherent,
+        # EVIDENCE-LOCKED edit. Never override the original validators.
+        if issues:
+            from acolad_mixed_qa_recovery import recover_mixed_issues
+            story,issues,mixed_notes=recover_mixed_issues(
+                story,issues,chosen,evidence,usage,MAX_CALLS,
+                request_json=lambda instruction: api_call(
+                    key,SYSTEM,instruction,5900,usage),
+                quality_check=lambda draft: (
+                    story_quality(draft,chosen)+cinematic_quality(draft,chosen)))
+            diag.extend(mixed_notes)
         status='PREVIEW_NEEDS_HUMAN_REVIEW' if not issues else 'QA_BLOCKED_HUMAN_REVIEW_REQUIRED'
     except (RuntimeError,ValueError,KeyError,TypeError) as ex:
         issues.append('Pipeline interrupted: '+str(ex)[:160])
