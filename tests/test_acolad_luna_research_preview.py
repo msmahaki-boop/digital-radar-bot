@@ -74,10 +74,10 @@ class LunaResearchTests(unittest.TestCase):
         def excerpt(url):
             attempted.append(url)
             return 'Direct original first-party article with concrete context on website controls. ' * 4
-        with patch.object(e,'search_news',return_value=secondary+[official]), \\
-             patch.object(e,'search_scholar',return_value=[]), \\
-             patch.object(e,'search_openalex',return_value=[]), \\
-             patch.object(e,'get_article_excerpt',side_effect=excerpt):
+        with (patch.object(e,'search_news',return_value=secondary+[official]),
+              patch.object(e,'search_scholar',return_value=[]),
+              patch.object(e,'search_openalex',return_value=[]),
+              patch.object(e,'get_article_excerpt',side_effect=excerpt)):
             selected=e.collect_sources('marketing',[])
         self.assertEqual(attempted[0],official['url'])
         self.assertEqual(selected[0]['url'],official['url'])
