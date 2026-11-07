@@ -1,0 +1,42 @@
+name: Acolad primary article extraction diagnostics NO SOCIAL
+on:
+  push:
+    branches: [fix/acolad-gemini-lite-recovery-20261107]
+    paths: [ops/acolad-firstparty-html-diagnostic.trigger]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python -m pip install requests==2.32.5 beautifulsoup4==4.14.2 Pillow==11.3.0
+      - name: Probe first-party publicly available article HTML, never publish
+        run: |
+          python -u - <<'PY'
+          import json
+          import acolad_luna_research_preview as n
+          from bs4 import BeautifulSoup
+          for name,feed in n.RSS_FEEDS[:5]:
+              try:
+                  r=n.http_get(feed,timeout=15)
+                  entries=n.feed_entries(r.content,name,feed)
+                  print('PRIMARY_FEED',json.dumps({'publisher':name,'items':len(entries)},ensure_ascii=False))
+                  for e in entries[:3]:
+                      row={'publisher':name,'title':e['title'],'date':e['date'],'url':e['url']}
+                      try:
+                          resp=n.http_get(e['url'],timeout=16)
+                          soup=BeautifulSoup(resp.text[:800000],'html.parser')
+                          row.update({'code':resp.status_code,'mime':resp.headers.get('Content-Type'),
+                              'bytes':len(resp.content),'article':bool(soup.select_one('article')),
+                              'main':bool(soup.select_one('main')),
+                              'p_count':len(soup.select('article p,main p')),
+                              'extract_len':len(n.get_article_excerpt(e['url']))})
+                      except Exception as ex:
+                          row.update({'problem':type(ex).__name__,'detail':str(ex)[:110]})
+                      print('PRIMARY_ARTICLE',json.dumps(row,ensure_ascii=False),flush=True)
+              except Exception as ex:print('PRIMARY_FEED_ERROR',name,type(ex).__name__,str(ex)[:110],flush=True)
+          PY
