@@ -41,6 +41,13 @@ jobs:
           run-id: 42385914996
           github-token: ${{ github.token }}
           path: checked_images
+      - name: Recover exact previous real-send intents and documented Bale HTTP400 (NO POST)
+        uses: actions/download-artifact@v4
+        with:
+          name: acolad-nov7-real-three-platform-publication-proof
+          run-id: 42386436882
+          github-token: ${{ github.token }}
+          path: previous_attempt
       - name: Assemble verified immutable publication bundle; source dates, DOI, text and art QA
         run: |
           python -u - <<'PY'
@@ -86,6 +93,22 @@ jobs:
                       raise RuntimeError('STORY_FRAME_INVALID')
                   img.verify()
           p.OUT.mkdir(parents=True,exist_ok=True)
+          # Carry the earlier REAL Telegram send intent forward so even a stale
+          # provider cache cannot resend it. HTTP400 Bale was a deterministic
+          # ValidationException refusal, NOT an ambiguous successful post.
+          prior=Path('previous_attempt')
+          old_status=json.loads((prior/'hourly_status.json').read_text(encoding='utf8'))
+          old_intents=json.loads((prior/'send_intents.json').read_text(encoding='utf8'))
+          recorded=old_intents.get('sent_or_unknown') or {}
+          if not (old_status.get('reason')=='IMMEDIATE_POST_HTTP_bale_400' and
+                  old_intents.get('day')==day.isoformat() and
+                  str((recorded.get('telegram') or {}).get('group_id'))=='3698156' and
+                  (recorded.get('telegram') or {}).get('state')=='ACCEPTED' and
+                  (recorded.get('bale') or {}).get('state')=='SENDING_NO_CONFIRMED_RECEIPT'):
+              raise RuntimeError('PRIOR_SEND_INTENTS_CANNOT_BE_CONFIRMED')
+          recorded['bale']={'state':'REJECTED_VALIDATION_400'}
+          (p.OUT/'send_intents.json').write_text(json.dumps(old_intents,ensure_ascii=False,indent=2),encoding='utf8')
+          print('PREVIOUS_TELEGRAM_3698156_LOCKED_BALE_HTTP400_REJECTED',flush=True)
           shutil.copytree(frames_dir,p.OUT/'frames',dirs_exist_ok=True)
           shutil.copyfile(art/'image_provenance.json',p.OUT/'image_provenance.json')
           (p.OUT/'story.json').write_text(json.dumps(story,ensure_ascii=False,indent=2),encoding='utf8')
