@@ -1132,7 +1132,16 @@ def main(argv=None):
         plan_prompt=(SELECT_INSTRUCTION+'\n\nTHEMATIC_PAIRS (UNTRUSTED HEURISTIC; VERIFY CLAIMS):\n'+
             json.dumps(thematic_pairs,ensure_ascii=False)[:3000]+
             '\nSOURCE CANDIDATES (UNTRUSTED DATA):\n'+source_prompt)
-        plan=api_call(key,SYSTEM,plan_prompt,1500,usage)
+        try:
+            plan=api_call(key,SYSTEM,plan_prompt,1500,usage)
+        except RuntimeError as ex:
+            # Malformed model JSON is a TRANSPORT/FORMAT error, not permission
+            # to fabricate evidence. Resume the existing deterministic
+            # single-source fallback using already collected original studies.
+            if 'GapGPT invalid JSON/shape' not in str(ex):
+                raise
+            plan={'source_ids':[]}
+            diag.append('Luna plan JSON malformed; use verified ONE-source plan fallback only.')
         issues=validate_plan(plan,sources)
         # A valid cross-publisher pair was available but Luna selected two items
         # from one outlet. Retry the EDITORIAL PLAN once, within the paid-call
