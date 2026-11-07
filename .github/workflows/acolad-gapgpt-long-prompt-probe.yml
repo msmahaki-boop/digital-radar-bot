@@ -1,0 +1,66 @@
+name: Acolad GapGPT Representative Long-Prompt Probe (NO PUBLISH)
+on:
+  push:
+    branches: [diagnostic/acolad-gapgpt-recharge-20261107]
+    paths: [ops/acolad-gapgpt-long-prompt.trigger]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install requests==2.32.5
+      - name: Compare real-sized GapGPT request on exact GH secret; never print key
+        env:
+          GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
+        run: |
+          python - <<'PY'
+          import os,json,re,requests,time
+          k=os.getenv("GAPGPT_API_KEY","").strip()
+          assert len(k)>15,"GAPGPT_SECRET_MISSING"
+          examples=("تست تجربه کاربری فروشگاه آنلاین: کاربر دکمه پرداخت رو پیدا می‌کنه، "
+                    "اما برای خرید مهمان لازم نیست حساب بسازه. هیچ داده واقعی اختراع نکن. ")
+          payload={
+            "model":"gpt-6-luna","stream":False,"reasoning_effort":"none",
+            "max_tokens":1500,
+            "messages":[{"role":"system","content":"Respond with JSON only. Be concise."},
+                        {"role":"user","content":examples*115+"\n فقط JSON {\"ok\":true} بده."}]
+          }
+          try:
+            r=requests.post("https://api.gapgpt.app/v1/chat/completions",
+              headers={"Authorization":"Bearer "+k,"Content-Type":"application/json"},
+              json=payload,timeout=100)
+          except Exception as e:
+            print("REPRESENTATIVE_GAPGPT",json.dumps({"network_error":type(e).__name__}))
+            raise SystemExit(2)
+          result={"http":r.status_code,"model":"gpt-6-luna",
+              "approx_user_chars":len(payload["messages"][1]["content"]),
+              "max_tokens":1500}
+          if r.status_code==200:
+            data=r.json()
+            result["has_choice"]=bool(data.get("choices"))
+            result["usage_in"]=(data.get("usage") or {}).get("prompt_tokens")
+            result["usage_out"]=(data.get("usage") or {}).get("completion_tokens")
+          else:
+            try:
+              body=r.json()
+              error=body.get("error",body) if isinstance(body,dict) else {}
+              msg=str(error.get("message") or error.get("detail") or "") if isinstance(error,dict) else ""
+              code=str(error.get("code") or error.get("type") or "") if isinstance(error,dict) else ""
+            except (ValueError,AttributeError):
+              msg="";code=""
+            text=(msg+" "+code).lower()
+            result["category"]=(
+                "CREDIT_OR_BALANCE" if re.search(r"credit|balance|insufficien|billing|quota|payment|余额|موجودی",text)
+                else "MODEL_ACCESS" if re.search(r"model|permission|forbidden|authorization|access|invalid.key",text)
+                else "RATE_LIMIT" if re.search(r"rate.limit|too.many|frequency",text)
+                else "INPUT_OR_CONTENT" if re.search(r"length|content|token|context|input",text)
+                else "OTHER")
+            result["error_code"]=re.sub(r"[^a-zA-Z0-9_\-]","",code)[:50]
+          print("REPRESENTATIVE_GAPGPT",json.dumps(result,ensure_ascii=False))
+          if r.status_code!=200: raise SystemExit(2)
+          PY
