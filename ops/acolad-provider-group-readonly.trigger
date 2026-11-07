@@ -1,1 +1,1 @@
-read-only date-boundary and external ID diagnostics after Telegram published 3698156
+corrected GET-only with=post(accountPost) pagination and day filter tests
