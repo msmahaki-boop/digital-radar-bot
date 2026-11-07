@@ -1,0 +1,47 @@
+name: Acolad Gemini alternate text models under current 429 (NO SOCIAL)
+on:
+  push:
+    branches: [diagnostic/acolad-gapgpt-recharge-20261107]
+    paths: [ops/acolad-gemini-alternate-model-probe.trigger]
+permissions:
+  contents: read
+jobs:
+  model-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install requests==2.32.5
+      - name: Test available alternate Google Gemini models with minimal safe JSON and bounded cost
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python - <<'PY'
+          import os,json,requests
+          key=os.getenv("GEMINI_API_KEY","").strip()
+          assert len(key)>15,"SECRET_MISSING"
+          for model in ("gemini-2.5-flash","gemini-3.1-flash-lite"):
+              cfg={"responseMimeType":"application/json","maxOutputTokens":100,"temperature":0.1}
+              if model=="gemini-2.5-flash":cfg["thinkingConfig"]={"thinkingBudget":0}
+              else:cfg["thinkingConfig"]={"thinkingLevel":"minimal"}
+              payload={"contents":[{"role":"user","parts":[{"text":"Return JSON object with single key ok = true."}]}],"generationConfig":cfg}
+              try:
+                  r=requests.post("https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent",
+                    headers={"x-goog-api-key":key,"Content-Type":"application/json"},
+                    json=payload,timeout=55)
+                  output={"model":model,"http":r.status_code}
+                  if r.status_code==200:
+                      body=r.json();parts=(body.get("candidates") or [{}])[0].get("content",{}).get("parts") or []
+                      output["json_response"]=any("text" in x for x in parts)
+                  else:
+                      try:
+                          err=r.json().get("error") or {}
+                          output["code"]=err.get("code")
+                          output["status"]=err.get("status")
+                      except Exception:pass
+                  print("ACOLAD_GEMINI_ALT_TEXT_PROBE",json.dumps(output),flush=True)
+              except requests.RequestException as exc:
+                  print("ACOLAD_GEMINI_ALT_TEXT_PROBE",json.dumps({"model":model,"transport":type(exc).__name__}),flush=True)
+          PY
