@@ -87,6 +87,8 @@ jobs:
             acolad_v4_daily_publication/
             acolad_daily_editorial_output/preview_status.json
             acolad_luna_research_preview/status.json
+            acolad_luna_research_preview/stories.json
+            acolad_luna_research_preview/selected_evidence.json
           retention-days: 14
           if-no-files-found: warn
       - name: Show real publication state rather than green check
