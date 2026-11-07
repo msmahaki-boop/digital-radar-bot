@@ -1,0 +1,69 @@
+name: Acolad source-locked original ink 7-frame PREVIEW ONLY NO SOCIAL
+on:
+  push:
+    branches: [fix/acolad-gemini-lite-recovery-20261107]
+    paths: [ops/acolad-original-ink-resume-preview.trigger]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  ink-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Fonts and packages
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-core fonts-noto-color-emoji libharfbuzz0b libfribidi0 >/dev/null
+          python -m pip install --disable-pip-version-check requests==2.32.5 beautifulsoup4==4.14.2 Pillow==11.3.0
+      - name: Fetch fresh source-verified 7 frame approved preview; NO OTHER SOURCE
+        uses: actions/download-artifact@v4
+        with:
+          name: acolad-gemini-lite-preview-20261107
+          run-id: 42384710220
+          github-token: ${{ github.token }}
+          path: prior_approved_preview
+      - name: Render images from verified story and check visible original ink; NO SOCIAL
+        env:
+          GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+        run: |
+          python -u - <<'PY'
+          import json,shutil
+          from pathlib import Path
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          import acolad_v4_hourly_publish as publisher
+          import acolad_v4_daily_autopublish as engine
+          src=Path('prior_approved_preview/acolad_v4_daily_publication')
+          story=json.loads((src/'story.json').read_text(encoding='utf8'))
+          evidence=json.loads((src/'sources_private.json').read_text(encoding='utf8'))
+          reviewer=json.loads((src/'hourly_ready.json').read_text(encoding='utf8'))
+          assert reviewer['validated'] is True
+          assert len(reviewer['critics'])==2 and not any(c['veto'] for c in reviewer['critics'])
+          assert set(reviewer['captions'])==set(publisher.NETWORKS)
+          assert publisher.has_current_substantive_evidence(evidence,datetime.now(ZoneInfo('Asia/Tehran')).date())
+          publisher.check_verified_editorial(story,evidence)
+          engine.OUT.mkdir(parents=True,exist_ok=True)
+          frames,art=engine.illustrate(story)
+          assert all(x['has_image'] for x in art)
+          visible=json.loads((engine.OUT/'frames'/'status.json').read_text(encoding='utf8'))
+          assert visible.get('concept_scenes'), 'NO_ART_VISIBLE'
+          print('INK_ART_PREVIEW_PASSED',json.dumps({'frames':len(frames),'art':art,
+                   'visible_concept_scenes':visible['concept_scenes'],'published':0},
+                   ensure_ascii=False),flush=True)
+          PY
+      - name: Upload only reviewed visual artifacts and provenance; NO PUBLISH
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-original-ink-real-visual-preview
+          path: |
+            acolad_v4_daily_publication/frames/
+            acolad_v4_daily_publication/image_provenance.json
+          if-no-files-found: warn
+          retention-days: 5
