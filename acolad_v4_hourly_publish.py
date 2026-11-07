@@ -124,6 +124,9 @@ def check_verified_editorial(story,evidence):
         raise RuntimeError("EDITORIAL_CACHE_BAD_SHAPE")
     if not has_current_substantive_evidence(evidence,now().date()):
         raise RuntimeError("EDITORIAL_STALE_PRIMARY_EVIDENCE_NO_TODAY_PUBLICATION")
+    urls={str(x.get("url") or "") for x in evidence if isinstance(x,dict)}
+    if story.get("story_link") and str(story["story_link"]) not in urls:
+        raise RuntimeError("EDITORIAL_UNSUPPORTED_STORY_LINK")
     if not story_is_distinct(story):
         raise RuntimeError("EDITORIAL_CACHE_REPEATED_STORY")
     issues=research.story_quality(story,evidence)+research.cinematic_quality(story,evidence)
