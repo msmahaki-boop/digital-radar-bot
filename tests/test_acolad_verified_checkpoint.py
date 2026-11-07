@@ -8,7 +8,8 @@ import acolad_v4_resume_verified_artifact as loader
 D=date(2026,11,7)
 STORY={"topic":"بازبینی واقعی UX","slides":[{"n":1,"text":"نمونه",
        "scene_id":1,"visual_action":"new_scene","beat":"hook"}]}
-EVIDENCE=[{"id":"S01","url":"https://doi.org/10.1234/test","title":"Source"}]
+EVIDENCE=[{"id":"S01","url":"https://doi.org/10.1234/test","title":"Source",
+           "date":"2026-11-05","evidence_depth":"abstract","source_type":"academic_doi"}]
 
 class CheckpointSafety(unittest.TestCase):
  def test_save_then_resume_without_recalling_original_research(self):
