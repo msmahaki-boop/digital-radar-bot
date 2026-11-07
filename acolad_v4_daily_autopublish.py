@@ -128,13 +128,13 @@ def colloquialize_safe_inflections(message):
     if not isinstance(message,str):
         return message
     variants=(
-        (r"می[‌ ]شود\\b","می‌شه"),
-        (r"می[‌ ]کنند\\b","می‌کنن"),
-        (r"می[‌ ]گردد\\b","می‌شه"),
-        (r"می[‌ ]باشد\\b","هست"),
-        (r"می[‌ ]تواند\\b","می‌تونه"),
-        (r"در نهایت\\b","آخرش"),
-        (r"در دنیای امروز\\b","امروز"),
+        (r"می[‌ ]شود\b","می‌شه"),
+        (r"می[‌ ]کنند\b","می‌کنن"),
+        (r"می[‌ ]گردد\b","می‌شه"),
+        (r"می[‌ ]باشد\b","هست"),
+        (r"می[‌ ]تواند\b","می‌تونه"),
+        (r"در نهایت\b","آخرش"),
+        (r"در دنیای امروز\b","امروز"),
     )
     for pattern,change in variants:
         message=re.sub(pattern,change,message,flags=re.I)
