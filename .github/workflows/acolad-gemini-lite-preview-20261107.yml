@@ -1,0 +1,61 @@
+name: Acolad Gemini Lite Nov7 prepublication PREVIEW ONLY (NO SOCIAL)
+on:
+  push:
+    branches: [fix/acolad-gemini-lite-recovery-20261107]
+    paths: [ops/acolad-gemini-lite-preview.trigger]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  build-preview-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Install image typography and Python dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-core fonts-noto-color-emoji libharfbuzz0b libfribidi0 >/dev/null
+          python -m pip install --disable-pip-version-check requests==2.32.5 beautifulsoup4==4.14.2 Pillow==11.3.0
+      - name: Fetch existing verified source artifact (READ ONLY)
+        uses: actions/download-artifact@v4
+        with:
+          name: acolad-hourly-three-network-publication-receipt
+          run-id: 42378884239
+          github-token: ${{ github.token }}
+          path: previous_verified
+      - name: Restore evidence and run original locked editorial QA
+        run: |
+          echo "day=$(TZ=Asia/Tehran date +%F)" >> "$GITHUB_ENV"
+          python -u acolad_v4_resume_verified_artifact.py --artifact-directory previous_verified --tehran-date "$(TZ=Asia/Tehran date +%F)"
+      - name: Generate preview-only text, critics and art (NO NOVINHUB TOKEN)
+        env:
+          GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+        run: |
+          python - <<'PY'
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          import acolad_v4_hourly_publish as p
+          from pathlib import Path
+          day=datetime.now(ZoneInfo("Asia/Tehran")).date()
+          x=p.prepare(day)
+          if x is None:raise RuntimeError("EDITORIAL_VETO_NO_PREVIEW")
+          document,frames=x
+          assert document["validated"] is True
+          assert set(document["captions"])==set(p.NETWORKS)
+          assert len(frames)>=6
+          for img in frames:assert Path(img).is_file()
+          print("PREVIEW_PASSED_ONLY", {"day":day.isoformat(),"frames":len(frames),"critic_count":len(document["critics"]),"network_copies":list(document["captions"]),"public_posts_created":0},flush=True)
+          PY
+      - name: Keep private preview artwork and captions
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-gemini-lite-preview-20261107
+          path: acolad_v4_daily_publication/
+          retention-days: 7
+          if-no-files-found: warn
