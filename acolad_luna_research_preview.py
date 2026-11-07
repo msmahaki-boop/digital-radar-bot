@@ -630,6 +630,17 @@ EDIT_INSTRUCTION += "\n\n" + VOICE_V4_ADDENDUM + """
 """
 
 
+# Strict V4 evergreen disclosure: don't falsely call an older study breaking news.
+WRITE_INSTRUCTION += (
+    "\nاگر منبع بیش از ۲۱ روز قدمت دارد، آن را خبر امروز جا نزن. "
+    "از عبارت «در یک پژوهش منتشرشده در تاریخ واقعی منبع» استفاده کن "
+    "یا روایت آموزشیِ بی‌ادعای تازگی بنویس. آمار و احساس ثبت‌نشده اختراع نکن."
+)
+EDIT_INSTRUCTION += (
+    "\nاگر تاریخ واقعی پژوهش قدیمی‌تر است، هر اشاره به «امروز منتشر شد» "
+    "یا «تازه اعلام شد» را حذف کن، بدون تغییر اصل یافته."
+)
+
 def source_data_for_llm(arr: list[dict], max_chars: int = 19000) -> str:
     """Provide every shortlisted source, without silently truncating the tail.
 
@@ -752,6 +763,21 @@ def suggested_evidence_pairs(sources: list[dict], limit: int = 6) -> list[dict]:
     pairs.sort(key=lambda x:x['relevance_score'],reverse=True)
     return pairs[:limit]
 
+def eligible_original_evergreen(source):
+    """Allow an old ORIGINAL specialist article as evergreen, never fake today's news."""
+    from urllib.parse import urlsplit
+    from acolad_editorial_trust_gate import load_policy,KNOWN_OFFICIAL,_matches
+    if not isinstance(source,dict) or source.get("evidence_depth")!="full_article":
+        return False
+    age=age_days(source.get("date",""))
+    if age is None or not 0<=age<=365:
+        return False
+    host=(urlsplit(str(source.get("url",""))).hostname or "").lower().removeprefix("www.")
+    domains={entry["domain"] for entry in load_policy()["source_policy"]["priority_sources"]}
+    domains.update(KNOWN_OFFICIAL)
+    return any(_matches(host,domain) for domain in domains)
+
+
 def validate_plan(plan: dict, sources: list[dict]) -> list[str]:
     issues=[]
     valid={s['id']:s for s in sources}
@@ -766,8 +792,12 @@ def validate_plan(plan: dict, sources: list[dict]) -> list[str]:
     if unrelated_selected_subjects(known):issues.append('plan: no shared concrete topic across selected articles')
     if not any(s.get('evidence_depth') in ('full_article','abstract') for s in known):
         issues.append('plan: no full-text article excerpt or scholarly abstract')
-    if not any(s['source_type']!='academic_doi' and age_days(s['date']) is not None and age_days(s['date'])<=21 for s in known):
-        issues.append('plan: no current news source')
+    if not any(
+        (s.get('source_type')!='academic_doi' and age_days(s.get('date','')) is not None
+         and 0<=age_days(s['date'])<=21)
+        or eligible_original_evergreen(s)
+        for s in known):
+        issues.append('plan: no current news or verified original evergreen source')
     return issues
 
 
@@ -1135,14 +1165,15 @@ def main(argv=None):
                  if x.get('source_type')!='academic_doi'
                  and x.get('evidence_depth')=='full_article'
                  and age_days(x.get('date','')) is not None
-                 and 0<=age_days(x['date'])<=21
+                 and (0<=age_days(x['date'])<=21 or eligible_original_evergreen(x))
                  and len(x.get('excerpt',''))>=180],
                 key=lambda x:x.get('rank',0),reverse=True)
             if qualified:
                 anchor=qualified[0]
                 plan={'angle':anchor['title'],
                       'source_ids':[anchor['id']],
-                      'why_now':'گزارش مستند منتشرشده در '+anchor['date'],
+                      'why_now':('پژوهش اصیل با تاریخ واقعی '+anchor['date']+
+                                 ' برای درس کاربردی؛ به‌عنوان خبر امروز معرفی نشود'),
                       'story_tension':'یک مسئله مشخص در رفتار خرید یا رشد کسب‌وکار که متن همین منبع پشتیبانی می‌کند',
                       'hypothetical_example':'هر مثال ساختگی باید با برچسب فرضی روایت شود',
                       'grounded_claims':[],
