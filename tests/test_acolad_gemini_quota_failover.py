@@ -52,7 +52,7 @@ class QuotaFailover(unittest.TestCase):
                 result=gemini.generate_json("System","Story",500,news.json_from_model,u)
         self.assertEqual(result,{"ok":True})
         self.assertEqual(u["gemini_fallback_calls"],1)
-        self.assertEqual(u["stages"][-1]["provider"],"gemini-3-flash-preview")
+        self.assertEqual(u["stages"][-1]["provider"],"gemini-3.1-flash-lite")
         self.assertEqual(fn.call_args.kwargs["json"]["generationConfig"]["responseMimeType"],"application/json")
         self.assertEqual(fn.call_args.kwargs["json"]["generationConfig"]["thinkingConfig"]["thinkingLevel"],"minimal")
     def test_max_tokens_truncated_json_retried_once_with_same_source(self):
