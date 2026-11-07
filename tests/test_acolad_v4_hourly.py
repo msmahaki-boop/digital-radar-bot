@@ -88,6 +88,24 @@ class HourlySafety(unittest.TestCase):
   self.assertTrue(changed)
   self.assertNotEqual(a["slides"][2]["scene_id"],a["slides"][1]["scene_id"])
   self.assertEqual([f["text"] for f in a["slides"]],[f["text"] for f in x["slides"]])
+ def test_novinhub_date_window_contains_same_day_published_message(self):
+  from unittest.mock import Mock
+  from datetime import date
+  response=Response(200,{"data":[{"id":3698156,"post":[{"account_id":233472,
+      "status":"published","accountPost":{"post_id":"47"}}]}]})
+  with patch.object(p.requests,"get",return_value=response) as fetch:
+   result=p.provider_list("not-real","telegram",date(2026,11,7))
+  self.assertEqual(fetch.call_args.kwargs["params"]["publish_to"],"2026-11-08")
+  self.assertEqual(p.assess(result,"telegram")["state"],"PUBLISHED")
+ def test_bale_400_diagnostic_never_dumps_caption(self):
+  payload={"error":{"errors":{"caption":["invalid text"]},"trace_id":"ABC123"}}
+  with patch.object(p.requests,"post",return_value=Response(400,payload)):
+   with self.assertRaises(RuntimeError) as issue:
+    p.send_now("not-real","bale","PRIVATE CAPTION CONTENT",[])
+  message=str(issue.exception)
+  self.assertIn("IMMEDIATE_POST_HTTP_bale_400",message)
+  self.assertIn("FIELDS_caption",message)
+  self.assertNotIn("PRIVATE CAPTION CONTENT",message)
  def test_bad_provider_format_fails_closed(self):
   with patch.object(p.requests,"get",return_value=Response(200,{"bad":1})):
    with self.assertRaisesRegex(RuntimeError,"PROVIDER_LIST_UNRECOGNIZED"):
