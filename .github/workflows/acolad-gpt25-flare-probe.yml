@@ -1,0 +1,48 @@
+name: Acolad GPT Image 2.5 Flare transparent single-scene probe (NO SOCIAL)
+on:
+  push:
+    branches: [feature/acolad-gapgpt-transparent-gptimage-20261107]
+    paths: [ops/acolad-gpt25-flare-probe.trigger]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install requests==2.32.5 Pillow==11.3.0
+      - name: Single real GPT Image 2.5 Flare transparent cutout; no social posting
+        env:
+          GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
+        run: |
+          python -u - <<'PY'
+          import json,os
+          from pathlib import Path
+          import requests
+          import acolad_gapgpt_transparent_art as art
+          art.MODEL="gpt-image-2.5-flare"
+          key=os.getenv("GAPGPT_API_KEY","").strip()
+          try:
+              present=art.models_available(key)
+              print("GPT25_FLARE_CATALOG_PRESENT",present,flush=True)
+              if not present:raise RuntimeError("FLARE_NOT_LISTED")
+              story={"slides":[{"scene_id":1,"visual_idea":
+                  "A quirky business owner inspecting a tiny e-commerce website performance dashboard with a large magnifying glass; a humorous black-ink metaphor for diagnosing website conversion problems."}]}
+              image=art.generate(story,1,Path("probe_output/scene_01.png"),key=key)
+              print("GPT25_FLARE_REAL_ALPHA",json.dumps(image,ensure_ascii=False),flush=True)
+          except Exception as exc:
+              if isinstance(exc,RuntimeError) and str(exc)=="IMAGE_PROVIDER_HTTP_403":
+                  # Whitelisted status categorization only; no raw response.
+                  print("GPT25_FLARE_HTTP_403_ACCESS_OR_QUOTA_UNVERIFIED",flush=True)
+              raise
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: acolad-gapgpt-gpt25-flare-transparent-single-scene
+          path: probe_output/
+          if-no-files-found: ignore
+          retention-days: 7
