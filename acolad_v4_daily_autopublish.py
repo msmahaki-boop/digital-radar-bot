@@ -109,23 +109,19 @@ def generate_editorial(day):
     return story,evidence
 
 def model_json(system,data):
+    """Use the SAME authenticated, provider-compatible client as live research.
+
+    The independent channel copy and critic client previously used a
+    different request shape (no reasoning_effort, no stream). The research
+    client already succeeded moments before it received HTTP 403. Reusing it
+    preserves the same response parsing and secret handling.
+    """
+    import acolad_luna_research_preview as news
     key=os.getenv("GAPGPT_API_KEY","").strip()
     if not key:raise RuntimeError("GAPGPT_KEY_MISSING")
-    res=requests.post("https://api.gapgpt.app/v1/chat/completions",
-      headers={"Authorization":"Bearer "+key,"Content-Type":"application/json"},
-      json={"model":"gpt-6-luna","messages":[
-        {"role":"system","content":system},
-        {"role":"user","content":json.dumps(data,ensure_ascii=False)}],
-        "max_tokens":2500},timeout=170)
-    if res.status_code!=200:raise RuntimeError("EDITORIAL_API_HTTP_"+str(res.status_code))
-    obj=res.json()
-    text=str((obj.get("choices") or [{}])[0].get("message",{}).get("content") or "").strip()
-    if not text:raise RuntimeError("EDITORIAL_API_EMPTY")
-    if not text.startswith("{"):
-        text=text[text.find("{"):text.rfind("}")+1]
-    result=json.loads(text)
-    if not isinstance(result,dict):raise RuntimeError("EDITORIAL_MODEL_JSON_INVALID")
-    return result
+    user=json.dumps(data,ensure_ascii=False)
+    usage={"requests_sent":0,"cost_estimated_usd":0.0,"budget_usd":0.018,"stages":[]}
+    return news.api_call(key,system,user,2500,usage)
 
 def channel_copy_issues(net,message,minimum,maximum):
     if not isinstance(message,str):return ["MISSING"]
