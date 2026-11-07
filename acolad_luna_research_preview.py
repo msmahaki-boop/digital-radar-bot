@@ -39,6 +39,8 @@ USER_AGENT = 'AcoladResearchPreview/1.0 (editorial preview; no publishing)'
 
 # Fixed source list. Feed discovery is not permission to trust article claims.
 RSS_FEEDS = [
+    ("Google Search Central official SEO releases", "https://developers.google.com/search/blog/feed.xml"),
+    ("Google Developers official AI updates", "https://blog.google/technology/developers/rss/"),
     ("Baymard Institute original UX research", "https://feeds.baymard.com/baymard"),
     # Public expert blog feeds verified on 2026-11-04.
     # Public feed discovery never grants access to paywalled content.
@@ -67,7 +69,7 @@ ACADEMIC_QUERIES = [
     'online shopping price framing randomized consumer experiment',
 ]
 ALLOWED_ARTICLE_HOSTS = (
-    'baymard.com', 'feeds.baymard.com',
+    'developers.google.com', 'blog.google', 'baymard.com', 'feeds.baymard.com',
     'seths.blog', 'lennysnewsletter.com',
     'peivast.com', 'digiato.com', 'zoomit.ir', 'tejaratnews.com',
     'techcrunch.com', 'searchenginejournal.com', 'bbc.com', 'bbc.co.uk',
