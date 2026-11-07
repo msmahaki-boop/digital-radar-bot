@@ -1,0 +1,47 @@
+name: Acolad Per-Key Quota Split Probe (NO SOCIAL PUBLISH)
+on:
+  push:
+    branches: [diagnostic/acolad-gapgpt-recharge-20261107]
+    paths: [ops/acolad-quota-split-probe.trigger]
+permissions:
+  contents: read
+jobs:
+  quota-isolation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install requests==2.32.5
+      - name: Distinguish input-size vs output-token quota with max 2 tiny no-social requests
+        env:
+          GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
+        run: |
+          python - <<'PY'
+          import os,json,requests,re
+          key=os.environ.get("GAPGPT_API_KEY","").strip()
+          assert len(key)>15
+          cases=[
+            ("short_input_1000_max_output","سلام، فقط یک کلمه OK پاسخ بده.",1000),
+            ("long_input_80_max_output",("این یک مثال غیرواقعی درباره تجربه کاربری فروشگاه است. "*265)+" فقط OK پاسخ بده.",80)
+          ]
+          for name,content,max_tokens in cases:
+            body={"model":"gpt-6-luna","stream":False,"reasoning_effort":"none",
+              "max_tokens":max_tokens,"messages":[{"role":"system","content":"Answer briefly."},
+                {"role":"user","content":content}]}
+            try:
+              r=requests.post("https://api.gapgpt.app/v1/chat/completions",
+                headers={"Authorization":"Bearer "+key,"Content-Type":"application/json"},
+                json=body,timeout=80)
+              d=r.json()
+              err=d.get("error",d) if isinstance(d,dict) else {}
+              code=str(err.get("code") or err.get("type") or "") if isinstance(err,dict) else ""
+              print("SAFE_KEY_QUOTA_SPLIT",json.dumps({"case":name,"http":r.status_code,
+                 "input_chars":len(content),"max_tokens":max_tokens,
+                 "error_code":re.sub(r"[^A-Za-z0-9_-]","",code)[:48],
+                 "usage_in":(d.get("usage") or {}).get("prompt_tokens") if r.status_code==200 else None},
+                ensure_ascii=False))
+            except requests.RequestException as ex:
+              print("SAFE_KEY_QUOTA_SPLIT",{"case":name,"transport":type(ex).__name__})
+          PY
