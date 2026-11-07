@@ -212,7 +212,21 @@ def send_now(key,net,caption,media,session=requests):
     r=session.post(API+"/post",headers={**headers(key),"Content-Type":"application/json"},
                    json=payload,timeout=80)
     if r.status_code not in (200,201):
-        raise RuntimeError("IMMEDIATE_POST_HTTP_"+net+"_"+str(r.status_code))
+        detail=""
+        if r.status_code==400:
+            try:
+                obj=r.json()
+                error=obj.get("error") if isinstance(obj,dict) else None
+                if isinstance(error,dict):
+                    fields=error.get("errors") or error.get("validation") or {}
+                    if isinstance(fields,dict):
+                        detail="_FIELDS_"+",".join(sorted(str(x)[:30] for x in fields)[:6])
+                    trace=error.get("trace_id") or obj.get("trace_id")
+                    if isinstance(trace,(str,int)) and str(trace).replace("-","").isalnum():
+                        detail+="_TRACE_"+str(trace)[:50]
+            except (ValueError,TypeError,AttributeError):
+                pass
+        raise RuntimeError("IMMEDIATE_POST_HTTP_"+net+"_"+str(r.status_code)+detail)
     obj=r.json();row=obj.get("data",obj) if isinstance(obj,dict) else {}
     group_id=row.get("id") if isinstance(row,dict) else None
     if not group_id:raise RuntimeError("POST_RECEIPT_AMBIGUOUS_"+net)
