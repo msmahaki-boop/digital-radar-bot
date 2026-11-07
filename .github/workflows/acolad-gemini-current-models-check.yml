@@ -1,0 +1,42 @@
+name: Acolad Current Gemini Text Model Usability (NO PUBLISH)
+on:
+  push:
+    branches: [diagnostic/acolad-gapgpt-recharge-20261107]
+    paths: [ops/acolad-gemini-current-models.trigger]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install requests==2.32.5
+      - name: Test tiny JSON only on two models explicitly listed for existing key
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python - <<'PY'
+          import requests,os,json
+          k=os.getenv("GEMINI_API_KEY","").strip()
+          assert k
+          models=["gemini-3-flash-preview","gemini-3.1-flash-lite"]
+          for model in models:
+              try:
+                  r=requests.post(f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+                    headers={"x-goog-api-key":k,"Content-Type":"application/json"},
+                    json={"contents":[{"role":"user","parts":[{"text":"Reply only with JSON: {\"ok\":true}"}]}],
+                      "generationConfig":{"maxOutputTokens":80,"temperature":0.1,
+                      "responseMimeType":"application/json"}},timeout=55)
+                  d=r.json()
+                  info={"model":model,"http":r.status_code}
+                  if r.status_code==200:
+                      info["candidate"]=bool(d.get("candidates"))
+                  else:
+                      info["error_status"]=str((d.get("error") or {}).get("status") or "")[:50]
+                  print("ACOLAD_CURRENT_GEMINI",json.dumps(info))
+              except requests.RequestException as e:
+                  print("ACOLAD_CURRENT_GEMINI",{"model":model,"transport":type(e).__name__})
+          PY
