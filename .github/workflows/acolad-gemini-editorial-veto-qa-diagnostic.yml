@@ -1,0 +1,40 @@
+name: Acolad Nov 7 New Gemini QA Veto Diagnostic (NO PUBLISH)
+on:
+  push:
+    branches: [diagnostic/acolad-gapgpt-recharge-20261107]
+    paths: [ops/acolad-gemini-editorial-veto-diagnostic.trigger]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: acolad-hourly-three-network-publication-receipt
+          run-id: 42377723004
+          github-token: ${{ github.token }}
+          path: recovered
+      - name: Print editorial error codes and quality-gate metadata; no prompt payloads
+        run: |
+          python - <<'PY'
+          import json,re
+          from pathlib import Path
+          for f in sorted(Path("recovered").rglob("*.json")):
+              if f.name not in ("preview_status.json","status.json","hourly_status.json"):
+                  continue
+              d=json.loads(f.read_text(encoding="utf8"))
+              if not isinstance(d,dict):continue
+              filtered={}
+              for key in ("status","issues","diagnostic","chosen_source_ids","voice_v4_gate","independent_editorial_gate","story_frames","story_summary","model_calls","reason","editorial_result","dynamic_story_ready_for_design"):
+                  if key not in d:continue
+                  val=d[key]
+                  txt=json.dumps(val,ensure_ascii=False)[:2400]
+                  txt=re.sub(r"https?://\S+","[SOURCE_URL]",txt)
+                  txt=re.sub(r"(?i)(bearer\s+|sk-)[a-z0-9_\-]{10,}","[REDACTED]",txt)
+                  filtered[key]=txt
+              print("ACOLAD_V4_NEW_GEMINI_QA",f.name,json.dumps(filtered,ensure_ascii=False))
+          PY
