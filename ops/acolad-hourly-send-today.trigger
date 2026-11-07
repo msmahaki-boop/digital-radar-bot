@@ -3,3 +3,5 @@ User explicitly authorized one real IMMEDIATE PUBLICATION attempt on all three A
 Nov 7 attempt 2: primary-expert-only preselection fixed. No schedule/draft, owner permits real public posting, receipt required.
 
 Attempt 3 Nov 7: trusted original expert evergreen with strict actual date disclosure, all quality gates unchanged; direct public posts only if approved.
+
+Attempt 4 today: malformed Luna selector JSON handled with evidence-locked single-source fallback, no Draft, no Scheduled, immediate publish only upon full QA.
