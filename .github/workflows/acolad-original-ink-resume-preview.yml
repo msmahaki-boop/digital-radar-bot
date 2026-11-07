@@ -43,6 +43,9 @@ jobs:
           story=json.loads((src/'story.json').read_text(encoding='utf8'))
           evidence=json.loads((src/'sources_private.json').read_text(encoding='utf8'))
           reviewer=json.loads((src/'hourly_ready.json').read_text(encoding='utf8'))
+          # The old model suggested a non-selected DOI in private metadata.
+          # Ground the link in verified source evidence before re-validation.
+          story['story_link']=evidence[0]['url']
           assert reviewer['validated'] is True
           assert len(reviewer['critics'])==2 and not any(c['veto'] for c in reviewer['critics'])
           assert set(reviewer['captions'])==set(publisher.NETWORKS)
