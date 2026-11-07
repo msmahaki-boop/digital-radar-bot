@@ -103,6 +103,16 @@ def generate(story: dict, scene: int, output: Path, session=requests, *,
                               "Accept": "application/json"},
                      json=payload, timeout=195)
     if r.status_code != 200:
+        # Distinguish per-key quota from transient model/API transport errors.
+        # Never emit provider response bodies, credential values or arbitrary messages.
+        if r.status_code == 403:
+            try:
+                obj = r.json()
+                err = obj.get("error") if isinstance(obj, dict) else None
+                if isinstance(err, dict) and err.get("code") == "pre_consume_token_quota_failed":
+                    raise RuntimeError("GAPGPT_IMAGE_KEY_PRECONSUME_QUOTA_BLOCKED")
+            except (ValueError, TypeError, AttributeError):
+                pass
         raise RuntimeError("IMAGE_PROVIDER_HTTP_" + str(r.status_code))
     body = r.json()
     data = body.get("data") if isinstance(body, dict) else None
