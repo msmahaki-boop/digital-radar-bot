@@ -1,0 +1,40 @@
+name: Acolad Existing Gemini Available Models (READ ONLY)
+on:
+  push:
+    branches: [diagnostic/acolad-gapgpt-recharge-20261107]
+    paths: [ops/acolad-gemini-models.trigger]
+permissions:
+  contents: read
+jobs:
+  models:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install requests==2.32.5
+      - name: List models accessible to connected Gemini secret, no generation
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python - <<'PY'
+          import os,json,requests
+          k=os.getenv("GEMINI_API_KEY","").strip()
+          if not k:raise SystemExit("GEMINI_SECRET_NOT_CONFIGURED")
+          try:
+              r=requests.get("https://generativelanguage.googleapis.com/v1beta/models",
+                headers={"x-goog-api-key":k},timeout=30)
+              result={"http":r.status_code}
+              d=r.json()
+              if r.status_code==200:
+                  models=d.get("models") or []
+                  result["text_models"]=[x["name"] for x in models
+                    if isinstance(x,dict) and "generateContent" in (x.get("supportedGenerationMethods") or [])
+                    and any(t in x.get("name","").lower() for t in ("flash","pro","gemini"))][:20]
+              else:
+                  result["status"]=str((d.get("error") or {}).get("status") or "")[:55]
+              print("ACOLAD_GEMINI_MODELS",json.dumps(result))
+          except requests.RequestException as ex:
+              print("ACOLAD_GEMINI_MODELS",{"transport":type(ex).__name__})
+          PY
