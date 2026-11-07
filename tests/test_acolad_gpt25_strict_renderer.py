@@ -34,7 +34,7 @@ class StrictPipelineTests(unittest.TestCase):
         bad=self.story()
         bad["slides"][1]["scene_id"]=1
         with patch.object(strict,"generate_scenes") as api:
-            with self.assertRaisesRegex(RuntimeError,"DISTINCT_SCENE_COUNT"):
+            with self.assertRaisesRegex(ValueError,"New scene reused"):
                 strict.illustrate_strict(bad)
             api.assert_not_called()
 
