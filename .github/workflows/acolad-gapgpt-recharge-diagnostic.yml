@@ -1,0 +1,43 @@
+name: Acolad 2026-11-07 Recharge Failure Diagnostic (READ ONLY)
+on:
+  push:
+    branches: [diagnostic/acolad-gapgpt-recharge-20261107]
+    paths: [ops/acolad-recharge-diagnostic.trigger]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: acolad-hourly-three-network-publication-receipt
+          run-id: 42374826932
+          github-token: ${{ github.token }}
+          path: recovered
+      - name: Print only redacted diagnostics
+        run: |
+          python - <<'PY'
+          import json,re
+          from pathlib import Path
+          for path in Path("recovered").rglob("*.json"):
+              if path.name not in ("status.json","preview_status.json","hourly_status.json"):
+                  continue
+              try:
+                  data=json.loads(path.read_text(encoding="utf8"))
+              except Exception:
+                  print("DIAG unreadable",path.name)
+                  continue
+              if not isinstance(data,dict):continue
+              safe_fields={}
+              for key in ("status","reason","issues","diagnostic","editorial_result","dynamic_story_ready_for_design","voice_v4_gate","independent_editorial_gate","model_calls"):
+                  if key in data:
+                      value=str(data[key])[:1100]
+                      value=re.sub(r"(?i)(bearer\s+|sk-)[a-z0-9_\-]{12,}","[REDACTED]",value)
+                      value=re.sub(r"https?://\S+","[URL]",value)
+                      safe_fields[key]=value
+              print("ACOLAD_SAFE_DIAGNOSTIC",path.name,json.dumps(safe_fields,ensure_ascii=False))
+          PY
