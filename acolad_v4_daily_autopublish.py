@@ -105,6 +105,12 @@ def generate_editorial(day):
         raise RuntimeError("STORY_WRONG_FRAME_COUNT")
     if any(audience_issues(s.get("text","")) for s in story["slides"]):
         raise RuntimeError("V4_STYLE_VETO")
+    # Model-proposed URL is not a source. Ground all private link metadata
+    # in the precise DOI or primary URL selected and checked earlier.
+    originals={str(x.get("url") or "") for x in evidence if isinstance(x,dict)}
+    if story.get("story_link") and story["story_link"] not in originals:
+        story["story_link"]=str(evidence[0]["url"])
+        story["original_source_link_repaired"]=True
     story["sources"]=evidence
     return story,evidence
 
@@ -158,6 +164,7 @@ def make_channel_copies(story,evidence):
     rubric=(genre_note+"تو نویسنده آکولاد هستی. با زبان یکدست و محاوره‌ایِ ایرانی "
       "دو متن مستقل تلگرام و بله و یک کپشن اینستاگرام تولید کن. برای رعایت دقیق محدودیت‌های انتشار، متن تلگرام ۶۰۰ تا ۱۰۰۰ کاراکتر، بله ۲۵۰ تا ۴۵۰ کاراکتر، و اینستاگرام فقط ۱۸۰ تا ۳۲۰ کاراکتر باشد؛ برای اینستاگرام هرگز بیش از ۴۰۰ کاراکتر ننویس. "
       "به ترتیب ماجرا، گره، کشف و راهکار قابل آزمون وفادار باش؛ "
+      "اگر متن منبع اثر را محدود یا modest گزارش می‌کند، از تعبیر سریع، جهشی و قطعی برای آن اثر دوری کن. "
       "قهرمان فرضی را به عنوان آدم واقعی پژوهش معرفی نکن. "
       "هیچ آمار یا پیامد قطعی بی‌سند نساز. 📌، URL، نام رسانه واسطه، "
       "منبع در پایان و شناسه فنی ممنوع؛ امضای برند را بعداً سیستم اضافه می‌کند. "
