@@ -24,7 +24,7 @@ jobs:
           import json,requests
           from acolad_novinhub_bridge import API,token,headers,as_items
           key=token()
-          r=requests.get(API+'/post/group/3698156',headers=headers(key),params={'with':'post(accountPost)'},timeout=40)
+          r=requests.get(API+'/post/group/3698166',headers=headers(key),params={'with':'post(accountPost)'},timeout=40)
           print('ACOLAD_GROUP_READONLY',json.dumps({'http':r.status_code},ensure_ascii=False),flush=True)
           if r.status_code==200:
               data=r.json();x=data.get('data',data) if isinstance(data,dict) else {}
