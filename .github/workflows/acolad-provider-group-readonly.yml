@@ -34,13 +34,13 @@ jobs:
               for field in ('posts','post','account_posts'):
                   for p in x.get(field,[]) if isinstance(x.get(field),list) else []:
                       if isinstance(p,dict):
-                      remote=p.get('accountPost') or p.get('account_post') or {}
-                      print('ACOLAD_GROUP_MEMBER',json.dumps({
+                          remote=p.get('accountPost') or p.get('account_post') or {}
+                          print('ACOLAD_GROUP_MEMBER',json.dumps({
                           'id':p.get('id'),'account_id':p.get('account_id'),
                           'status':p.get('status'),'publish_date':p.get('publish_date'),
                           'remote_object':{k:v for k,v in remote.items() if k in ('id','post_id','external_id','status','media_id','url','permalink')}
                           if isinstance(remote,dict) else 'NOT_DICT',
-                          'member_keys':list(p.keys())[:30]},ensure_ascii=False),flush=True)
+                              'member_keys':list(p.keys())[:30]},ensure_ascii=False),flush=True)
           elif r.status_code>=400:
               try:print('GROUP_ERROR_META',str((r.json().get('error') or {}).get('message') or '')[:140])
               except Exception:pass
