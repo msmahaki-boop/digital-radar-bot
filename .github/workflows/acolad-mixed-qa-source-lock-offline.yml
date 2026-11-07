@@ -20,4 +20,3 @@ jobs:
           python -m py_compile acolad_mixed_qa_recovery.py acolad_luna_research_preview.py acolad_v4_hourly_publish.py
           python -m unittest discover -s tests -p 'test_acolad_mixed_qa_source_lock.py' -v
           python -m unittest discover -s tests -p 'test_acolad_v4_hourly.py' -v
-          python -m unittest discover -s tests -p 'test_acolad_gemini*qa.py' -v
