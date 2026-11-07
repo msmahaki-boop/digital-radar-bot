@@ -42,6 +42,9 @@ jobs:
           import acolad_v4_hourly_publish as p
           from pathlib import Path
           day=datetime.now(ZoneInfo("Asia/Tehran")).date()
+          import json
+          cached=json.loads(p.EDITORIAL_CACHE.read_text(encoding="utf8"))
+          print("PREVIEW_SOURCE_DATES",{"today_tehran":day.isoformat(),"dates":[e.get("date") for e in cached.get("evidence",[])]},flush=True)
           x=p.prepare(day)
           if x is None:raise RuntimeError("EDITORIAL_VETO_NO_PREVIEW")
           document,frames=x
