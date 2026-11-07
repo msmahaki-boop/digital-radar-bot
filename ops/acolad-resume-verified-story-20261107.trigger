@@ -1,0 +1,1 @@
+Approved by owner: one LIVE immediate publication attempt for Tehran Nov 7 2026 across Acolad Instagram story, Telegram and Bale from previously validated 42378884239 verified source text. Preserve QA and exact receipts, avoid duplicates; no draft, no schedule.
