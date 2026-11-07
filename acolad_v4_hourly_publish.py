@@ -98,7 +98,15 @@ def existing_bundle(day):
 
 def prepare(day):
     story,evidence=engine.generate_editorial(day)
-    if story is None:return None
+    if story is None:
+        # Keep external API/transport failures distinct from editorial quality
+        # vetoes; an unavailable model is not evidence that a story is bad.
+        if engine.STATUS.is_file():
+            upstream=json.loads(engine.STATUS.read_text(encoding="utf8"))
+            if upstream.get("status") in ("PIPELINE_ERROR_NO_PUBLICATION",
+                                          "RESEARCH_OUTPUT_MISSING"):
+                raise RuntimeError("EDITORIAL_UPSTREAM_TECHNICAL_FAILURE")
+        return None
     copies=engine.make_channel_copies(story,evidence)
     critics=engine.critics_approve(story,evidence,copies)
     if any(x["veto"] for x in critics):return None
