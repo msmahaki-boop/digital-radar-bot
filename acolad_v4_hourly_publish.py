@@ -13,6 +13,7 @@ import acolad_v4_daily_autopublish as engine
 TZ=ZoneInfo("Asia/Tehran")
 OUT=Path("acolad_v4_daily_publication")
 READY=OUT/"hourly_ready.json"
+EDITORIAL_CACHE=OUT/"verified_story_checkpoint.json"
 NETWORKS=("telegram","bale","instagram")
 ACCOUNT={"telegram":233472,"bale":233497,"instagram":230527}
 DONE={"published","sent","success","completed","complete"}
@@ -96,8 +97,49 @@ def existing_bundle(day):
             im.verify()
     return d,images
 
+def check_verified_editorial(story,evidence):
+    """Re-run ALL source, beat, numerical and voice gates on restored content."""
+    import acolad_luna_research_preview as research
+    from acolad_editorial_trust_gate import evaluate
+    from acolad_voice_v4_guard import audience_issues
+    from acolad_daily_editorial_v1 import story_is_distinct
+    if not isinstance(story,dict) or not isinstance(evidence,list):
+        raise RuntimeError("EDITORIAL_CACHE_BAD_SHAPE")
+    if not story_is_distinct(story):
+        raise RuntimeError("EDITORIAL_CACHE_REPEATED_STORY")
+    issues=research.story_quality(story,evidence)+research.cinematic_quality(story,evidence)
+    if issues:
+        raise RuntimeError("EDITORIAL_CACHE_QA_VETO:"+",".join(issues[:3]))
+    gate=evaluate(story,evidence)
+    if not gate.get("passed"):
+        raise RuntimeError("EDITORIAL_CACHE_SOURCE_VETO:"+",".join(gate.get("hard_vetoes",[])[:3]))
+    for frame in story.get("slides",[]):
+        if audience_issues(frame.get("text","")):
+            raise RuntimeError("EDITORIAL_CACHE_VOICE_VETO")
+    return True
+
+def saved_editorial(day):
+    if not EDITORIAL_CACHE.exists():return None
+    obj=json.loads(EDITORIAL_CACHE.read_text(encoding="utf8"))
+    if obj.get("day")!=day.isoformat() or obj.get("validated") is not True:
+        raise RuntimeError("EDITORIAL_CACHE_WRONG_DAY_OR_UNVALIDATED")
+    story,evidence=obj.get("story"),obj.get("evidence")
+    check_verified_editorial(story,evidence)
+    return story,evidence
+
+def save_editorial(day,story,evidence):
+    check_verified_editorial(story,evidence)
+    OUT.mkdir(parents=True,exist_ok=True)
+    obj={"day":day.isoformat(),"validated":True,"story":story,"evidence":evidence}
+    EDITORIAL_CACHE.write_text(json.dumps(obj,ensure_ascii=False,indent=2),encoding="utf8")
+
 def prepare(day):
-    story,evidence=engine.generate_editorial(day)
+    cached=saved_editorial(day)
+    if cached is not None:
+        story,evidence=cached
+        print("ACOLAD_VERIFIED_EDITORIAL_CACHE_HIT",day.isoformat(),flush=True)
+    else:
+        story,evidence=engine.generate_editorial(day)
     if story is None:
         # Keep external API/transport failures distinct from editorial quality
         # vetoes; an unavailable model is not evidence that a story is bad.
@@ -107,6 +149,9 @@ def prepare(day):
                                           "RESEARCH_OUTPUT_MISSING"):
                 raise RuntimeError("EDITORIAL_UPSTREAM_TECHNICAL_FAILURE")
         return None
+    # Persist at the EARLIEST defensible checkpoint before additional
+    # caption/critic/image calls. A provider HTTP429 must not waste this story.
+    save_editorial(day,story,evidence)
     copies=engine.make_channel_copies(story,evidence)
     critics=engine.critics_approve(story,evidence,copies)
     if any(x["veto"] for x in critics):return None
