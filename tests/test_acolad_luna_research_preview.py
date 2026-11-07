@@ -1,6 +1,7 @@
 import unittest
 import importlib.util
 from pathlib import Path
+from unittest.mock import patch
 
 spec=importlib.util.spec_from_file_location('engine',Path(__file__).resolve().parents[1]/'acolad_luna_research_preview.py')
 e=importlib.util.module_from_spec(spec)
@@ -56,6 +57,31 @@ class LunaResearchTests(unittest.TestCase):
         self.assertEqual(len(obj),19)
         self.assertEqual(obj[-1]['id'],'S19')
         self.assertLessEqual(len(packed),19000)
+
+    def test_fresh_official_original_read_before_secondary_headlines(self):
+        today=e.now().date().isoformat()
+        official={'title':'Official Search Controls for AI Training',
+            'publisher':'Google Search Central','date':today,
+            'url':'https://developers.google.com/search/blog/2026/11/example',
+            'excerpt':'official announcement of new controls','source_type':'rss_summary',
+            'evidence_depth':'summary_only'}
+        secondary=[{'title':f'Customer marketing experiment digest number {i}',
+            'publisher':f'Secondary {i}','date':today,
+            'url':f'https://digiato.com/test-{i}',
+            'excerpt':'consumer customer brand marketing retail commerce price ' * 6,
+            'source_type':'rss_summary','evidence_depth':'summary_only'} for i in range(22)]
+        attempted=[]
+        def excerpt(url):
+            attempted.append(url)
+            return 'Direct original first-party article with concrete context on website controls. ' * 4
+        with patch.object(e,'search_news',return_value=secondary+[official]), \\
+             patch.object(e,'search_scholar',return_value=[]), \\
+             patch.object(e,'search_openalex',return_value=[]), \\
+             patch.object(e,'get_article_excerpt',side_effect=excerpt):
+            selected=e.collect_sources('marketing',[])
+        self.assertEqual(attempted[0],official['url'])
+        self.assertEqual(selected[0]['url'],official['url'])
+        self.assertEqual(selected[0]['evidence_depth'],'full_article')
 
     def test_cross_publisher_requirement(self):
         today=e.now().date().isoformat()
