@@ -30,7 +30,9 @@ def generate_json(system: str, user: str, max_tokens: int, parser, usage: dict, 
         "contents": [{"role": "user", "parts": [{"text": user}]}],
         "generationConfig": {
             "responseMimeType": "application/json",
-            "temperature": 0.55,
+            # A malformed-JSON STOP retry lowers sampling variance but keeps
+            # exactly the same verified source and semantic instructions.
+            "temperature": 0.12 if _retried else 0.55,
             "maxOutputTokens": max_tokens,
             "thinkingConfig":{"thinkingLevel":"minimal"},
         },
@@ -72,9 +74,17 @@ def generate_json(system: str, user: str, max_tokens: int, parser, usage: dict, 
         reason = ""
         if isinstance(locals().get("candidates"),list) and candidates:
             reason = str(candidates[0].get("finishReason") or "")
-        if (not _retried and reason=="MAX_TOKENS" and max_tokens<8192
-                and _fallback_calls<MAX_TOTAL_FALLBACK_CALLS):
-            return generate_json(system,user,min(8192,max_tokens+2200),parser,usage,
+        if (not _retried and reason in ("MAX_TOKENS","STOP")
+                and _fallback_calls<MAX_TOTAL_FALLBACK_CALLS
+                and (reason!="MAX_TOKENS" or max_tokens<8192)):
+            # STOP is not proof of valid structured JSON. A second bounded
+            # generation is allowed; NEVER accept a partial/invalid document.
+            next_max=(min(8192,max_tokens+2200) if reason=="MAX_TOKENS"
+                      else max_tokens)
+            usage.setdefault("stages",[]).append({
+                "provider":MODEL,"json_rejected":True,"finish_reason":reason,
+                "retry_once":True,"cost_usd":"NOT_VERIFIED_FROM_PROVIDER"})
+            return generate_json(system,user,next_max,parser,usage,
                                  session=session,_retried=True)
         raise RuntimeError("GEMINI_FALLBACK_INVALID_JSON_"+type(exc).__name__+
                            "_FINISH_"+(reason or "UNKNOWN")[:35]) from None
