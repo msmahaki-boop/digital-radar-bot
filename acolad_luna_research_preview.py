@@ -1263,7 +1263,7 @@ def main(argv=None):
         # source-locked rewriting two bounded tries. Never invent percentages,
         # replace unsupported digits with a fabricated estimate, or discard QA.
         if issues and all(re.fullmatch(
-                r'frame \\d+: numerical claim [0-9.,]+%? not in approved evidence', str(x))
+                r'frame \d+: numerical claim [0-9.,]+%? not in approved evidence', str(x))
                 for x in issues):
             for extra_try in range(2):
                 if not issues or usage['requests_sent']>=MAX_CALLS:break
