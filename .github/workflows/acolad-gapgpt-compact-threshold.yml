@@ -1,0 +1,45 @@
+name: Acolad GapGPT Quota Threshold for Compact Narrative (NO SOCIAL)
+on:
+  push:
+    branches: [diagnostic/acolad-gapgpt-recharge-20261107]
+    paths: [ops/acolad-quota-threshold.trigger]
+permissions:
+  contents: read
+jobs:
+  threshold:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install requests==2.32.5
+      - name: Max-two bounded model requests to evaluate practical compact output allowance
+        env:
+          GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
+        run: |
+          python - <<'PY'
+          import os,json,requests,re
+          key=os.getenv("GAPGPT_API_KEY","").strip()
+          assert len(key)>15,"SECRET_MISSING"
+          cases=[
+            ("short_input_2500_max_output","یک کلمه OK بده.",2500),
+            ("long_input_500_max_output",("موقعیت فرضی یک فروشگاه آنلاین برای تست ایمن. "*310)+" فقط OK.",500)
+          ]
+          for tag,content,m in cases:
+            body={"model":"gpt-6-luna","reasoning_effort":"none","stream":False,"max_tokens":m,
+              "messages":[{"role":"system","content":"Output exactly OK."},{"role":"user","content":content}]}
+            try:
+              r=requests.post("https://api.gapgpt.app/v1/chat/completions",
+                headers={"Authorization":"Bearer "+key,"Content-Type":"application/json"},
+                json=body,timeout=75)
+              d=r.json()
+              e=d.get("error",d) if isinstance(d,dict) else {}
+              c=str(e.get("code") or "") if isinstance(e,dict) else ""
+              print("COMPACT_QUOTA_THRESH",json.dumps({"case":tag,"http":r.status_code,
+                "chars":len(content),"max_tokens":m,
+                "code":re.sub(r"[^A-Za-z0-9_-]","",c)[:48],
+                "usage_in":(d.get("usage") or {}).get("prompt_tokens") if r.status_code==200 else None}))
+            except requests.RequestException as ex:
+              print("COMPACT_QUOTA_THRESH",{"case":tag,"transport":type(ex).__name__})
+          PY
