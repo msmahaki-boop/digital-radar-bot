@@ -1,0 +1,83 @@
+name: Acolad Nov 7 resume previously verified story, IMMEDIATE TG Bale IG
+on:
+  push:
+    branches: [main]
+    paths: [ops/acolad-resume-verified-story-20261107.trigger]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: acolad-v4-one-publish-attempt-at-a-time
+  cancel-in-progress: false
+jobs:
+  source-locked-quick-resume:
+    runs-on: ubuntu-latest
+    timeout-minutes: 95
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: System fonts and Python requirements
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-core fonts-noto-color-emoji libharfbuzz0b libfribidi0 >/dev/null
+          python -m pip install --disable-pip-version-check requests==2.32.5 beautifulsoup4==4.14.2 Pillow==11.3.0
+      - name: Offline tests before paid calls or public posts
+        run: |
+          python -m py_compile acolad_v4_hourly_publish.py acolad_v4_resume_verified_artifact.py
+          python -m unittest discover -s tests -p 'test_acolad_verified_checkpoint.py' -v
+          python -m unittest discover -s tests -p 'test_acolad_v4_hourly.py' -v
+      - name: Establish current Tehran day
+        id: local
+        run: echo "day=$(TZ=Asia/Tehran date +%F)" >> "$GITHUB_OUTPUT"
+      - name: Restore Nov 7 saved publication-intents to prevent duplicates
+        uses: actions/cache/restore@v4
+        with:
+          path: acolad_v4_daily_publication/
+          key: acolad-v4-hourly-art-${{ steps.local.outputs.day }}-${{ github.run_id }}
+          restore-keys: |
+            acolad-v4-hourly-art-${{ steps.local.outputs.day }}-
+      - name: Download privately archived VERIFIED story, not a new artificial news claim
+        uses: actions/download-artifact@v4
+        with:
+          name: acolad-hourly-three-network-publication-receipt
+          run-id: 42378884239
+          github-token: ${{ github.token }}
+          path: prior_validated_story
+      - name: Recheck original source, factual numbers, beats, independent trust and voice
+        run: |
+          python -u acolad_v4_resume_verified_artifact.py --artifact-directory prior_validated_story --tehran-date "${{ steps.local.outputs.day }}"
+      - name: Send to NovinHub immediately, after critic and art gates only
+        env:
+          GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          NOVINHUB_API_TOKEN: ${{ secrets.NOVINHUB_API_TOKEN }}
+          NOVINHUB_TOKEN: ${{ secrets.NOVINHUB_TOKEN }}
+          NOVINHUB_ACCESS_TOKEN: ${{ secrets.NOVINHUB_ACCESS_TOKEN }}
+          ACOLAD_HOURLY_PUBLISH_APPROVAL: ACOLAD_USER_APPROVED_HOURLY_IMMEDIATE_20261107
+        run: python -u acolad_v4_hourly_publish.py --mode immediate
+      - name: Save original story checkpoint and any send intents even if incomplete
+        if: always()
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: acolad_v4_daily_publication/
+          key: acolad-v4-hourly-art-${{ steps.local.outputs.day }}-${{ github.run_id }}
+      - name: Private status, sources, and receipts — not public proof by themselves
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-nov7-verified-story-immediate-provider-receipts
+          path: |
+            acolad_v4_daily_publication/
+          retention-days: 14
+          if-no-files-found: warn
+      - name: Publish diagnostics in Actions summary
+        if: always()
+        run: |
+          if test -f acolad_v4_daily_publication/hourly_status.json; then
+            cat acolad_v4_daily_publication/hourly_status.json >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "NOT PUBLISHED: no provider receipt" >> "$GITHUB_STEP_SUMMARY"
+          fi

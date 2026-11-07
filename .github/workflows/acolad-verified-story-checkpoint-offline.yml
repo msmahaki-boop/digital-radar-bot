@@ -1,0 +1,19 @@
+name: Acolad V4 Verified Story Checkpoint Safety (NO SOCIAL)
+on:
+  push:
+    branches: [fix/acolad-verified-story-checkpoint-20261107]
+    paths: [ops/acolad-story-checkpoint-safety.trigger]
+permissions:
+  contents: read
+jobs:
+  safe-cache:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install --disable-pip-version-check requests==2.32.5 beautifulsoup4==4.14.2 Pillow==11.3.0
+      - run: python -m py_compile acolad_v4_hourly_publish.py acolad_v4_resume_verified_artifact.py
+      - run: python -m unittest discover -s tests -p 'test_acolad_verified_checkpoint.py' -v
+      - run: python -m unittest discover -s tests -p 'test_acolad_v4_hourly.py' -v
