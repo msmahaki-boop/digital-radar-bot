@@ -1106,6 +1106,12 @@ padding:19px;box-sizing:border-box;border-top:7px solid #7B2CBF;position:relativ
     (ROOT/'story_preview.html').write_text(page,encoding='utf-8')
 
 
+def only_unsupported_numeric_issues(issues):
+    return bool(issues) and all(
+        re.fullmatch(r'frame \d+: numerical claim [0-9.,]+%? not in approved evidence',str(item))
+        for item in issues)
+
+
 def select_plan_or_verified_source_fallback(key,prompt,usage,diag):
     """Only malformed JSON falls back; auth, billing, network failures remain fatal."""
     try:
@@ -1262,9 +1268,7 @@ def main(argv=None):
         # If the ONLY remaining veto is ungrounded numeric claims, give
         # source-locked rewriting two bounded tries. Never invent percentages,
         # replace unsupported digits with a fabricated estimate, or discard QA.
-        if issues and all(re.fullmatch(
-                r'frame \d+: numerical claim [0-9.,]+%? not in approved evidence', str(x))
-                for x in issues):
+        if only_unsupported_numeric_issues(issues):
             for extra_try in range(2):
                 if not issues or usage['requests_sent']>=MAX_CALLS:break
                 instruction=(EDIT_INSTRUCTION+
