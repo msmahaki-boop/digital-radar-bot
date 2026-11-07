@@ -127,6 +127,16 @@ def model_json(system,data):
     if not isinstance(result,dict):raise RuntimeError("EDITORIAL_MODEL_JSON_INVALID")
     return result
 
+def channel_copy_issues(net,message,minimum,maximum):
+    if not isinstance(message,str):return ["MISSING"]
+    text=message.strip()
+    issues=[]
+    if not minimum<=len(text)<=maximum:issues.append("LENGTH")
+    if audience_issues(text):issues.append("FORMAL_OR_UNSAFE_TONE")
+    if re.search(r"https?://|www[.]|ACOLAD[-_]|(?:منبع|source)\s*[:：]",text,re.I):
+        issues.append("SOURCE_LEAK")
+    return issues
+
 def make_channel_copies(story,evidence):
     rubric=("تو نویسنده آکولاد هستی. با زبان یکدست و محاوره‌ایِ ایرانی "
       "دو متن مستقل تلگرام و بله و یک کپشن اینستاگرام تولید کن. "
@@ -141,13 +151,28 @@ def make_channel_copies(story,evidence):
     captions={}
     for net,minimum,maximum in (("telegram",400,1800),("bale",180,700),("instagram",60,500)):
         message=result.get(net)
-        if not isinstance(message,str):raise RuntimeError("MISSING_COPY_"+net)
-        message=message.strip()
-        if not minimum<=len(message)<=maximum or audience_issues(message):
-            raise RuntimeError("LOW_QUALITY_OR_INVALID_COPY_"+net)
-        if re.search(r"https?://|www[.]|ACOLAD[-_]|(?:منبع|source)\s*[:：]",message,re.I):
-            raise RuntimeError("SOURCE_LEAK_IN_COPY_"+net)
-        captions[net]=message+("\n\n"+FOOTER if net in ("telegram","bale") else "")
+        issues=channel_copy_issues(net,message,minimum,maximum)
+        # Only the failing channel is rewritten, at most twice, against
+        # UNCHANGED primary evidence and unchanged story. Do not loosen rules.
+        for retry_no in range(2):
+            if not issues:break
+            instruction=("تو ویراستار فارسی محاوره‌ای آکولاد هستی. فقط متن "+net+
+                " رو اصلاح کن. ایرادها: "+", ".join(issues)+". "
+                "به همون داستان و منابع اصلی وفادار بمون. "
+                "بین "+str(minimum)+" تا "+str(maximum)+" کاراکتر بنویس. "
+                "بدون لینک، برچسب منبع، 📌، فعل رسمی، شناسه فنی یا ادعای بی‌سند. "
+                "فقط JSON با کلید "+net+" برگردون.")
+            data=model_json(instruction,{"story":story,
+                "previous":str(message or "")[:1900],
+                "strict_length":[minimum,maximum],"issues":issues,
+                "evidence":[{"title":s.get("title"),
+                             "excerpt":str(s.get("excerpt") or "")[:500]}
+                            for s in evidence[:3]]})
+            message=data.get(net)
+            issues=channel_copy_issues(net,message,minimum,maximum)
+        if issues:
+            raise RuntimeError("LOW_QUALITY_OR_INVALID_COPY_"+net+"_"+",".join(issues))
+        captions[net]=message.strip()+("\n\n"+FOOTER if net in ("telegram","bale") else "")
     return captions
 
 def critics_approve(story,evidence,captions):
