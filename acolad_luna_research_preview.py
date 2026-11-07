@@ -778,6 +778,19 @@ def eligible_original_evergreen(source):
     return any(_matches(host,domain) for domain in domains)
 
 
+def eligible_scholarly_abstract(source):
+    """Only substantive DOI-indexed research abstracts, never abstracts invented by AI."""
+    if not isinstance(source,dict) or source.get("source_type")!="academic_doi":
+        return False
+    if source.get("evidence_depth")!="abstract":
+        return False
+    if not str(source.get("url","")).startswith("https://doi.org/10."):
+        return False
+    a=age_days(source.get("date",""))
+    return (a is not None and 0<=a<=365 and
+            len(str(source.get("excerpt") or ""))>=180)
+
+
 def validate_plan(plan: dict, sources: list[dict]) -> list[str]:
     issues=[]
     valid={s['id']:s for s in sources}
@@ -796,8 +809,9 @@ def validate_plan(plan: dict, sources: list[dict]) -> list[str]:
         (s.get('source_type')!='academic_doi' and age_days(s.get('date','')) is not None
          and 0<=age_days(s['date'])<=21)
         or eligible_original_evergreen(s)
+        or eligible_scholarly_abstract(s)
         for s in known):
-        issues.append('plan: no current news or verified original evergreen source')
+        issues.append('plan: no current news, original expert article or substantive DOI abstract')
     return issues
 
 
@@ -1173,11 +1187,12 @@ def main(argv=None):
             # complete article, never glue unrelated findings together.
             qualified=sorted(
                 [x for x in sources
-                 if x.get('source_type')!='academic_doi'
-                 and x.get('evidence_depth')=='full_article'
-                 and age_days(x.get('date','')) is not None
-                 and (0<=age_days(x['date'])<=21 or eligible_original_evergreen(x))
-                 and len(x.get('excerpt',''))>=180],
+                 if ((x.get('source_type')!='academic_doi'
+                       and x.get('evidence_depth')=='full_article'
+                       and age_days(x.get('date','')) is not None
+                       and (0<=age_days(x['date'])<=21 or eligible_original_evergreen(x))
+                       and len(x.get('excerpt',''))>=180)
+                      or eligible_scholarly_abstract(x))],
                 key=lambda x:x.get('rank',0),reverse=True)
             if qualified:
                 anchor=qualified[0]
@@ -1188,7 +1203,8 @@ def main(argv=None):
                       'story_tension':'یک مسئله مشخص در رفتار خرید یا رشد کسب‌وکار که متن همین منبع پشتیبانی می‌کند',
                       'hypothetical_example':'هر مثال ساختگی باید با برچسب فرضی روایت شود',
                       'grounded_claims':[],
-                      'limits':['فقط از متن سند انتخاب‌شده استفاده کن',
+                      'limits':['فقط از متن سند انتخاب‌شده و در مورد چکیده، فقط از خود چکیده استفاده کن',
+                                'اگر جزئیات روش پژوهش در چکیده نیست به آن اشاره نکن',
                                 'هیچ پژوهش، آمار، شخصیت یا آزمایش بیرونی اختراع نکن'],
                       'story_chain':{
                         'hero':'موقعیت مخاطب‌محور، نه شخصیت تکراری',
