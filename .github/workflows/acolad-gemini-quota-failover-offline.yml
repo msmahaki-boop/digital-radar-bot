@@ -1,7 +1,7 @@
 name: Acolad strict GapGPT quota fallback to Gemini - OFFLINE QA
 on:
   push:
-    branches: [fix/acolad-model-gemini-failover-20261107]
+    branches: [fix/acolad-gemini-lite-recovery-20261107]
     paths: [ops/acolad-gemini-failover-qa.trigger]
 permissions:
   contents: read
