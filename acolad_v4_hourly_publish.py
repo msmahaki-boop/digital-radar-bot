@@ -252,6 +252,7 @@ def execute(mode):
     if any(s["state"]=="PENDING_OR_UNKNOWN" for s in states.values()):
         return report("WAIT_PROVIDER_OR_UNKNOWN_DELIVERY_NO_DUPLICATES",states)
     missing=[n for n in NETWORKS if states[n]["state"]=="ABSENT"]
+    missing.sort(key={"instagram":0,"bale":1,"telegram":2}.get)
     if not missing:return report("NOTHING_SAFE_TO_SEND",states)
     bundle=existing_bundle(day)
     if not bundle and any(s["state"]=="PUBLISHED" for s in states.values()):
