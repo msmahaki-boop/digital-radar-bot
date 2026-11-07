@@ -61,6 +61,16 @@ class TransparentImageQA(unittest.TestCase):
                              Mock(post=Mock(return_value=response)),key="mock")
             self.assertEqual(list(Path(root).glob("*.png")),[])
 
+    def test_precise_gapgpt_per_key_quota_blocks_without_art(self):
+        response=Mock(status_code=403)
+        response.json.return_value={"error":{"code":"pre_consume_token_quota_failed"}}
+        with TemporaryDirectory() as root:
+            dest=Path(root)/"scene_01.png"
+            with self.assertRaisesRegex(RuntimeError,"PRECONSUME_QUOTA_BLOCKED"):
+                art.generate(self.story(),1,dest,
+                             Mock(post=Mock(return_value=response)),key="mock")
+            self.assertFalse(dest.exists())
+
     def test_missing_catalog_model_does_not_buy_images(self):
         session=Mock()
         session.get.return_value=Mock(status_code=200)
