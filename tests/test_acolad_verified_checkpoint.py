@@ -29,6 +29,13 @@ class CheckpointSafety(unittest.TestCase):
     gen.reset_mock()
     with self.assertRaisesRegex(RuntimeError,"429"):p.prepare(D)
     gen.assert_not_called()
+ def test_critic_veto_does_not_poison_future_hourly_retries(self):
+  with tempfile.TemporaryDirectory() as root:
+   with patch.object(p,"EDITORIAL_CACHE",Path(root)/"verified_story_checkpoint.json"),patch.object(p,"OUT",Path(root)),patch.object(p,"READY",Path(root)/"hourly_ready.json"),patch.object(p,"check_verified_editorial",return_value=True),patch.object(p.engine,"generate_editorial",return_value=(STORY,EVIDENCE)),patch.object(p.engine,"make_channel_copies",return_value={"telegram":"copy","bale":"copy","instagram":"copy"}),patch.object(p.engine,"critics_approve",return_value=[{"veto":True,"score":65,"reason_short":"quality"}]),patch.object(p.engine,"illustrate") as illustrator:
+    self.assertIsNone(p.prepare(D))
+    self.assertFalse(p.EDITORIAL_CACHE.exists())
+    self.assertTrue((Path(root)/"critic_rejected_story.json").exists())
+    illustrator.assert_not_called()
  def test_not_ready_artifact_never_seeds_cache(self):
   with tempfile.TemporaryDirectory() as root:
    basedir=Path(root)
