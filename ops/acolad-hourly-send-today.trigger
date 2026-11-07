@@ -1,0 +1,1 @@
+User explicitly authorized one real IMMEDIATE PUBLICATION attempt on all three Acolad NovinHub targets for Tehran 2026-11-07. No drafts, no scheduling, exact same-day quality gates, dedup and receipts.
