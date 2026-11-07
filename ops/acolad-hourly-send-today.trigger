@@ -13,3 +13,5 @@ Attempt 6 on Nov 7: strict targeted caption repair after primary source narrativ
 Attempt 7, 2026-11-07 Tehran: numeric-only source-locked corrected draft, no schedule or draft; only publish after all editorial hard gates. This commit triggers ONE real immediate production try.
 
 Attempt 8 on 2026-11-07: one strict evidence-locked Luna story writer JSON repair; no drafts, no scheduling, immediate only after all truth and quality gates.
+
+Attempt 9 2026-11-07: unified GapGPT Luna client for original research, captions and independent critics; full fact-check and source QA remain. Immediate public posts only if all preflight and quality gates passed.
