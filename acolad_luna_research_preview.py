@@ -1112,6 +1112,24 @@ def only_unsupported_numeric_issues(issues):
         for item in issues)
 
 
+def write_story_with_json_retry(key, evidence_locked_prompt, usage, diagnostic):
+    """Retry malformed model JSON once; authentication, budgets and QA stay hard."""
+    try:
+        return api_call(key, SYSTEM, evidence_locked_prompt, 5700, usage)
+    except RuntimeError as ex:
+        if "GapGPT invalid JSON/shape" not in str(ex):
+            raise
+        diagnostic.append("Story writer returned malformed JSON; one evidence-locked retry")
+    repair_prompt = (
+        "خروجی قبلی ساختار JSON معتبر نداشت. این بار فقط یک شیء JSON کامل "
+        "مطابق همان طرح و شواهد زیر برگردون. متن توضیحی، کدبلاک و تحلیل بیرون "
+        "از JSON ممنوع. همه اسلایدها و تمام فیلدهای الزامی رو نگه دار. "
+        "هیچ عدد، نام، ادعا، شخصیت واقعی یا منبع جدید نساز.\n"
+        + evidence_locked_prompt
+    )
+    return api_call(key,SYSTEM,repair_prompt,5700,usage)
+
+
 def select_plan_or_verified_source_fallback(key,prompt,usage,diag):
     """Only malformed JSON falls back; auth, billing, network failures remain fatal."""
     try:
@@ -1229,7 +1247,7 @@ def main(argv=None):
         chosen=[x for x in sources if x['id'] in plan['source_ids']]
         evidence=source_data_for_llm(chosen,8000)
         user=WRITE_INSTRUCTION+'\nPLAN:\n'+json.dumps(plan,ensure_ascii=False)[:3500]+'\nEVIDENCE:\n'+evidence
-        story=api_call(key,SYSTEM,user,5700,usage)
+        story=write_story_with_json_retry(key,user,usage,diag)
         issues=story_quality(story,chosen)+cinematic_quality(story,chosen)
         # Always attempt one additional editorial pass for rhythm and emotional pull.
         # Keep original if the revised version introduces more machine-detected faults.
