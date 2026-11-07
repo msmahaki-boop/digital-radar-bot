@@ -1,0 +1,64 @@
+name: Acolad direct Gemini original image smoke test (NO SOCIAL)
+on:
+  push:
+    branches: [fix/acolad-gemini-lite-recovery-20261107]
+    paths: [ops/acolad-direct-gemini-image-probe.trigger]
+permissions:
+  contents: read
+jobs:
+  image-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install requests==2.32.5 Pillow==11.3.0
+      - name: Test ONE compact original image without publishing or social token
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python -u - <<'PY'
+          import os,json,requests,base64,io
+          from PIL import Image
+          from pathlib import Path
+          key=os.getenv('GEMINI_API_KEY','').strip()
+          if not key:raise RuntimeError('SECRET_MISSING')
+          model='gemini-3.1-flash-lite-image'
+          prompt=('Original sparse black ink editorial drawing on warm ivory paper, '
+            'a tiny overwhelmed business owner measuring an enormous website with a ruler, '
+            'whimsical witty metaphor for comparing website performance with other businesses, '
+            'simple hand-drawn outlines, very limited lavender accent, generous empty space, '
+            'no lettering, no numbers, no real individuals or trademarks.')
+          body={'contents':[{'parts':[{'text':prompt}]}],
+                'generationConfig':{'responseModalities':['IMAGE'],
+                'imageConfig':{'aspectRatio':'1:1','imageSize':'1K'}}}
+          resp=requests.post('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent',
+            json=body,headers={'x-goog-api-key':key,'Content-Type':'application/json'},timeout=170)
+          print('IMAGE_PROVIDER_PROBE',json.dumps({'model':model,'http':resp.status_code},ensure_ascii=False),flush=True)
+          if resp.status_code!=200:
+              try:print('PROBE_ERROR_STATUS',str((resp.json().get('error') or {}).get('status','UNKNOWN')))
+              except Exception:pass
+              raise SystemExit(2)
+          for cand in resp.json().get('candidates') or []:
+              for part in (cand.get('content') or {}).get('parts') or []:
+                  blob=part.get('inlineData') or part.get('inline_data') or {}
+                  if blob.get('data') and str(blob.get('mimeType') or blob.get('mime_type') or '').startswith('image/'):
+                      raw=base64.b64decode(blob['data'],validate=True)
+                      with Image.open(io.BytesIO(raw)) as img:
+                          image=img.convert('RGB')
+                          if min(image.size)<512:raise RuntimeError('IMAGE_TOO_SMALL')
+                          Path('probe_art').mkdir(exist_ok=True)
+                          image.save('probe_art/original_ink.png')
+                          print('DIRECT_GEMINI_IMAGE_VALID',json.dumps({'size':image.size,'bytes':len(raw)}),flush=True)
+                          raise SystemExit(0)
+          raise RuntimeError('NO_INLINE_IMAGE')
+          PY
+      - name: Keep safe preview image for visual review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-direct-gemini-image-preview-only
+          path: probe_art/
+          if-no-files-found: warn
+          retention-days: 3
