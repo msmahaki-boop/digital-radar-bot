@@ -25,3 +25,5 @@ Attempt 12 Nov 7: verified Gemini 3 Flash source-locked fallback for GapGPT pre_
 Attempt 13 2026-11-07: resume after interrupted Gemini thinking-optimization PR20 merged; owner-authorized immediate no-draft NovinHub post, source and QA gates, provider no-duplicate checks intact.
 
 Attempt 14 Nov 7: Gemini fallback plus mixed numeric/payoff source-locked correction merged. User authorized immediate IG TG Bale publication, no drafts, no scheduling; verify per-network receipts, no duplicates.
+
+Attempt 15 Nov 7: corrected invalid Gemini STOP JSON one low-temp retry, validated source-locked mixed numeric/beat QA and receipt anti-duplicate before all 3 public posts.
