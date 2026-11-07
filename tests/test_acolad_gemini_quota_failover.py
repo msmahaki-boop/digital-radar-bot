@@ -54,6 +54,42 @@ class QuotaFailover(unittest.TestCase):
         self.assertEqual(u["gemini_fallback_calls"],1)
         self.assertEqual(u["stages"][-1]["provider"],"gemini-3-flash-preview")
         self.assertEqual(fn.call_args.kwargs["json"]["generationConfig"]["responseMimeType"],"application/json")
+        self.assertEqual(fn.call_args.kwargs["json"]["generationConfig"]["thinkingConfig"]["thinkingLevel"],"minimal")
+    def test_max_tokens_truncated_json_retried_once_with_same_source(self):
+        first=Mock(status_code=200)
+        first.json.return_value={"candidates":[{"finishReason":"MAX_TOKENS",
+            "content":{"parts":[{"text":'{"unfinished":'}]}}]}
+        second=Mock(status_code=200)
+        second.json.return_value={"candidates":[{"finishReason":"STOP",
+            "content":{"parts":[{"text":'{"ok":true}'}]}}]}
+        with patch.dict(os.environ,{"GEMINI_API_KEY":"test-key-not-real"}):
+            with patch.object(gemini.requests,"post",side_effect=[first,second]) as post:
+                result=gemini.generate_json("SYSTEM","UNCHANGED ORIGINAL EVIDENCE",
+                    500,news.json_from_model,usage())
+        self.assertEqual(result,{"ok":True})
+        self.assertEqual(post.call_count,2)
+        self.assertEqual(post.call_args_list[0].kwargs["json"]["contents"],
+                         post.call_args_list[1].kwargs["json"]["contents"])
+        self.assertEqual(post.call_args_list[1].kwargs["json"]["generationConfig"]["maxOutputTokens"],2700)
+        self.assertEqual(gemini._fallback_calls,2)
+    def test_malformed_non_truncated_json_does_not_retry(self):
+        r=Mock(status_code=200)
+        r.json.return_value={"candidates":[{"finishReason":"STOP",
+            "content":{"parts":[{"text":'{"unfinished":'}]}}]}
+        with patch.dict(os.environ,{"GEMINI_API_KEY":"test-key-not-real"}):
+            with patch.object(gemini.requests,"post",return_value=r) as post:
+                with self.assertRaisesRegex(RuntimeError,"FINISH_STOP"):
+                    gemini.generate_json("SYS","EVIDENCE",500,news.json_from_model,usage())
+        self.assertEqual(post.call_count,1)
+    def test_second_truncated_json_fails_closed_after_one_retry(self):
+        r=Mock(status_code=200)
+        r.json.return_value={"candidates":[{"finishReason":"MAX_TOKENS",
+            "content":{"parts":[{"text":'{"unfinished":'}]}}]}
+        with patch.dict(os.environ,{"GEMINI_API_KEY":"test-key-not-real"}):
+            with patch.object(gemini.requests,"post",return_value=r) as post:
+                with self.assertRaisesRegex(RuntimeError,"FINISH_MAX_TOKENS"):
+                    gemini.generate_json("SYS","EVIDENCE",500,news.json_from_model,usage())
+        self.assertEqual(post.call_count,2)
     def test_missing_google_secret_stops_before_external_send(self):
         with patch.dict(os.environ,{"GEMINI_API_KEY":""}):
             with patch.object(gemini.requests,"post") as send:

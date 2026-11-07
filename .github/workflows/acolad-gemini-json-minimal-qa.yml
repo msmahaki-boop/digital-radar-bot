@@ -1,0 +1,21 @@
+name: Acolad Gemini minimal-thinking JSON strict regression NO SOCIAL
+on:
+  push:
+    branches: [fix/acolad-gemini-json-minimal-thinking-20261107]
+    paths: [ops/acolad-gemini-json-minimal.trigger]
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install requests==2.32.5 Pillow==11.3.0 beautifulsoup4==4.14.2
+      - name: Compile model adapters and run safe QA unit checks
+        run: |
+          python -m py_compile acolad_model_gemini_failover.py acolad_luna_research_preview.py acolad_v4_hourly_publish.py
+          python -m unittest discover -s tests -p 'test_acolad_gemini_quota_failover.py' -v
+          python -m unittest discover -s tests -p 'test_acolad_v4_hourly.py' -v
