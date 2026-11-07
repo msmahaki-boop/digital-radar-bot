@@ -315,7 +315,22 @@ def run_preview(day=None,budget_usd=0.018,output=OUT):
     orig_collect=news.collect_sources
     history=read_history(date)
     def _dedup_sources(focus,diagnostic):
-        return unseen_recent_articles(orig_collect(focus,diagnostic),history,diagnostic)
+        # HARD SOURCE-FIRST PRIORITY: do not spend on a secondary-media story
+        # that the independent trust gate must inevitably reject later.
+        from acolad_editorial_trust_gate import (
+            KNOWN_OFFICIAL, load_policy, _host, _matches)
+        raw=unseen_recent_articles(orig_collect(focus,diagnostic),history,diagnostic)
+        allowed={item["domain"] for item in load_policy()["source_policy"]["priority_sources"]}
+        allowed.update(KNOWN_OFFICIAL)
+        vetted=[src for src in raw
+                if src.get("source_type")=="academic_doi"
+                or any(_matches(_host(src.get("url")),domain) for domain in allowed)]
+        diagnostic.append("First-party / expert sources retained before paid story: "+
+                          str(len(vetted))+"/"+str(len(raw)))
+        # Keep source IDs canonical after filtering so citations still resolve.
+        for i,source in enumerate(vetted,1):
+            source["id"]="S"+str(i).zfill(2)
+        return vetted
     try:
         news.collect_sources=_dedup_sources
         extra=narrative_prompts(date)
