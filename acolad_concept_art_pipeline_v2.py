@@ -88,7 +88,22 @@ def ink_sketch(scene:int, metaphor:str, output:Path)->dict:
     stroke([(239,361),(253,353),(271,361)],5)
     # Dynamic editorial metaphor selected from actual story context.
     idea=metaphor.casefold()
-    if any(w in idea for w in ("پرده","کلید","curtain","hidden guest")):
+    if any(w in idea for w in ("داشبورد","بنچمارک","مقایسه","وب‌سایت","سایت","benchmark","website","شکاف عملکرد","مسیر روشن")):
+        # Business website peer-benchmarking: oversized browser as a mirror,
+        # with two starkly different comparison bars and an open upward path.
+        # Deliberately schematic, never presented as actual research statistics.
+        draw.rounded_rectangle((446,280,865,687),radius=28,outline=dark,width=12)
+        stroke([(448,352),(860,352)],8)
+        for x in (490,527,564):
+            oval((x,309,x+10,319),outline=soft,width=3)
+        stroke([(518,589),(518,506)],12,color=soft)
+        stroke([(576,589),(576,442)],12)
+        stroke([(633,589),(633,394)],12,color=soft)
+        stroke([(486,590),(687,590)],8)
+        stroke([(703,544),(749,500),(777,518),(834,433)],11,color=dark)
+        stroke([(818,440),(836,427),(832,454)],8,color=soft)
+        oval((675,626,743,694),width=8)
+    elif any(w in idea for w in ("پرده","کلید","curtain","hidden guest")):
         # Story-specific reveal: a real key is hidden behind a heavy curtain,
         # rather than an unrelated shopping-cart symbol.
         curtain_x=640 if "باز" not in idea else 790
