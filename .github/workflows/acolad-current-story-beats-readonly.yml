@@ -1,0 +1,37 @@
+name: Acolad latest Gemini story beat inspection, read-only
+on:
+  push:
+    branches: [diagnostic/acolad-gapgpt-recharge-20261107]
+    paths: [ops/acolad-20261107-beats-inspect.trigger]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: acolad-hourly-three-network-publication-receipt
+          run-id: 42377723004
+          github-token: ${{ github.token }}
+          path: recovered
+      - name: Show scene beat text and unpublished numeric context
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          for f in Path('recovered').rglob('stories.json'):
+              data=json.loads(f.read_text(encoding='utf8'))
+              print("STORY_TITLE",str(data.get("topic"))[:160])
+              for frame in data.get('slides',[]):
+                  print("FRAME_BEAT",frame.get('n'),str(frame.get('beat')),str(frame.get('text'))[:340])
+              print("RESOLUTION",str(data.get('resolution'))[:500])
+          for f in Path('recovered').rglob('selected_evidence.json'):
+              data=json.loads(f.read_text(encoding='utf8'))
+              for source in data[:2]:
+                  print("SOURCE_TITLE",str(source.get('title'))[:200])
+                  print("SOURCE_EXCERPT",str(source.get('excerpt',''))[:850])
+          PY
