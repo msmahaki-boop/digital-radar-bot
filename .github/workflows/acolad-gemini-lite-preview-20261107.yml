@@ -19,17 +19,17 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq fonts-noto-core fonts-noto-color-emoji libharfbuzz0b libfribidi0 >/dev/null
           python -m pip install --disable-pip-version-check requests==2.32.5 beautifulsoup4==4.14.2 Pillow==11.3.0
-      - name: Fetch existing verified source artifact (READ ONLY)
-        uses: actions/download-artifact@v4
-        with:
-          name: acolad-hourly-three-network-publication-receipt
-          run-id: 42378884239
-          github-token: ${{ github.token }}
-          path: previous_verified
-      - name: Restore evidence and run original locked editorial QA
+      - name: Reject old archived research and discover FRESH dated first-party evidence
         run: |
           echo "day=$(TZ=Asia/Tehran date +%F)" >> "$GITHUB_ENV"
-          python -u acolad_v4_resume_verified_artifact.py --artifact-directory previous_verified --tehran-date "$(TZ=Asia/Tehran date +%F)"
+          python - <<'PY'
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          import acolad_v4_hourly_publish as publisher
+          from pathlib import Path
+          assert not Path(publisher.EDITORIAL_CACHE).exists(), "Unexpected old restored cache"
+          print("PREVIEW_FRESH_SOURCE_REQUIRED",datetime.now(ZoneInfo("Asia/Tehran")).date().isoformat())
+          PY
       - name: Generate preview-only text, critics and art (NO NOVINHUB TOKEN)
         env:
           GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
@@ -43,9 +43,9 @@ jobs:
           from pathlib import Path
           day=datetime.now(ZoneInfo("Asia/Tehran")).date()
           import json
-          cached=json.loads(p.EDITORIAL_CACHE.read_text(encoding="utf8"))
-          print("PREVIEW_SOURCE_DATES",{"today_tehran":day.isoformat(),"dates":[e.get("date") for e in cached.get("evidence",[])]},flush=True)
           x=p.prepare(day)
+          evidence=json.loads(p.EDITORIAL_CACHE.read_text(encoding="utf8")).get("evidence",[]) if p.EDITORIAL_CACHE.exists() else []
+          print("PREVIEW_SOURCE_DATES",{"today_tehran":day.isoformat(),"dates":[e.get("date") for e in evidence]},flush=True)
           if x is None:raise RuntimeError("EDITORIAL_VETO_NO_PREVIEW")
           document,frames=x
           assert document["validated"] is True
@@ -59,6 +59,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: acolad-gemini-lite-preview-20261107
-          path: acolad_v4_daily_publication/
+          path: |
+            acolad_v4_daily_publication/
+            acolad_daily_editorial_output/preview_status.json
+            acolad_luna_research_preview/status.json
+            acolad_luna_research_preview/selected_evidence.json
           retention-days: 7
           if-no-files-found: warn
