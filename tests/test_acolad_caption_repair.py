@@ -35,10 +35,11 @@ class CaptionRetry(unittest.TestCase):
  def test_critics_use_actual_tehran_date_without_disabling_veto(self):
   review={"score":78,"veto":True,"reason":"unsupported source"}
   with patch.object(p,"model_json",return_value=review) as model:
-   res=p.critics_approve({"slides":[{"text":"یک روایت"}]},[],{"telegram":"متن","bale":"متن","instagram":"متن"})
+   res=p.critics_approve({"slides":[{"text":"یک روایت"}]},[{"url":"https://doi.org/10.47857/irjms.2026.v07i02.08781","date":"2026-01-01"}],{"telegram":"متن","bale":"متن","instagram":"متن"})
   self.assertEqual(len(res),2)
   self.assertTrue(all(x["veto"] for x in res))
   self.assertIn(p.tehran_now().date().isoformat(),model.call_args_list[0].args[0])
+  self.assertIn("مرور پژوهش",model.call_args_list[0].args[0])
  def test_external_sources_cannot_be_in_public_caption(self):
   self.assertIn("SOURCE_LEAK",p.channel_copy_issues("instagram","https://example.com",60,500))
  def test_formal_or_pinned_tone_is_rejected(self):
