@@ -1,0 +1,35 @@
+name: Acolad Bale and Instagram account public profile GET only
+on:
+  push:
+    branches: [fix/acolad-gemini-lite-recovery-20261107]
+    paths: [ops/acolad-social-account-metadata-readonly.trigger]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install requests==2.32.5
+      - name: Read safe profile URLs and account types only
+        env:
+          NOVINHUB_API_TOKEN: ${{ secrets.NOVINHUB_API_TOKEN }}
+          NOVINHUB_TOKEN: ${{ secrets.NOVINHUB_TOKEN }}
+          NOVINHUB_ACCESS_TOKEN: ${{ secrets.NOVINHUB_ACCESS_TOKEN }}
+        run: |
+          python - <<'PY'
+          import json,requests
+          from acolad_novinhub_bridge import API,token,headers,as_items
+          r=requests.get(API+'/account',headers=headers(token()),timeout=35)
+          print('ACCOUNT_METADATA_HTTP',r.status_code)
+          if r.status_code!=200:raise SystemExit(1)
+          for a in as_items(r.json()) or []:
+            if str(a.get('id')) in ('233497','230527'):
+              print('PUBLIC_ACCOUNT_METADATA',json.dumps({
+                'id':a.get('id'),'type':a.get('type'),
+                'name':a.get('name'),'profile_url':a.get('profile_url'),
+                'login_required':a.get('login_required')},ensure_ascii=False))
+          PY
