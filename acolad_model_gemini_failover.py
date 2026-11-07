@@ -10,12 +10,13 @@ import time
 import requests
 
 MODEL = "gemini-3-flash-preview"
+ALT_MODEL = "gemini-3.1-flash-lite"
 API = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent"
 MAX_TOTAL_FALLBACK_CALLS = 12
 _fallback_calls = 0
 
 
-def generate_json(system: str, user: str, max_tokens: int, parser, usage: dict, session=requests, _retried=False):
+def generate_json(system: str, user: str, max_tokens: int, parser, usage: dict, session=requests, _retried=False, _alt_used=False):
     global _fallback_calls
     if _fallback_calls >= MAX_TOTAL_FALLBACK_CALLS:
         raise RuntimeError("GEMINI_FALLBACK_DAILY_CALL_LIMIT")
@@ -25,6 +26,8 @@ def generate_json(system: str, user: str, max_tokens: int, parser, usage: dict, 
     if max_tokens < 100 or max_tokens > 8192:
         raise RuntimeError("GEMINI_FALLBACK_TOKEN_ALLOWANCE_INVALID")
     _fallback_calls += 1
+    chosen_model = ALT_MODEL if _alt_used else MODEL
+    chosen_api = f"https://generativelanguage.googleapis.com/v1beta/models/{chosen_model}:generateContent"
     payload = {
         "systemInstruction": {"parts": [{"text": system}]},
         "contents": [{"role": "user", "parts": [{"text": user}]}],
@@ -32,18 +35,27 @@ def generate_json(system: str, user: str, max_tokens: int, parser, usage: dict, 
             "responseMimeType": "application/json",
             # A malformed-JSON STOP retry lowers sampling variance but keeps
             # exactly the same verified source and semantic instructions.
-            "temperature": 0.12 if _retried else 0.55,
+            "temperature": (0.12 if _retried else 0.3 if _alt_used else 0.55),
             "maxOutputTokens": max_tokens,
             "thinkingConfig":{"thinkingLevel":"minimal"},
         },
     }
     t0 = time.monotonic()
     try:
-        response = session.post(API, headers={"x-goog-api-key":key,
+        response = session.post(chosen_api, headers={"x-goog-api-key":key,
                               "Content-Type":"application/json"},
                                 json=payload,timeout=145)
     except requests.RequestException as exc:
         raise RuntimeError("GEMINI_FALLBACK_NETWORK_"+type(exc).__name__) from None
+    if response.status_code==429 and not _alt_used and _fallback_calls<MAX_TOTAL_FALLBACK_CALLS:
+        # Model-specific quota rejection, not evidence or editorial failure.
+        # Only switch to alternate model actually confirmed with HTTP 200.
+        usage.setdefault("stages",[]).append({
+            "provider":chosen_model,"http_status":429,
+            "route":"GEMINI_MODEL_429_TO_FLASH_LITE",
+            "cost_usd":"NOT_VERIFIED_FROM_PROVIDER"})
+        return generate_json(system,user,max_tokens,parser,usage,
+                             session=session,_retried=False,_alt_used=True)
     if response.status_code != 200:
         raise RuntimeError("GEMINI_FALLBACK_HTTP_"+str(response.status_code))
     try:
@@ -58,7 +70,7 @@ def generate_json(system: str, user: str, max_tokens: int, parser, usage: dict, 
         result=parser(content)
         meta=body.get("usageMetadata") or {}
         usage.setdefault("stages",[]).append({
-            "provider": MODEL,
+            "provider": chosen_model,
             "route":"GAPGPT_PRECONSUME_KEY_QUOTA_FALLBACK",
             "elapsed_sec":round(time.monotonic()-t0,2),
             "prompt_tokens":meta.get("promptTokenCount"),
@@ -85,6 +97,6 @@ def generate_json(system: str, user: str, max_tokens: int, parser, usage: dict, 
                 "provider":MODEL,"json_rejected":True,"finish_reason":reason,
                 "retry_once":True,"cost_usd":"NOT_VERIFIED_FROM_PROVIDER"})
             return generate_json(system,user,next_max,parser,usage,
-                                 session=session,_retried=True)
+                                 session=session,_retried=True,_alt_used=_alt_used)
         raise RuntimeError("GEMINI_FALLBACK_INVALID_JSON_"+type(exc).__name__+
                            "_FINISH_"+(reason or "UNKNOWN")[:35]) from None
