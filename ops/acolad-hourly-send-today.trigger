@@ -17,3 +17,5 @@ Attempt 8 on 2026-11-07: one strict evidence-locked Luna story writer JSON repai
 Attempt 9 2026-11-07: unified GapGPT Luna client for original research, captions and independent critics; full fact-check and source QA remain. Immediate public posts only if all preflight and quality gates passed.
 
 Attempt 10 on 2026-11-07: user reports GapGPT wallet topped up; retry immediate publish with live provider readback, no draft or schedule, quality and anti-duplicate gates intact.
+
+Attempt 11 Nov 7: same GitHub GapGPT secret independently verified HTTP 200 model gpt-6-luna run 42375278881. Owner requested direct public posting after top-up. No draft/schedule, no duplicate, strict editorial gates.
