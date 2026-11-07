@@ -11,8 +11,8 @@ import acolad_gpt25_strict_renderer as strict
 class StrictPipelineTests(unittest.TestCase):
     def story(self):
         return {"slides":[
-            {"scene_id":1,"visual_action":"new_scene","visual_idea":"a tiny store owner"},
-            {"scene_id":2,"visual_action":"new_scene","visual_idea":"a line chart"}]}
+            {"n":1,"scene_id":1,"visual_action":"new_scene","visual_idea":"a tiny store owner"},
+            {"n":2,"scene_id":2,"visual_action":"new_scene","visual_idea":"a line chart"}]}
 
     def test_live_feature_gate_calls_only_strict_layer(self):
         with patch.dict(os.environ,{"ACOLAD_REQUIRE_REAL_GPT25_ART":"1"}):
@@ -39,7 +39,7 @@ class StrictPipelineTests(unittest.TestCase):
             api.assert_not_called()
 
     def test_more_than_four_scenes_rejected_before_billing(self):
-        story={"slides":[{"scene_id":i,"visual_action":"new_scene"} for i in range(1,6)]}
+        story={"slides":[{"n":i,"scene_id":i,"visual_action":"new_scene"} for i in range(1,6)]}
         with patch.object(strict,"generate_scenes") as api:
             with self.assertRaisesRegex(RuntimeError,"DISTINCT_SCENE_COUNT"):
                 strict.illustrate_strict(story)
