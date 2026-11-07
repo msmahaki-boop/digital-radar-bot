@@ -2,7 +2,7 @@
 """Acolad hourly IMMEDIATE publisher; fail closed for ambiguous provider receipts."""
 from __future__ import annotations
 import argparse,json,os,sys,time
-from datetime import datetime
+from datetime import datetime,timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 import requests
@@ -33,7 +33,7 @@ def report(status,networks=None,**extra):
 def provider_list(key,net,day,session=requests):
     res=session.get(API+"/post",headers=headers(key),params={
         "account_ids[]":str(ACCOUNT[net]),"order":"id","with":"post(accountPost)",
-        "publish_from":day.isoformat(),"publish_to":day.isoformat()},timeout=45)
+        "publish_from":day.isoformat(),"publish_to":(day+timedelta(days=1)).isoformat()},timeout=45)
     if res.status_code!=200:raise RuntimeError("PROVIDER_READ_HTTP_"+net+"_"+str(res.status_code))
     obj=res.json();rows=as_items(obj)
     if rows is None:raise RuntimeError("PROVIDER_LIST_UNRECOGNIZED_"+net)
