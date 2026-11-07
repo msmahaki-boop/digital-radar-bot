@@ -30,7 +30,7 @@ GIFT = 'I_CONFIRMED_LIMITED_GIFT_KEY'
 EXCHANGE_TOMAN = 250000
 INPUT_PER_M = 0.10
 OUTPUT_PER_M = 0.50
-MAX_CALLS = 4
+MAX_CALLS = 6
 MAX_BUDGET_USD = 0.025
 SOURCE_MAX_AGE_DAYS = 45
 MIN_NEWS = 2
@@ -1106,6 +1106,12 @@ padding:19px;box-sizing:border-box;border-top:7px solid #7B2CBF;position:relativ
     (ROOT/'story_preview.html').write_text(page,encoding='utf-8')
 
 
+def only_unsupported_numeric_issues(issues):
+    return bool(issues) and all(
+        re.fullmatch(r'frame \d+: numerical claim [0-9.,]+%? not in approved evidence',str(item))
+        for item in issues)
+
+
 def select_plan_or_verified_source_fallback(key,prompt,usage,diag):
     """Only malformed JSON falls back; auth, billing, network failures remain fatal."""
     try:
@@ -1259,6 +1265,30 @@ def main(argv=None):
                     diag.append('Final V4 evidence-locked editorial retry reduced QA violations')
             except (RuntimeError,ValueError,TypeError) as ex:
                 diag.append('Final QA retry could not run: '+type(ex).__name__)
+        # If the ONLY remaining veto is ungrounded numeric claims, give
+        # source-locked rewriting two bounded tries. Never invent percentages,
+        # replace unsupported digits with a fabricated estimate, or discard QA.
+        if only_unsupported_numeric_issues(issues):
+            for extra_try in range(2):
+                if not issues or usage['requests_sent']>=MAX_CALLS:break
+                instruction=(EDIT_INSTRUCTION+
+                    '\\nفقط اعداد یا ادعاهای عددی فاقد سند را در همین متن بردار یا با عبارت غیرعددی '
+                    'و فاقد ادعای جدید بازنویسی کن. نکته واقعی منبع باید حفظ شود؛ '
+                    'اگر حذف عدد معنی را تغییر می‌دهد، آن بند را کامل حذف کن. '
+                    'هیچ عدد تازه‌ای نساز و منبع دیگری اضافه نکن. '
+                    'JSON کامل با ساختار اصلی استوری برگردان.\\nNUMERIC_VETO: '+
+                    json.dumps(issues,ensure_ascii=False)+
+                    '\\nVERIFIED_EVIDENCE: '+evidence+
+                    '\\nCURRENT_STORY: '+json.dumps(story,ensure_ascii=False))
+                try:
+                    repaired=api_call(key,SYSTEM,instruction,5500,usage)
+                    checked=story_quality(repaired,chosen)+cinematic_quality(repaired,chosen)
+                    if len(checked)<len(issues):
+                        story,issues=repaired,checked
+                        diag.append('Evidence-locked unsupported numeric claim rewrite improved QA')
+                except (RuntimeError,ValueError,TypeError) as ex:
+                    diag.append('Numerical claim correction failed: '+type(ex).__name__)
+                    break
         status='PREVIEW_NEEDS_HUMAN_REVIEW' if not issues else 'QA_BLOCKED_HUMAN_REVIEW_REQUIRED'
     except (RuntimeError,ValueError,KeyError,TypeError) as ex:
         issues.append('Pipeline interrupted: '+str(ex)[:160])

@@ -15,7 +15,7 @@ class TrustedEvergreen(unittest.TestCase):
  def test_old_secondary_news_is_never_evergreen_evidence(self):
   a=article("digiato.com",60)
   self.assertFalse(m.eligible_original_evergreen(a))
-  self.assertIn("plan: no current news or verified original evergreen source",
+  self.assertIn("plan: no current news, original expert article or substantive DOI abstract",
                 m.validate_plan({"source_ids":["S01"]},[a]))
  def test_original_study_older_than_one_year_is_not_current(self):
   self.assertFalse(m.eligible_original_evergreen(article("baymard.com",367)))
