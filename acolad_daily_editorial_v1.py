@@ -192,6 +192,45 @@ def repair_unnecessary_publisher_mentions(story:dict)->tuple[dict,bool]:
         slide["text"]=text
     return out,changed
 
+def repair_overlong_progressive_scene(story, issues):
+    """Split an already-written scene BEFORE its overflowing frame.
+
+    Only visual metadata changes; the words, claims, IDs, evidence, and
+    semantic beat order remain byte-for-byte unchanged.
+    """
+    import copy
+    out=copy.deepcopy(story)
+    frames=out.get("slides") or []
+    indexes=set()
+    for issue in issues:
+        match=re.fullmatch(
+            r"frame (\d+): accumulated scene text \d+ words, change background sooner",
+            str(issue))
+        if match:
+            index=int(match.group(1))-1
+            if 0<index<len(frames):
+                indexes.add(index)
+    if not indexes:
+        return story,False
+    original_texts=[(f.get("text"),f.get("source_ids"),f.get("beat")) for f in frames]
+    scene=0
+    prev_id=None
+    for i,frame in enumerate(frames):
+        prev_original=story["slides"][i].get("scene_id")
+        fresh=(i==0 or i in indexes or frame.get("visual_action")=="new_scene"
+               or prev_original!=prev_id)
+        if fresh:
+            scene+=1
+            frame["visual_action"]="new_scene"
+        else:
+            frame["visual_action"]="add_text"
+        frame["scene_id"]=scene
+        prev_id=prev_original
+    if original_texts!=[(f.get("text"),f.get("source_ids"),f.get("beat")) for f in frames]:
+        raise ValueError("A visual-only scene repair unexpectedly changed editorial content")
+    return out,True
+
+
 def read_history(day)->list[dict]:
     if not HISTORY.is_file():return []
     try:
@@ -307,6 +346,8 @@ def run_preview(day=None,budget_usd=0.018,output=OUT):
         and bool(possible_cosmetic_issues)
         and all(x=="story lacks at least one progressive same-background reveal"
                 or x=="cinema: too many final periods"
+                or x=="cinema: missing conflict beat"
+                or re.fullmatch(r"frame \d+: accumulated scene text \d+ words, change background sooner",x)
                 or (x.startswith("cinema: frame ")
                     and x.endswith(" unnecessary publisher mention"))
                 for x in possible_cosmetic_issues)
@@ -358,6 +399,25 @@ def run_preview(day=None,budget_usd=0.018,output=OUT):
                 status["beat_label_repair_without_text_changes"]=True
                 (output/"editorially_repaired_story.json").write_text(
                     json.dumps(story,ensure_ascii=False,indent=2),encoding="utf-8")
+    if not good and story and any(re.fullmatch(
+            r"frame \d+: accumulated scene text \d+ words, change background sooner",str(i))
+            for i in status.get("issues",[])):
+        selected_path=RESEARCH_OUT/"selected_evidence.json"
+        chosen=(json.loads(selected_path.read_text(encoding="utf-8"))
+                if selected_path.exists() else [])
+        candidate,repaired=repair_overlong_progressive_scene(story,status.get("issues",[]))
+        if repaired:
+            fresh_issues=news.story_quality(candidate,chosen)+news.cinematic_quality(candidate,chosen)
+            if not fresh_issues:
+                story=candidate
+                good=True
+                status["status"]="PREVIEW_NEEDS_HUMAN_REVIEW"
+                status["issues"]=[]
+                status["scene_split_without_text_changes"]=True
+                (output/"editorially_repaired_story.json").write_text(
+                    json.dumps(story,ensure_ascii=False,indent=2),encoding="utf-8")
+            else:
+                status["structural_repair_issues"]=fresh_issues
     distinct=story_is_distinct(story) if good else False
     # A "good" JSON/beat structure is not a good editorial story.
     # Fail closed when only secondary reportage is selected, or the audience

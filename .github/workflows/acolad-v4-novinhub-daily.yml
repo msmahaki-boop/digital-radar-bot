@@ -1,7 +1,7 @@
-name: Acolad V4 Daily Story and NovinHub Telegram Bale Instagram
+name: Acolad V4 - Hourly 09-23 Tehran Until 3 Real Publications
 on:
   schedule:
-    - cron: '45 7 * * *'  # 11:15 Tehran, UTC 07:45
+    - cron: '30 5-19 * * *' # 09:00..23:00 Tehran hourly
   workflow_dispatch:
     inputs:
       mode:
@@ -10,40 +10,50 @@ on:
         default: preview
         required: true
   push:
-    branches: [feature/acolad-v4-autopublish-20261104]
-    paths: [ops/acolad-v4-production-preflight.trigger]
+    branches: [main]
+    paths: [ops/acolad-hourly-send-today.trigger]
 permissions:
   contents: read
 concurrency:
-  group: acolad-v4-daily-all-platforms
+  group: acolad-v4-one-publish-attempt-at-a-time
   cancel-in-progress: false
 jobs:
-  verified-narrative:
+  retry-until-verified:
     runs-on: ubuntu-latest
     timeout-minutes: 95
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Install Persian shaping and image dependencies
+        with: {python-version: '3.12'}
+      - name: Install Persian layout and source-check dependencies
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq fonts-noto-core fonts-noto-color-emoji libharfbuzz0b libfribidi0 >/dev/null
           python -m pip install --disable-pip-version-check requests==2.32.5 beautifulsoup4==4.14.2 Pillow==11.3.0
-      - name: Mandatory offline unit tests before any paid API call
+      - name: Offline safety checks before external calls
         run: |
-          python -m py_compile acolad_v4_daily_autopublish.py acolad_daily_editorial_v1.py acolad_luna_research_preview.py acolad_narrative_visual_v2.py
-          python -m unittest discover -s tests -p 'test_acolad_v4_autopublish.py' -v
-      - name: Restore source duplicate history
+          python -m py_compile acolad_v4_hourly_publish.py acolad_v4_daily_autopublish.py acolad_daily_editorial_v1.py
+          python -m unittest discover -s tests -p 'test_acolad_v4_hourly.py' -v
+      - name: Tehran date used for all retries
+        id: local
+        run: echo "day=$(TZ=Asia/Tehran date +%F)" >> "$GITHUB_OUTPUT"
+      - name: Restore same-day reviewed story and original images
+        uses: actions/cache/restore@v4
+        with:
+          path: acolad_v4_daily_publication/
+          key: acolad-v4-hourly-art-${{ steps.local.outputs.day }}-${{ github.run_id }}
+          restore-keys: |
+            acolad-v4-hourly-art-${{ steps.local.outputs.day }}-
+      - name: Restore 14-day source deduplication history
         uses: actions/cache/restore@v4
         with:
           path: acolad_daily_editorial_history.json
-          key: acolad-v4-history-${{ github.run_id }}
+          key: acolad-v4-hourly-source-${{ github.run_id }}
           restore-keys: |
+            acolad-v4-hourly-source-
             acolad-v4-history-
-            acolad-daily-verified-story-history-
-      - name: Generate original-source story and schedule in NovinHub only after safe approval
+      - name: Check actual publication, then publish missing networks IMMEDIATELY
+        if: github.event_name == 'schedule' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[ACOLAD_USER_REQUESTED_IMMEDIATE_20261107]'))
         env:
           GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -51,23 +61,39 @@ jobs:
           NOVINHUB_API_TOKEN: ${{ secrets.NOVINHUB_API_TOKEN }}
           NOVINHUB_TOKEN: ${{ secrets.NOVINHUB_TOKEN }}
           NOVINHUB_ACCESS_TOKEN: ${{ secrets.NOVINHUB_ACCESS_TOKEN }}
-          ACOLAD_AUTOPUBLISH_APPROVAL: ${{ github.event_name == 'schedule' && github.ref == 'refs/heads/main' && 'APPROVED_AUTO_PUBLISH_ALL_THREE_20261104' || 'PREVIEW_ONLY' }}
-          RUN_MODE: ${{ github.event_name == 'schedule' && github.ref == 'refs/heads/main' && 'auto' || 'preview' }}
-        run: python -u acolad_v4_daily_autopublish.py --mode "$RUN_MODE"
-      - name: Save fresh source history
-        if: success()
+          ACOLAD_HOURLY_PUBLISH_APPROVAL: ACOLAD_USER_APPROVED_HOURLY_IMMEDIATE_20261107
+          SEND_MODE: ${{ github.event_name == 'push' && 'immediate' || 'hourly' }}
+        run: python -u acolad_v4_hourly_publish.py --mode "$SEND_MODE"
+      - name: Save reviewed bundle and no-duplicate intents even after incomplete runs
+        if: always()
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: acolad_v4_daily_publication/
+          key: acolad-v4-hourly-art-${{ steps.local.outputs.day }}-${{ github.run_id }}
+      - name: Save source history for next attempt
+        if: always()
+        continue-on-error: true
         uses: actions/cache/save@v4
         with:
           path: acolad_daily_editorial_history.json
-          key: acolad-v4-history-${{ github.run_id }}
-      - name: Preserve provider receipts and rendered frames
+          key: acolad-v4-hourly-source-${{ github.run_id }}
+      - name: Keep QA and provider receipts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: acolad-v4-publication-report
+          name: acolad-hourly-three-network-publication-receipt
           path: |
             acolad_v4_daily_publication/
             acolad_daily_editorial_output/preview_status.json
             acolad_luna_research_preview/status.json
           retention-days: 14
           if-no-files-found: warn
+      - name: Show real publication state rather than green check
+        if: always()
+        run: |
+          if test -f acolad_v4_daily_publication/hourly_status.json; then
+            cat acolad_v4_daily_publication/hourly_status.json >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "NO PUBLICATION RECEIPT PRODUCED" >> "$GITHUB_STEP_SUMMARY"
+          fi
