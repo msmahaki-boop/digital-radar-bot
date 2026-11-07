@@ -1,0 +1,35 @@
+name: Acolad Nov7 verified source provenance inspection (READ ONLY)
+on:
+  push:
+    branches: [fix/acolad-gemini-lite-recovery-20261107]
+    paths: [ops/acolad-source-provenance-readonly.trigger]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  provenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: acolad-hourly-three-network-publication-receipt
+          run-id: 42378884239
+          github-token: ${{ github.token }}
+          path: prior_verified
+      - name: Report exact original evidence and source claims without social API
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          e=list(Path("prior_verified").rglob("selected_evidence.json"))
+          s=list(Path("prior_verified").rglob("stories.json"))
+          assert len(e)==1 and len(s)==1
+          evidence=json.loads(e[0].read_text(encoding="utf8"))
+          story=json.loads(s[0].read_text(encoding="utf8"))
+          for i,x in enumerate(evidence):
+              print("SOURCE_EVIDENCE",json.dumps({"index":i,"date":x.get("date"),"title":x.get("title"),"publisher":x.get("publisher"),"url":x.get("url"),"excerpt":str(x.get("excerpt") or "")[:400]},ensure_ascii=False))
+          print("STORY_TOPIC",json.dumps({"topic":story.get("topic"),"slides":[{"beat":x.get("beat"),"text":str(x.get("text") or "")[:180]} for x in story.get("slides",[])]},ensure_ascii=False))
+          print("READ_ONLY_DONE_NO_PUBLICATION")
+          PY
