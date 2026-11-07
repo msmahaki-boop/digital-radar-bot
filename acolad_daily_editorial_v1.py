@@ -298,6 +298,25 @@ def unseen_recent_articles(sources,history,diagnostic):
     diagnostic.append("Editorial duplicate URLs excluded: "+str(len(sources)-len(fresh)))
     return fresh
 
+def first_party_expert_sources(raw, diagnostic):
+    """Choose only primary research, expert blogs and official documents BEFORE Luna.
+
+    Never promote a secondary news site into a primary source simply because
+    the news article itself has full text. Retain genuine DOI abstracts.
+    """
+    from acolad_editorial_trust_gate import KNOWN_OFFICIAL,load_policy,_host,_matches
+    domains={x["domain"] for x in load_policy()["source_policy"]["priority_sources"]}
+    domains.update(KNOWN_OFFICIAL)
+    vetted=[src for src in raw if isinstance(src,dict) and (
+        src.get("source_type")=="academic_doi" or
+        any(_matches(_host(src.get("url")),domain) for domain in domains))]
+    for i,source in enumerate(vetted,1):
+        source["id"]="S"+str(i).zfill(2)
+    diagnostic.append("PRIMARY_EXPERT_ONLY_BEFORE_LUNA "+
+                      str(len(vetted))+"/"+str(len(raw)))
+    return vetted
+
+
 def run_preview(day=None,budget_usd=0.018,output=OUT):
     date=day or local_day()
     output.mkdir(parents=True,exist_ok=True)
@@ -315,7 +334,8 @@ def run_preview(day=None,budget_usd=0.018,output=OUT):
     orig_collect=news.collect_sources
     history=read_history(date)
     def _dedup_sources(focus,diagnostic):
-        return unseen_recent_articles(orig_collect(focus,diagnostic),history,diagnostic)
+        fresh=unseen_recent_articles(orig_collect(focus,diagnostic),history,diagnostic)
+        return first_party_expert_sources(fresh,diagnostic)
     try:
         news.collect_sources=_dedup_sources
         extra=narrative_prompts(date)
