@@ -151,6 +151,16 @@ def execute(mode):
             states[net]["state"]="RETRY_REQUESTED"
     if any(s["state"] in ("PENDING_OR_UNKNOWN","RETRY_REQUESTED") for s in states.values()):
         return report("WAIT_PROVIDER_DO_NOT_DUPLICATE",states)
+    # A previous run may have got an HTTP timeout after NovinHub accepted
+    # an irreversible write. Cross-run cached intent blocks blind resending.
+    intent_file=OUT/"send_intents.json"
+    intents=json.loads(intent_file.read_text(encoding="utf8")) if intent_file.exists() else {}
+    if intents.get("day")==day.isoformat():
+        for n in NETWORKS:
+            if n in intents.get("sent_or_unknown",{}) and states[n]["state"]=="ABSENT":
+                states[n]={"state":"PENDING_OR_UNKNOWN","intent":"REMOTE_RECEIPT_NOT_VISIBLE"}
+    if any(s["state"]=="PENDING_OR_UNKNOWN" for s in states.values()):
+        return report("WAIT_PROVIDER_OR_UNKNOWN_DELIVERY_NO_DUPLICATES",states)
     missing=[n for n in NETWORKS if states[n]["state"]=="ABSENT"]
     if not missing:return report("NOTHING_SAFE_TO_SEND",states)
     bundle=existing_bundle(day)
@@ -170,7 +180,15 @@ def execute(mode):
         if fresh["state"]!="ABSENT":
             states[net]=fresh
             continue
+        # Record the network intent BEFORE the mutation. If the request
+        # times out, the next run must inspect the provider rather than re-send.
+        if intents.get("day")!=day.isoformat():
+            intents={"day":day.isoformat(),"sent_or_unknown":{}}
+        intents["sent_or_unknown"][net]={"state":"SENDING_NO_CONFIRMED_RECEIPT"}
+        intent_file.write_text(json.dumps(intents,ensure_ascii=False,indent=2),encoding="utf8")
         group_id=send_now(key,net,d["captions"][net],media)
+        intents["sent_or_unknown"][net]={"state":"ACCEPTED","group_id":group_id}
+        intent_file.write_text(json.dumps(intents,ensure_ascii=False,indent=2),encoding="utf8")
         submitted.append({"network":net,"group_id":group_id,
                           "state":"SUBMITTED_NOT_YET_PROVEN_PUBLISHED"})
         (OUT/"submission_receipts.json").write_text(
