@@ -282,8 +282,18 @@ def repair_missing_conflict_beat(story):
 
 def unseen_recent_articles(sources,history,diagnostic):
     banned={x["url"] for x in history}
+    # News publication is not an evergreen educational slot: a months-old
+    # DOI abstract cannot be silently reused as today's fresh update.
+    def current_substantive(x):
+        try:
+            age=(local_day()-dt.date.fromisoformat(str(x.get("date") or ""))).days
+            return (0<=age<=21 and
+                    x.get("evidence_depth") in ("full_article","abstract"))
+        except (ValueError,TypeError):
+            return False
     fresh=[x for x in sources if x.get("url") not in banned and not
-           is_promotional_source(x)]
+           is_promotional_source(x) and current_substantive(x)]
+    diagnostic.append("Current substantive <=21d sources available: "+str(len(fresh)))
     diagnostic.append("Self-promotional/advertorial candidate sources excluded: "+
                       str(sum(is_promotional_source(x) for x in sources)))
     candidate_news=[x for x in fresh if x.get("source_type")!="academic_doi"
