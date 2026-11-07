@@ -25,6 +25,13 @@ class CaptionRetry(unittest.TestCase):
    {"instagram":"📌 بد"}]):
    with self.assertRaisesRegex(RuntimeError,"LOW_QUALITY_OR_INVALID_COPY_instagram"):
     p.make_channel_copies({"slides":[]},[])
+ def test_colloquial_inflections_keep_unsupported_numeric_claim_blocked(self):
+  original="این کار می‌شود ولی مشتری ۱۵ دقیقه صبر کرده است و در نهایت باید دوباره اقدام کند."
+  normalized=p.colloquialize_safe_inflections(original)
+  self.assertIn("می‌شه",normalized)
+  self.assertIn("آخرش",normalized)
+  self.assertNotIn("FORMAL_0",p.audience_issues(normalized))
+  self.assertIn("UNSUPPORTED_0",p.audience_issues(normalized))
  def test_external_sources_cannot_be_in_public_caption(self):
   self.assertIn("SOURCE_LEAK",p.channel_copy_issues("instagram","https://example.com",60,500))
  def test_formal_or_pinned_tone_is_rejected(self):
