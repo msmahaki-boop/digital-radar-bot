@@ -1,0 +1,49 @@
+name: Acolad Nov7 exact Telegram group and all accounts GET-only
+on:
+  push:
+    branches: [fix/acolad-gemini-lite-recovery-20261107]
+    paths: [ops/acolad-provider-group-readonly.trigger]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install requests==2.32.5 Pillow==11.3.0 beautifulsoup4==4.14.2
+      - name: Verify exact group receipt, no posts created
+        env:
+          NOVINHUB_API_TOKEN: ${{ secrets.NOVINHUB_API_TOKEN }}
+          NOVINHUB_TOKEN: ${{ secrets.NOVINHUB_TOKEN }}
+          NOVINHUB_ACCESS_TOKEN: ${{ secrets.NOVINHUB_ACCESS_TOKEN }}
+        run: |
+          python -u - <<'PY'
+          import json,requests
+          from acolad_novinhub_bridge import API,token,headers,as_items
+          key=token()
+          r=requests.get(API+'/post/group/3698156',headers=headers(key),timeout=40)
+          print('ACOLAD_GROUP_READONLY',json.dumps({'http':r.status_code},ensure_ascii=False),flush=True)
+          if r.status_code==200:
+              data=r.json();x=data.get('data',data) if isinstance(data,dict) else {}
+              print('ACOLAD_GROUP_FIELDS',json.dumps({'id':x.get('id'),'type':x.get('type'),
+                  'scheduled':x.get('is_scheduled'),'schedule_date':x.get('schedule_date'),
+                  'field_names':list(x.keys())[:35]},ensure_ascii=False),flush=True)
+              for field in ('posts','post','account_posts'):
+                  for p in x.get(field,[]) if isinstance(x.get(field),list) else []:
+                      if isinstance(p,dict):print('ACOLAD_GROUP_MEMBER',json.dumps({
+                          'id':p.get('id'),'account_id':p.get('account_id'),
+                          'status':p.get('status'),'publish_date':p.get('publish_date'),
+                          'network_external_id':p.get('account_post_id') or p.get('external_id')},ensure_ascii=False),flush=True)
+          elif r.status_code>=400:
+              try:print('GROUP_ERROR_META',str((r.json().get('error') or {}).get('message') or '')[:140])
+              except Exception:pass
+          r=requests.get(API+'/post',headers=headers(key),params={'order':'id'},timeout=35)
+          print('ACOLAD_RECENT_GROUPS_READONLY_HTTP',r.status_code)
+          if r.status_code==200:
+              rows=as_items(r.json()) or []
+              print('ACOLAD_RECENT_GROUP_IDS',json.dumps([{'id':x.get('id'),'type':x.get('type'),
+                  'schedule_date':x.get('schedule_date')} for x in rows[:15] if isinstance(x,dict)],ensure_ascii=False),flush=True)
+          PY
