@@ -21,3 +21,5 @@ Attempt 10 on 2026-11-07: user reports GapGPT wallet topped up; retry immediate 
 Attempt 11 Nov 7: same GitHub GapGPT secret independently verified HTTP 200 model gpt-6-luna run 42375278881. Owner requested direct public posting after top-up. No draft/schedule, no duplicate, strict editorial gates.
 
 Attempt 12 Nov 7: verified Gemini 3 Flash source-locked fallback for GapGPT pre_consume_token_quota_failed. Immediate real Instagram Telegram Bale publication only after V4 QA, never Draft/Queue/Schedule.
+
+Attempt 13 2026-11-07: resume after interrupted Gemini thinking-optimization PR20 merged; owner-authorized immediate no-draft NovinHub post, source and QA gates, provider no-duplicate checks intact.
