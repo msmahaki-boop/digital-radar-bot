@@ -1,0 +1,20 @@
+name: Acolad Gemini Lite recovery OFFLINE QA (NO SOCIAL)
+on:
+  push:
+    branches: [fix/acolad-gemini-lite-recovery-20261107]
+    paths: [ops/acolad-gemini-lite-qa.trigger]
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install requests==2.32.5 Pillow==11.3.0 beautifulsoup4==4.14.2
+      - run: python -m py_compile acolad_model_gemini_failover.py acolad_luna_research_preview.py acolad_v4_hourly_publish.py
+      - run: python -m unittest discover -s tests -p 'test_acolad_gemini_quota_failover.py' -v
+      - run: python -m unittest discover -s tests -p 'test_acolad_gemini_stop_json_retry.py' -v
+      - run: python -m unittest discover -s tests -p 'test_acolad_v4_hourly.py' -v
