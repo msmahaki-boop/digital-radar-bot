@@ -1,0 +1,24 @@
+name: Acolad GPT Image 2.5 TRANSPARENT ALPHA offline regression (NO SOCIAL)
+on:
+  push:
+    branches: [feature/acolad-gapgpt-transparent-gptimage-20261107]
+    paths: [ops/acolad-gpt25-transparent-offline.trigger]
+permissions:
+  contents: read
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install requests==2.32.5 Pillow==11.3.0 beautifulsoup4==4.14.2
+      - name: Compile independent alpha and source-locked preview pipeline
+        run: python -m py_compile acolad_gapgpt_transparent_art.py acolad_gapgpt_transparent_preview.py
+      - name: Test real transparency, no fallback, no endpoint writes
+        run: python -m unittest discover -s tests -p 'test_acolad_gapgpt_transparent_art.py' -v
+      - name: Do not weaken pre-existing editorial and social guards
+        run: |
+          python -m unittest discover -s tests -p 'test_acolad_v4_hourly.py' -v
+          python -m unittest discover -s tests -p 'test_acolad_verified_checkpoint.py' -v
