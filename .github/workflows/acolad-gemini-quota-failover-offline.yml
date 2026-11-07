@@ -1,0 +1,21 @@
+name: Acolad strict GapGPT quota fallback to Gemini - OFFLINE QA
+on:
+  push:
+    branches: [fix/acolad-model-gemini-failover-20261107]
+    paths: [ops/acolad-gemini-failover-qa.trigger]
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install requests==2.32.5 Pillow==11.3.0 beautifulsoup4==4.14.2
+      - name: Validate fail-closed JSON schema, fallback reasons and error propagation
+        run: |
+          python -m py_compile acolad_luna_research_preview.py acolad_model_gemini_failover.py acolad_v4_hourly_publish.py acolad_v4_daily_autopublish.py
+          python -m unittest discover -s tests -p 'test_acolad_gemini_quota_failover.py' -v
+          python -m unittest discover -s tests -p 'test_acolad_v4_hourly.py' -v
