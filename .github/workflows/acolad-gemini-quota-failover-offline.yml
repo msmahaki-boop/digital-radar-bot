@@ -19,3 +19,4 @@ jobs:
           python -m py_compile acolad_luna_research_preview.py acolad_model_gemini_failover.py acolad_v4_hourly_publish.py acolad_v4_daily_autopublish.py
           python -m unittest discover -s tests -p 'test_acolad_gemini_quota_failover.py' -v
           python -m unittest discover -s tests -p 'test_acolad_v4_hourly.py' -v
+          python -m unittest discover -s tests -p 'test_acolad_caption_repair.py' -v
