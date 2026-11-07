@@ -177,7 +177,17 @@ def prepare(day):
     copies=engine.make_channel_copies(story,evidence)
     critics=engine.critics_approve(story,evidence,copies)
     if any(x["veto"] for x in critics):
+        # Save rejected copy for editorial audit without treating it as READY.
+        # An independent quality veto must trigger a genuinely new next-hour
+        # candidate rather than endlessly re-criticizing identical cached text.
+        OUT.mkdir(parents=True,exist_ok=True)
+        (OUT/"critic_rejected_story.json").write_text(json.dumps({
+            "day":day.isoformat(),"status":"REJECTED_NOT_PUBLISHED",
+            "critics":critics,"source_urls":[s.get("url") for s in evidence]
+        },ensure_ascii=False,indent=2),encoding="utf8")
+        EDITORIAL_CACHE.unlink(missing_ok=True)
         print("CRITIC_QA_VETO "+json.dumps(critics,ensure_ascii=False),flush=True)
+        print("CRITIC_VETO_FRESH_RESEARCH_REQUIRED_NEXT_ATTEMPT",flush=True)
         return None
     frames,art=engine.illustrate(story)
     OUT.mkdir(parents=True,exist_ok=True)
