@@ -154,7 +154,9 @@ def prepare(day):
     save_editorial(day,story,evidence)
     copies=engine.make_channel_copies(story,evidence)
     critics=engine.critics_approve(story,evidence,copies)
-    if any(x["veto"] for x in critics):return None
+    if any(x["veto"] for x in critics):
+        print("CRITIC_QA_VETO "+json.dumps(critics,ensure_ascii=False),flush=True)
+        return None
     frames,art=engine.illustrate(story)
     OUT.mkdir(parents=True,exist_ok=True)
     document={"day":day.isoformat(),"validated":True,"captions":copies,"critics":critics,"nframes":len(frames)}
