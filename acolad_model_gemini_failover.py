@@ -15,14 +15,14 @@ MAX_TOTAL_FALLBACK_CALLS = 12
 _fallback_calls = 0
 
 
-def generate_json(system: str, user: str, max_tokens: int, parser, usage: dict, session=requests):
+def generate_json(system: str, user: str, max_tokens: int, parser, usage: dict, session=requests, _retried=False):
     global _fallback_calls
     if _fallback_calls >= MAX_TOTAL_FALLBACK_CALLS:
         raise RuntimeError("GEMINI_FALLBACK_DAILY_CALL_LIMIT")
     key = os.getenv("GEMINI_API_KEY", "").strip()
     if not key:
         raise RuntimeError("GEMINI_FALLBACK_SECRET_MISSING")
-    if max_tokens < 100 or max_tokens > 6000:
+    if max_tokens < 100 or max_tokens > 8192:
         raise RuntimeError("GEMINI_FALLBACK_TOKEN_ALLOWANCE_INVALID")
     _fallback_calls += 1
     payload = {
@@ -32,6 +32,7 @@ def generate_json(system: str, user: str, max_tokens: int, parser, usage: dict, 
             "responseMimeType": "application/json",
             "temperature": 0.55,
             "maxOutputTokens": max_tokens,
+            "thinkingConfig":{"thinkingLevel":"minimal"},
         },
     }
     t0 = time.monotonic()
@@ -65,4 +66,15 @@ def generate_json(system: str, user: str, max_tokens: int, parser, usage: dict, 
         usage["gemini_fallback_calls"]=usage.get("gemini_fallback_calls",0)+1
         return result
     except (ValueError,TypeError,KeyError,IndexError) as exc:
-        raise RuntimeError("GEMINI_FALLBACK_INVALID_JSON_"+type(exc).__name__) from None
+        # A JSON MIME response can still be truncated when reasoning consumes
+        # the available output tokens. Retry ONCE at most, with the SAME
+        # source evidence and prompt, and never accept a partial JSON document.
+        reason = ""
+        if isinstance(locals().get("candidates"),list) and candidates:
+            reason = str(candidates[0].get("finishReason") or "")
+        if (not _retried and reason=="MAX_TOKENS" and max_tokens<8192
+                and _fallback_calls<MAX_TOTAL_FALLBACK_CALLS):
+            return generate_json(system,user,min(8192,max_tokens+2200),parser,usage,
+                                 session=session,_retried=True)
+        raise RuntimeError("GEMINI_FALLBACK_INVALID_JSON_"+type(exc).__name__+
+                           "_FINISH_"+(reason or "UNKNOWN")[:35]) from None
