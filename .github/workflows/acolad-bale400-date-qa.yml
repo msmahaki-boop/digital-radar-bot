@@ -1,0 +1,19 @@
+name: Acolad Nov7 Bale 400 and NovinHub day window OFFLINE QA NO SOCIAL
+on:
+  push:
+    branches: [fix/acolad-bale-400-date-window-20261107]
+    paths: [ops/acolad-bale400-qa.trigger]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python -m pip install --disable-pip-version-check requests==2.32.5 beautifulsoup4==4.14.2 Pillow==11.3.0
+      - run: python -m py_compile acolad_v4_hourly_publish.py
+      - run: python -m unittest discover -s tests -p 'test_acolad_v4_hourly.py' -v
+      - run: python -m unittest discover -s tests -p 'test_acolad_verified_checkpoint.py' -v
