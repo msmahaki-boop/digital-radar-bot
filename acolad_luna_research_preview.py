@@ -21,6 +21,7 @@ import xml.etree.ElementTree as ET
 
 import requests
 from bs4 import BeautifulSoup
+import acolad_model_gemini_failover as model_fallback
 
 ROOT = Path('acolad_luna_research_preview')
 API_URL = 'https://api.gapgpt.app/v1/chat/completions'
@@ -486,7 +487,10 @@ def json_from_model(response: str) -> dict:
     raise ValueError('Model did not return one JSON object')
 
 
+GAPGPT_KEY_QUOTA_BLOCKED_IN_PROCESS = False
+
 def api_call(key: str, system: str, user: str, max_tokens: int, usage: dict) -> dict:
+    global GAPGPT_KEY_QUOTA_BLOCKED_IN_PROCESS
     if usage['requests_sent'] >= MAX_CALLS:
         raise RuntimeError('MAX_CALLS reached')
     # Conservative planning, not a provider-side hard stop: Persian tokenization varies.
@@ -499,10 +503,31 @@ def api_call(key: str, system: str, user: str, max_tokens: int, usage: dict) -> 
              'max_tokens':max_tokens,'stream':False,'reasoning_effort':'none'}
     usage['requests_sent']+=1  # charged attempt may fail; do not automatically retry
     t0=time.monotonic()
+    if GAPGPT_KEY_QUOTA_BLOCKED_IN_PROCESS:
+        return model_fallback.generate_json(system,user,max_tokens,json_from_model,usage)
     try:
         resp=requests.post(API_URL,json=payload,
             headers={'Authorization':'Bearer '+key,'Content-Type':'application/json'},timeout=130)
         if resp.status_code!=200:
+            error_code=""
+            if resp.status_code==403:
+                try:
+                    error_json=resp.json()
+                    err=(error_json.get("error") or {})
+                    if isinstance(err,dict):
+                        error_code=str(err.get("code") or "")
+                except (ValueError,AttributeError,TypeError):
+                    pass
+            if resp.status_code==403 and error_code=="pre_consume_token_quota_failed":
+                # A successful wallet top-up does not necessarily reset the
+                # per-key pre-consumption quota. The same account's direct
+                # Gemini key has been verified; fall back ONLY for this code.
+                GAPGPT_KEY_QUOTA_BLOCKED_IN_PROCESS=True
+                usage.setdefault('stages',[]).append({
+                    'provider':'GapGPT','status':'KEY_PRECONSUME_QUOTA_EXHAUSTED',
+                    'http_status':403,'elapsed_sec':round(time.monotonic()-t0,2)})
+                return model_fallback.generate_json(system,user,max_tokens,
+                                                    json_from_model,usage)
             raise RuntimeError('GapGPT HTTP '+str(resp.status_code)+' (body suppressed)')
         data=resp.json()
         choice=(data.get('choices') or [{}])[0]
