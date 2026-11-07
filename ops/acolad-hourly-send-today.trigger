@@ -5,3 +5,5 @@ Nov 7 attempt 2: primary-expert-only preselection fixed. No schedule/draft, owne
 Attempt 3 Nov 7: trusted original expert evergreen with strict actual date disclosure, all quality gates unchanged; direct public posts only if approved.
 
 Attempt 4 today: malformed Luna selector JSON handled with evidence-locked single-source fallback, no Draft, no Scheduled, immediate publish only upon full QA.
+
+Attempt 5 Nov 7: substantive original DOI academic abstract as source-locked fallback; immediate public send only if full editorial & visual checks pass.
