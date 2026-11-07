@@ -1,0 +1,44 @@
+name: Acolad Existing Gemini Secret Text Fallback Readiness (NO SOCIAL)
+on:
+  push:
+    branches: [diagnostic/acolad-gapgpt-recharge-20261107]
+    paths: [ops/acolad-gemini-fallback-probe.trigger]
+permissions:
+  contents: read
+jobs:
+  capability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install requests==2.32.5
+      - name: Test one minimal Gemini text JSON reply using existing Secret, no publish
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python - <<'PY'
+          import os,requests,json,re
+          key=os.getenv("GEMINI_API_KEY","").strip()
+          if not key:
+            print("ACOLAD_GEMINI_TEXT_PROBE",{"state":"SECRET_MISSING"})
+            raise SystemExit(2)
+          try:
+            r=requests.post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+              headers={"x-goog-api-key":key,"Content-Type":"application/json"},
+              json={"contents":[{"parts":[{"text":"فقط JSON {\"ok\":true} پاسخ بده."}]}],
+                "generationConfig":{"temperature":0.1,"maxOutputTokens":90,
+                "responseMimeType":"application/json"}},timeout=55)
+            result={"http":r.status_code,"model":"gemini-2.5-flash","same_existing_secret":True}
+            if r.status_code==200:
+              d=r.json();result["has_candidate"]=bool(d.get("candidates"))
+            else:
+              d=r.json();e=d.get("error") or {}
+              result["provider_status"]=re.sub(r"[^A-Za-z0-9_]","",str(e.get("status") or ""))[:45]
+            print("ACOLAD_GEMINI_TEXT_PROBE",json.dumps(result))
+            if r.status_code!=200:raise SystemExit(2)
+          except requests.RequestException as ex:
+            print("ACOLAD_GEMINI_TEXT_PROBE",{"transport":type(ex).__name__})
+            raise SystemExit(2)
+          PY
