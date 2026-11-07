@@ -10,7 +10,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 POLICY=Path(__file__).resolve().parent/"editorial"/"acolad_editorial_contract.json"
-KNOWN_OFFICIAL={"anthropic.com","openai.com","developers.googleblog.com","blog.google",
+KNOWN_OFFICIAL={"anthropic.com","openai.com","developers.googleblog.com","developers.google.com","blog.google",
                 "research.google","about.fb.com","shopify.com"}
 SECONDARY={"digiato.com","zoomit.ir","peivast.com","dmboard.media",
            "way2pay.ir","techcrunch.com"}

@@ -8,7 +8,8 @@ import acolad_v4_resume_verified_artifact as loader
 D=date(2026,11,7)
 STORY={"topic":"بازبینی واقعی UX","slides":[{"n":1,"text":"نمونه",
        "scene_id":1,"visual_action":"new_scene","beat":"hook"}]}
-EVIDENCE=[{"id":"S01","url":"https://doi.org/10.1234/test","title":"Source"}]
+EVIDENCE=[{"id":"S01","url":"https://doi.org/10.1234/test","title":"Source",
+           "date":"2026-11-05","evidence_depth":"abstract","source_type":"academic_doi"}]
 
 class CheckpointSafety(unittest.TestCase):
  def test_save_then_resume_without_recalling_original_research(self):
@@ -28,6 +29,13 @@ class CheckpointSafety(unittest.TestCase):
     gen.reset_mock()
     with self.assertRaisesRegex(RuntimeError,"429"):p.prepare(D)
     gen.assert_not_called()
+ def test_critic_veto_does_not_poison_future_hourly_retries(self):
+  with tempfile.TemporaryDirectory() as root:
+   with patch.object(p,"EDITORIAL_CACHE",Path(root)/"verified_story_checkpoint.json"),patch.object(p,"OUT",Path(root)),patch.object(p,"READY",Path(root)/"hourly_ready.json"),patch.object(p,"check_verified_editorial",return_value=True),patch.object(p.engine,"generate_editorial",return_value=(STORY,EVIDENCE)),patch.object(p.engine,"make_channel_copies",return_value={"telegram":"copy","bale":"copy","instagram":"copy"}),patch.object(p.engine,"critics_approve",return_value=[{"veto":True,"score":65,"reason_short":"quality"}]),patch.object(p.engine,"illustrate") as illustrator:
+    self.assertIsNone(p.prepare(D))
+    self.assertFalse(p.EDITORIAL_CACHE.exists())
+    self.assertTrue((Path(root)/"critic_rejected_story.json").exists())
+    illustrator.assert_not_called()
  def test_not_ready_artifact_never_seeds_cache(self):
   with tempfile.TemporaryDirectory() as root:
    basedir=Path(root)

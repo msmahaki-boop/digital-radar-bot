@@ -10,6 +10,24 @@ class Response:
  def json(self):return self.content
 
 class HourlySafety(unittest.TestCase):
+ def test_old_doi_not_eligible_for_daily_publication(self):
+  day=date(2026,11,7)
+  old=[{"date":"2026-01-01","evidence_depth":"abstract","source_type":"academic_doi"}]
+  recent=[{"date":"2026-11-04","evidence_depth":"full_article","source_type":"rss_summary"}]
+  self.assertFalse(p.has_current_substantive_evidence(old,day))
+  self.assertTrue(p.has_current_substantive_evidence(recent,day))
+  self.assertFalse(p.has_current_substantive_evidence([{"date":"2026-11-09","evidence_depth":"abstract"}],day))
+  self.assertFalse(p.has_current_substantive_evidence([{"date":"2026-11-06","evidence_depth":"headline_only"}],day))
+ def test_stale_verified_checkpoint_falls_through_to_fresh_generation(self):
+  import json,tempfile
+  from pathlib import Path
+  with tempfile.TemporaryDirectory() as d:
+   stale=Path(d)/"verified_story_checkpoint.json"
+   stale.write_text(json.dumps({"day":"2026-11-07","validated":True,
+      "story":{"slides":[]},"evidence":[{"date":"2026-01-01","evidence_depth":"abstract"}]}))
+   with patch.object(p,"EDITORIAL_CACHE",stale),patch.object(p,"check_verified_editorial") as validator:
+    self.assertIsNone(p.saved_editorial(date(2026,11,7)))
+    validator.assert_not_called()
  def test_pending_is_never_absent(self):
   a=p.assess([{"id":17,"post":[{"account_id":233472,"status":"in_progress"}]}],"telegram")
   self.assertEqual(a["state"],"PENDING_OR_UNKNOWN")

@@ -9,7 +9,7 @@ import os
 import time
 import requests
 
-MODEL = "gemini-3-flash-preview"
+MODEL = "gemini-3.1-flash-lite"
 API = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent"
 MAX_TOTAL_FALLBACK_CALLS = 12
 _fallback_calls = 0

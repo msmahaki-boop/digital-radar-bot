@@ -105,6 +105,12 @@ def generate_editorial(day):
         raise RuntimeError("STORY_WRONG_FRAME_COUNT")
     if any(audience_issues(s.get("text","")) for s in story["slides"]):
         raise RuntimeError("V4_STYLE_VETO")
+    # Model-proposed URL is not a source. Ground all private link metadata
+    # in the precise DOI or primary URL selected and checked earlier.
+    originals={str(x.get("url") or "") for x in evidence if isinstance(x,dict)}
+    if story.get("story_link") and story["story_link"] not in originals:
+        story["story_link"]=str(evidence[0]["url"])
+        story["original_source_link_repaired"]=True
     story["sources"]=evidence
     return story,evidence
 
@@ -123,6 +129,24 @@ def model_json(system,data):
     usage={"requests_sent":0,"cost_estimated_usd":0.0,"budget_usd":0.018,"stages":[]}
     return news.api_call(key,system,user,2500,usage)
 
+def colloquialize_safe_inflections(message):
+    """Grammar-only variants, no factual, numerical or source claim rewrites."""
+    if not isinstance(message,str):
+        return message
+    variants=(
+        (r"می[‌ ]شود\b","می‌شه"),
+        (r"می[‌ ]کنند\b","می‌کنن"),
+        (r"می[‌ ]گردد\b","می‌شه"),
+        (r"می[‌ ]باشد\b","هست"),
+        (r"می[‌ ]تواند\b","می‌تونه"),
+        (r"در نهایت\b","آخرش"),
+        (r"در دنیای امروز\b","امروز"),
+    )
+    for pattern,change in variants:
+        message=re.sub(pattern,change,message,flags=re.I)
+    return message
+
+
 def channel_copy_issues(net,message,minimum,maximum):
     if not isinstance(message,str):return ["MISSING"]
     text=message.strip()
@@ -134,9 +158,13 @@ def channel_copy_issues(net,message,minimum,maximum):
     return issues
 
 def make_channel_copies(story,evidence):
-    rubric=("تو نویسنده آکولاد هستی. با زبان یکدست و محاوره‌ایِ ایرانی "
-      "دو متن مستقل تلگرام و بله و یک کپشن اینستاگرام تولید کن. "
+    research_genre=any("doi.org/" in str(x.get("url") or "") for x in evidence[:3])
+    genre_note=("این مرور یک پژوهش منتشرشده است و خبر فوری امروز نیست؛ نتیجه را به پژوهش نسبت بده و زمان انتشار را جدید جلوه نده. "
+               if research_genre else "این خبر را فقط با تاریخ واقعی منبع مطرح کن و هرگز رویداد قدیمی را خبر جدید جا نزن. ")
+    rubric=(genre_note+"تو نویسنده آکولاد هستی. با زبان یکدست و محاوره‌ایِ ایرانی "
+      "دو متن مستقل تلگرام و بله و یک کپشن اینستاگرام تولید کن. برای رعایت دقیق محدودیت‌های انتشار، متن تلگرام ۶۰۰ تا ۱۰۰۰ کاراکتر، بله ۲۵۰ تا ۴۵۰ کاراکتر، و اینستاگرام فقط ۱۸۰ تا ۳۲۰ کاراکتر باشد؛ برای اینستاگرام هرگز بیش از ۴۰۰ کاراکتر ننویس. "
       "به ترتیب ماجرا، گره، کشف و راهکار قابل آزمون وفادار باش؛ "
+      "اگر متن منبع اثر را محدود یا modest گزارش می‌کند، از تعبیر سریع، جهشی و قطعی برای آن اثر دوری کن. "
       "قهرمان فرضی را به عنوان آدم واقعی پژوهش معرفی نکن. "
       "هیچ آمار یا پیامد قطعی بی‌سند نساز. 📌، URL، نام رسانه واسطه، "
       "منبع در پایان و شناسه فنی ممنوع؛ امضای برند را بعداً سیستم اضافه می‌کند. "
@@ -146,7 +174,7 @@ def make_channel_copies(story,evidence):
     result=model_json(rubric,{"story":story,"evidence":evidence_safe})
     captions={}
     for net,minimum,maximum in (("telegram",400,1800),("bale",180,700),("instagram",60,500)):
-        message=result.get(net)
+        message=colloquialize_safe_inflections(result.get(net))
         issues=channel_copy_issues(net,message,minimum,maximum)
         # Only the failing channel is rewritten, at most twice, against
         # UNCHANGED primary evidence and unchanged story. Do not loosen rules.
@@ -155,7 +183,9 @@ def make_channel_copies(story,evidence):
             instruction=("تو ویراستار فارسی محاوره‌ای آکولاد هستی. فقط متن "+net+
                 " رو اصلاح کن. ایرادها: "+", ".join(issues)+". "
                 "به همون داستان و منابع اصلی وفادار بمون. "
-                "بین "+str(minimum)+" تا "+str(maximum)+" کاراکتر بنویس. "
+                "بازه مجاز "+str(minimum)+" تا "+str(maximum)+" کاراکتر است؛ برای اطمینان "+
+                ("دقیقاً ۱۸۰ تا ۳۲۰ کاراکتر بنویس." if net=="instagram" else
+                 "در میانه بازه مجاز بنویس؛ از پرگویی خودداری کن.")+" "
                 "بدون لینک، برچسب منبع، 📌، فعل رسمی، شناسه فنی یا ادعای بی‌سند. "
                 "فقط JSON با کلید "+net+" برگردون.")
             data=model_json(instruction,{"story":story,
@@ -164,18 +194,26 @@ def make_channel_copies(story,evidence):
                 "evidence":[{"title":s.get("title"),
                              "excerpt":str(s.get("excerpt") or "")[:500]}
                             for s in evidence[:3]]})
-            message=data.get(net)
+            message=colloquialize_safe_inflections(data.get(net))
             issues=channel_copy_issues(net,message,minimum,maximum)
         if issues:
+            print("CAPTION_QA_VETO",{"network":net,"length":len(message) if isinstance(message,str) else None,"issues":issues},flush=True)
             raise RuntimeError("LOW_QUALITY_OR_INVALID_COPY_"+net+"_"+",".join(issues))
         captions[net]=message.strip()+("\n\n"+FOOTER if net in ("telegram","bale") else "")
     return captions
 
 def critics_approve(story,evidence,captions):
+    research_genre=any("doi.org/" in str(x.get("url") or "") for x in evidence[:3])
     reviews=[]
     evidence_short=[{k:s.get(k) for k in ("title","excerpt","date")} for s in evidence[:3]]
     for i in (1,2):
         prompt=("تو منتقد سختگیر شماره "+str(i)+" هستی، مستقل از پاسخ منتقد دیگر. "
+            "امروز به وقت تهران "+tehran_now().date().isoformat()+" است. "
+            "تاریخ هر منبع را نسبت به این تاریخ واقعی بررسی کن؛ سال ۲۰۲۶ به تنهایی آینده نیست. "
+            "تاریخ منبع اگر بعد از امروز است یا با ادعای خبر ناسازگار است، جدی رد کن. "
+            +("این یک مرور پژوهش با شناسه DOI است، نه خبر فوری؛ فاصله زمانی انتشار به‌تنهایی جعل پژوهش نیست. "
+              "اما اگر متن مدعی انتشار امروز، تعمیم قطعی، نتیجه بی‌سند یا کاربرد غیراخلاقی است، رد کن. "
+              if research_genre else "برای خبر تازه، دقت زمانی و تازگی واقعی منبع را سختگیرانه بررسی کن. ")+
             "صداقت و سند ۲۵، بینش کسب‌وکار ۲۰، بافت ایران و فهم‌پذیری ۲۰، "
             "یکدستی لحن محاوره ۱۵، ریتم روایت ۱۰ و نتیجه مفید ۱۰ = ۱۰۰. "
             "یک ادعای بی‌سند یا نثر گیج‌کننده باید رد شود. "
@@ -220,14 +258,38 @@ def illustrate(story):
         if image is None:
             image,res=commons_stock(brief)
             tried.append({"provider":"Commons","status":res.get("status")})
-        if image is not None:image.save(CONCEPT_DIR/f"scene_{sid:02d}.png","PNG")
-        records.append({"scene":sid,"has_image":image is not None,"attempts":tried})
+        image_path=CONCEPT_DIR/f"scene_{sid:02d}.png"
+        if image is not None:
+            image.save(image_path,"PNG")
+        else:
+            # An IMAGE API quota refusal (429) is not permission to publish
+            # seven empty slides. Provide ORIGINAL Acolad ink instead, never
+            # misreport this deterministic line-art as AI-generated.
+            from acolad_concept_art_pipeline_v2 import ink_sketch
+            visual=str(batch[0].get("visual_idea") or story.get("topic") or "")[:240]
+            result=ink_sketch(sid,visual,image_path)
+            tried.append({"provider":"Acolad original procedural pen-and-ink",
+                          "status":result["status"],"model_generated":False})
+        with Image.open(image_path) as checked:
+            if checked.format!="PNG" or min(checked.size)<512:
+                raise RuntimeError("SCENE_INK_ILLUSTRATION_INVALID")
+            checked.verify()
+        records.append({"scene":sid,"has_image":True,"illustration_file":str(image_path),
+                        "original_procedural":image is None,"attempts":tried})
     OUT.mkdir(parents=True,exist_ok=True)
     (OUT/"image_provenance.json").write_text(json.dumps(records,ensure_ascii=False,indent=2),encoding="utf-8")
     frames_folder=OUT/"frames"
     layout=render(story,frames_folder,allow_stock=False)
     frames=sorted(frames_folder.glob("story_*.png"))
     if len(frames)!=len(story["slides"]):raise RuntimeError("RENDER_INCOMPLETE")
+    if not records or not all(r["has_image"] for r in records):
+        raise RuntimeError("ORIGINAL_ILLUSTRATIONS_REQUIRED")
+    rendered_status=frames_folder/"status.json"
+    if not rendered_status.is_file():
+        raise RuntimeError("RENDER_ART_PROVENANCE_MISSING")
+    visible=json.loads(rendered_status.read_text(encoding="utf-8"))
+    if len(visible.get("concept_scenes") or [])<1:
+        raise RuntimeError("NO_VISIBLE_INK_IN_RENDERED_STORIES")
     for file in frames:
         with Image.open(file) as im:
             if im.format!="PNG" or im.size!=(1080,1920):raise RuntimeError("FRAME_INVALID")

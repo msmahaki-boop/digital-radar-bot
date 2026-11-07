@@ -39,6 +39,8 @@ USER_AGENT = 'AcoladResearchPreview/1.0 (editorial preview; no publishing)'
 
 # Fixed source list. Feed discovery is not permission to trust article claims.
 RSS_FEEDS = [
+    ("Google Search Central official SEO releases", "https://developers.google.com/search/blog/feed.xml"),
+    ("Google Developers official AI updates", "https://blog.google/technology/developers/rss/"),
     ("Baymard Institute original UX research", "https://feeds.baymard.com/baymard"),
     # Public expert blog feeds verified on 2026-11-04.
     # Public feed discovery never grants access to paywalled content.
@@ -67,7 +69,7 @@ ACADEMIC_QUERIES = [
     'online shopping price framing randomized consumer experiment',
 ]
 ALLOWED_ARTICLE_HOSTS = (
-    'baymard.com', 'feeds.baymard.com',
+    'developers.google.com', 'blog.google', 'baymard.com', 'feeds.baymard.com',
     'seths.blog', 'lennysnewsletter.com',
     'peivast.com', 'digiato.com', 'zoomit.ir', 'tejaratnews.com',
     'techcrunch.com', 'searchenginejournal.com', 'bbc.com', 'bbc.co.uk',
@@ -426,8 +428,22 @@ def collect_sources(focus: str, diagnostic: list[str]) -> list[dict]:
         old=distinct.get(k)
         if old is None or (item['rank']>old['rank']):distinct[k]=item
     items=sorted(distinct.values(),key=lambda x:x['rank'],reverse=True)
+    # Without an explicit primary-source budget, high-ranked secondary headlines
+    # exhaust all 15 full-text fetches before official Google/expert posts are read.
+    # Prioritize RECENT primary URLs, but still require real extracted paragraphs.
+    from acolad_editorial_trust_gate import KNOWN_OFFICIAL,load_policy,_host,_matches
+    trusted={x['domain'] for x in load_policy()['source_policy']['priority_sources']}
+    trusted.update(KNOWN_OFFICIAL)
+    def original_rss(item):
+        return (item.get('source_type')=='rss_summary' and
+                any(_matches(_host(item.get('url')),d) for d in trusted))
+    primary_queue=[x for x in items if original_rss(x) and
+                   age_days(x.get('date','')) is not None and
+                   0<=age_days(x['date'])<=21][:9]
+    fetch_queue=primary_queue+[x for x in items if x not in primary_queue]
     articles=0
-    for item in items:
+    enriched_primary=0
+    for item in fetch_queue:
         if articles>=15:break
         if item.get('source_type')=='rss_summary' and is_allowed_article(item['url']):
             body=get_article_excerpt(item['url'])
@@ -436,6 +452,8 @@ def collect_sources(focus: str, diagnostic: list[str]) -> list[dict]:
                 item['excerpt']=body
                 item['evidence_depth']='full_article'
                 item['rank']=score_source(item,focus)
+                if original_rss(item):enriched_primary+=1
+    diagnostic.append(f'First-party fresh full-text reads: {enriched_primary}; total article fetches: {articles}')
     items=sorted(items,key=lambda x:x['rank'],reverse=True)
     # Balanced evidence mix; place academic abstracts early enough to reach Luna
     # within the bounded prompt, rather than drowning them in Google News headlines.
@@ -451,6 +469,12 @@ def collect_sources(focus: str, diagnostic: list[str]) -> list[dict]:
     # publisher early in the bounded research prompt.
     top=(solid_news[:4]+scholarly[:2]+solid_news[4:8]
          +scholarly[2:4]+headlines[:4]+solid_news[8:11]+other_scholar)
+    primary_recent=diversified_source_sample(
+        [x for x in items if original_rss(x) and x.get('evidence_depth')=='full_article'
+         and age_days(x.get('date','')) is not None and 0<=age_days(x['date'])<=21],
+        5,max_each=2)
+    top=primary_recent+[x for x in top if x not in primary_recent]
+    diagnostic.append(f'Fresh original first-party articles prioritized: {len(primary_recent)}')
     if len(top)<12:
         top+= [x for x in items if x not in top][:12-len(top)]
     selected=[]

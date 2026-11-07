@@ -1,6 +1,7 @@
 import unittest
 import importlib.util
 from pathlib import Path
+from unittest.mock import patch
 
 spec=importlib.util.spec_from_file_location('engine',Path(__file__).resolve().parents[1]/'acolad_luna_research_preview.py')
 e=importlib.util.module_from_spec(spec)
@@ -56,6 +57,31 @@ class LunaResearchTests(unittest.TestCase):
         self.assertEqual(len(obj),19)
         self.assertEqual(obj[-1]['id'],'S19')
         self.assertLessEqual(len(packed),19000)
+
+    def test_fresh_official_original_read_before_secondary_headlines(self):
+        today=e.now().date().isoformat()
+        official={'title':'Official Search Controls for AI Training',
+            'publisher':'Google Search Central','date':today,
+            'url':'https://developers.google.com/search/blog/2026/11/example',
+            'excerpt':'official announcement of new controls','source_type':'rss_summary',
+            'evidence_depth':'summary_only'}
+        secondary=[{'title':f'Customer marketing experiment digest number {i}',
+            'publisher':f'Secondary {i}','date':today,
+            'url':f'https://digiato.com/test-{i}',
+            'excerpt':'consumer customer brand marketing retail commerce price ' * 6,
+            'source_type':'rss_summary','evidence_depth':'summary_only'} for i in range(22)]
+        attempted=[]
+        def excerpt(url):
+            attempted.append(url)
+            return 'Direct original first-party article with concrete context on website controls. ' * 4
+        with (patch.object(e,'search_news',return_value=secondary+[official]),
+              patch.object(e,'search_scholar',return_value=[]),
+              patch.object(e,'search_openalex',return_value=[]),
+              patch.object(e,'get_article_excerpt',side_effect=excerpt)):
+            selected=e.collect_sources('marketing',[])
+        self.assertEqual(attempted[0],official['url'])
+        self.assertEqual(selected[0]['url'],official['url'])
+        self.assertEqual(selected[0]['evidence_depth'],'full_article')
 
     def test_cross_publisher_requirement(self):
         today=e.now().date().isoformat()
@@ -125,9 +151,11 @@ class LunaResearchTests(unittest.TestCase):
         self.assertEqual(e.suggested_evidence_pairs([news,other]),[])
 
     def test_replan_call_count_gate(self):
-        usage={'requests_sent':4,'cost_estimated_usd':0.0,'budget_usd':0.02}
-        with self.assertRaisesRegex(RuntimeError,'MAX_CALLS reached'):
-            e.api_call('never_sent','sys','user',100,usage)
+        usage={'requests_sent':e.MAX_CALLS,'cost_estimated_usd':0.0,'budget_usd':0.02}
+        with patch.object(e.requests,'post') as external:
+            with self.assertRaisesRegex(RuntimeError,'MAX_CALLS reached'):
+                e.api_call('never_sent','sys','user',100,usage)
+            external.assert_not_called()
 
     def test_json_extraction(self):
         self.assertEqual(e.json_from_model('```json\n{"a":1}\n```'),{'a':1})
@@ -287,6 +315,6 @@ class LunaResearchTests(unittest.TestCase):
 
     def test_model_luna_only(self):
         self.assertEqual(e.MODEL,'gpt-6-luna')
-        self.assertEqual(e.MAX_CALLS,4)
+        self.assertEqual(e.MAX_CALLS,6)
 
 if __name__=='__main__':unittest.main()

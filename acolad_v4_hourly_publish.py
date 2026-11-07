@@ -97,6 +97,23 @@ def existing_bundle(day):
             im.verify()
     return d,images
 
+def has_current_substantive_evidence(evidence,day):
+    """Do not label an old paper as today's story; require recent dated body."""
+    from datetime import date
+    if not isinstance(evidence,list):
+        return False
+    for item in evidence:
+        if not isinstance(item,dict) or item.get("evidence_depth") not in ("full_article","abstract"):
+            continue
+        try:
+            age=(day-date.fromisoformat(str(item.get("date") or ""))).days
+        except (ValueError,TypeError):
+            continue
+        if 0<=age<=21:
+            return True
+    return False
+
+
 def check_verified_editorial(story,evidence):
     """Re-run ALL source, beat, numerical and voice gates on restored content."""
     import acolad_luna_research_preview as research
@@ -105,6 +122,11 @@ def check_verified_editorial(story,evidence):
     from acolad_daily_editorial_v1 import story_is_distinct
     if not isinstance(story,dict) or not isinstance(evidence,list):
         raise RuntimeError("EDITORIAL_CACHE_BAD_SHAPE")
+    if not has_current_substantive_evidence(evidence,now().date()):
+        raise RuntimeError("EDITORIAL_STALE_PRIMARY_EVIDENCE_NO_TODAY_PUBLICATION")
+    urls={str(x.get("url") or "") for x in evidence if isinstance(x,dict)}
+    if story.get("story_link") and str(story["story_link"]) not in urls:
+        raise RuntimeError("EDITORIAL_UNSUPPORTED_STORY_LINK")
     if not story_is_distinct(story):
         raise RuntimeError("EDITORIAL_CACHE_REPEATED_STORY")
     issues=research.story_quality(story,evidence)+research.cinematic_quality(story,evidence)
@@ -124,6 +146,9 @@ def saved_editorial(day):
     if obj.get("day")!=day.isoformat() or obj.get("validated") is not True:
         raise RuntimeError("EDITORIAL_CACHE_WRONG_DAY_OR_UNVALIDATED")
     story,evidence=obj.get("story"),obj.get("evidence")
+    if not has_current_substantive_evidence(evidence,day):
+        print("STALE_EDITORIAL_CACHE_SKIPPED_FRESH_SOURCE_REQUIRED",flush=True)
+        return None
     check_verified_editorial(story,evidence)
     return story,evidence
 
@@ -154,7 +179,19 @@ def prepare(day):
     save_editorial(day,story,evidence)
     copies=engine.make_channel_copies(story,evidence)
     critics=engine.critics_approve(story,evidence,copies)
-    if any(x["veto"] for x in critics):return None
+    if any(x["veto"] for x in critics):
+        # Save rejected copy for editorial audit without treating it as READY.
+        # An independent quality veto must trigger a genuinely new next-hour
+        # candidate rather than endlessly re-criticizing identical cached text.
+        OUT.mkdir(parents=True,exist_ok=True)
+        (OUT/"critic_rejected_story.json").write_text(json.dumps({
+            "day":day.isoformat(),"status":"REJECTED_NOT_PUBLISHED",
+            "critics":critics,"source_urls":[s.get("url") for s in evidence]
+        },ensure_ascii=False,indent=2),encoding="utf8")
+        EDITORIAL_CACHE.unlink(missing_ok=True)
+        print("CRITIC_QA_VETO "+json.dumps(critics,ensure_ascii=False),flush=True)
+        print("CRITIC_VETO_FRESH_RESEARCH_REQUIRED_NEXT_ATTEMPT",flush=True)
+        return None
     frames,art=engine.illustrate(story)
     OUT.mkdir(parents=True,exist_ok=True)
     document={"day":day.isoformat(),"validated":True,"captions":copies,"critics":critics,"nframes":len(frames)}

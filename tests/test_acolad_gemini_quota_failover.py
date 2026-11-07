@@ -52,7 +52,7 @@ class QuotaFailover(unittest.TestCase):
                 result=gemini.generate_json("System","Story",500,news.json_from_model,u)
         self.assertEqual(result,{"ok":True})
         self.assertEqual(u["gemini_fallback_calls"],1)
-        self.assertEqual(u["stages"][-1]["provider"],"gemini-3-flash-preview")
+        self.assertEqual(u["stages"][-1]["provider"],"gemini-3.1-flash-lite")
         self.assertEqual(fn.call_args.kwargs["json"]["generationConfig"]["responseMimeType"],"application/json")
         self.assertEqual(fn.call_args.kwargs["json"]["generationConfig"]["thinkingConfig"]["thinkingLevel"],"minimal")
     def test_max_tokens_truncated_json_retried_once_with_same_source(self):
@@ -72,7 +72,7 @@ class QuotaFailover(unittest.TestCase):
                          post.call_args_list[1].kwargs["json"]["contents"])
         self.assertEqual(post.call_args_list[1].kwargs["json"]["generationConfig"]["maxOutputTokens"],2700)
         self.assertEqual(gemini._fallback_calls,2)
-    def test_malformed_non_truncated_json_does_not_retry(self):
+    def test_malformed_non_truncated_json_stop_retries_once_then_fails_closed(self):
         r=Mock(status_code=200)
         r.json.return_value={"candidates":[{"finishReason":"STOP",
             "content":{"parts":[{"text":'{"unfinished":'}]}}]}
@@ -80,7 +80,9 @@ class QuotaFailover(unittest.TestCase):
             with patch.object(gemini.requests,"post",return_value=r) as post:
                 with self.assertRaisesRegex(RuntimeError,"FINISH_STOP"):
                     gemini.generate_json("SYS","EVIDENCE",500,news.json_from_model,usage())
-        self.assertEqual(post.call_count,1)
+        self.assertEqual(post.call_count,2)
+        self.assertEqual(post.call_args_list[0].kwargs["json"]["contents"],
+                         post.call_args_list[1].kwargs["json"]["contents"])
     def test_second_truncated_json_fails_closed_after_one_retry(self):
         r=Mock(status_code=200)
         r.json.return_value={"candidates":[{"finishReason":"MAX_TOKENS",
