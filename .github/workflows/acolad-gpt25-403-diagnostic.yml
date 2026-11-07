@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: '3.12'}
-      - run: pip install requests==2.32.5
+      - run: pip install requests==2.32.5 Pillow==11.3.0
       - name: One bounded generation request, emit only whitelisted provider error code
         env:
           GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
