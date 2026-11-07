@@ -251,14 +251,38 @@ def illustrate(story):
         if image is None:
             image,res=commons_stock(brief)
             tried.append({"provider":"Commons","status":res.get("status")})
-        if image is not None:image.save(CONCEPT_DIR/f"scene_{sid:02d}.png","PNG")
-        records.append({"scene":sid,"has_image":image is not None,"attempts":tried})
+        image_path=CONCEPT_DIR/f"scene_{sid:02d}.png"
+        if image is not None:
+            image.save(image_path,"PNG")
+        else:
+            # An IMAGE API quota refusal (429) is not permission to publish
+            # seven empty slides. Provide ORIGINAL Acolad ink instead, never
+            # misreport this deterministic line-art as AI-generated.
+            from acolad_concept_art_pipeline_v2 import ink_sketch
+            visual=str(batch[0].get("visual_idea") or story.get("topic") or "")[:240]
+            result=ink_sketch(sid,visual,image_path)
+            tried.append({"provider":"Acolad original procedural pen-and-ink",
+                          "status":result["status"],"model_generated":False})
+        with Image.open(image_path) as checked:
+            if checked.format!="PNG" or min(checked.size)<512:
+                raise RuntimeError("SCENE_INK_ILLUSTRATION_INVALID")
+            checked.verify()
+        records.append({"scene":sid,"has_image":True,"illustration_file":str(image_path),
+                        "original_procedural":image is None,"attempts":tried})
     OUT.mkdir(parents=True,exist_ok=True)
     (OUT/"image_provenance.json").write_text(json.dumps(records,ensure_ascii=False,indent=2),encoding="utf-8")
     frames_folder=OUT/"frames"
     layout=render(story,frames_folder,allow_stock=False)
     frames=sorted(frames_folder.glob("story_*.png"))
     if len(frames)!=len(story["slides"]):raise RuntimeError("RENDER_INCOMPLETE")
+    if not records or not all(r["has_image"] for r in records):
+        raise RuntimeError("ORIGINAL_ILLUSTRATIONS_REQUIRED")
+    rendered_status=frames_folder/"status.json"
+    if not rendered_status.is_file():
+        raise RuntimeError("RENDER_ART_PROVENANCE_MISSING")
+    visible=json.loads(rendered_status.read_text(encoding="utf-8"))
+    if len(visible.get("concept_scenes") or [])<1:
+        raise RuntimeError("NO_VISIBLE_INK_IN_RENDERED_STORIES")
     for file in frames:
         with Image.open(file) as im:
             if im.format!="PNG" or im.size!=(1080,1920):raise RuntimeError("FRAME_INVALID")
