@@ -9,3 +9,5 @@ Attempt 4 today: malformed Luna selector JSON handled with evidence-locked singl
 Attempt 5 Nov 7: substantive original DOI academic abstract as source-locked fallback; immediate public send only if full editorial & visual checks pass.
 
 Attempt 6 on Nov 7: strict targeted caption repair after primary source narrative pass; direct immediate publish with full QA only.
+
+Attempt 7, 2026-11-07 Tehran: numeric-only source-locked corrected draft, no schedule or draft; only publish after all editorial hard gates. This commit triggers ONE real immediate production try.
