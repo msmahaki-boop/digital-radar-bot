@@ -1,0 +1,1 @@
+Owner confirmed real public Telegram, Bale and Instagram publication in chat on 2026-11-07. Release exactly one previously audited fresh source-backed 7-frame story with original ink visuals. No duplicate resends.
