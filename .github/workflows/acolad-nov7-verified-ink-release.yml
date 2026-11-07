@@ -1,0 +1,132 @@
+name: Acolad Nov7 final verified source + illustrated story IMMEDIATE three platforms
+on:
+  push:
+    branches: [main]
+    paths: [ops/acolad-nov7-verified-ink-release.trigger]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: acolad-v4-one-publish-attempt-at-a-time
+  cancel-in-progress: false
+jobs:
+  verified-immediate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Install only verification dependencies
+        run: python -m pip install --disable-pip-version-check requests==2.32.5 beautifulsoup4==4.14.2 Pillow==11.3.0
+      - name: Establish Tehran calendar date
+        id: clock
+        run: echo "day=$(TZ=Asia/Tehran date +%F)" >> "$GITHUB_OUTPUT"
+      - name: Strict offline preflight BEFORE fetching or sending
+        run: |
+          python -m py_compile acolad_v4_hourly_publish.py acolad_v4_daily_autopublish.py acolad_luna_research_preview.py
+          python -m unittest discover -s tests -p 'test_acolad_v4_hourly.py' -v
+          python -m unittest discover -s tests -p 'test_acolad_verified_checkpoint.py' -v
+      - name: Fetch exact source-reviewed story, independent critic scores and captions
+        uses: actions/download-artifact@v4
+        with:
+          name: acolad-gemini-lite-preview-20261107
+          run-id: 42384710220
+          github-token: ${{ github.token }}
+          path: checked_editorial
+      - name: Fetch exact proven final original ink frames
+        uses: actions/download-artifact@v4
+        with:
+          name: acolad-original-ink-real-visual-preview
+          run-id: 42385914996
+          github-token: ${{ github.token }}
+          path: checked_images
+      - name: Assemble verified immutable publication bundle; source dates, DOI, text and art QA
+        run: |
+          python -u - <<'PY'
+          import json,shutil
+          from pathlib import Path
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          from PIL import Image
+          import acolad_v4_hourly_publish as p
+          day=datetime.now(ZoneInfo('Asia/Tehran')).date()
+          if day.isoformat()!='2026-11-07':
+              raise RuntimeError('NOV7_IMMEDIATE_RELEASE_EXPIRED')
+          src=Path('checked_editorial/acolad_v4_daily_publication')
+          art=Path('checked_images')
+          story=json.loads((src/'story.json').read_text(encoding='utf8'))
+          evidence=json.loads((src/'sources_private.json').read_text(encoding='utf8'))
+          approved=json.loads((src/'hourly_ready.json').read_text(encoding='utf8'))
+          if approved.get('day')!=day.isoformat() or approved.get('validated') is not True:
+              raise RuntimeError('REVIEWED_DAY_NOT_VALIDATED')
+          critics=approved.get('critics') or []
+          if not (len(critics)==2 and all(c.get('veto') is False and isinstance(c.get('score'),int) and c['score']>=85 for c in critics)):
+              raise RuntimeError('INDEPENDENT_CRITIC_VETO')
+          if set(approved.get('captions') or {})!=set(p.NETWORKS):
+              raise RuntimeError('NETWORK_CAPTIONS_NOT_COMPLETE')
+          if len(evidence)!=1 or evidence[0].get('url')!='https://doi.org/10.1016/j.respol.2026.105630':
+              raise RuntimeError('VERIFIED_SOURCE_IDENTITY_CHANGED')
+          # Only PRIVATE metadata is repaired. Public copy and reviewer approvals are untouched.
+          if story.get('story_link')!=evidence[0]['url']:
+              story['story_link']=evidence[0]['url']
+              story['original_source_link_repaired']=True
+          p.check_verified_editorial(story,evidence)
+          p.save_editorial(day,story,evidence)
+          frames_dir=art/'frames'
+          status=json.loads((frames_dir/'status.json').read_text(encoding='utf8'))
+          if status.get('previous_pixels_identical') is not True or len(status.get('concept_scenes') or [])<2:
+              raise RuntimeError('ILLUSTRATIONS_NOT_VISIBLE')
+          frames=sorted(frames_dir.glob('story_*.png'))
+          if not (len(frames)==approved.get('nframes')==len(story.get('slides') or [])==7):
+              raise RuntimeError('STORY_FRAMES_COUNT_MISMATCH')
+          for frame in frames:
+              with Image.open(frame) as img:
+                  if img.format!='PNG' or img.size!=(1080,1920):
+                      raise RuntimeError('STORY_FRAME_INVALID')
+                  img.verify()
+          p.OUT.mkdir(parents=True,exist_ok=True)
+          shutil.copytree(frames_dir,p.OUT/'frames',dirs_exist_ok=True)
+          shutil.copyfile(art/'image_provenance.json',p.OUT/'image_provenance.json')
+          (p.OUT/'story.json').write_text(json.dumps(story,ensure_ascii=False,indent=2),encoding='utf8')
+          (p.OUT/'sources_private.json').write_text(json.dumps(evidence,ensure_ascii=False,indent=2),encoding='utf8')
+          p.READY.write_text(json.dumps(approved,ensure_ascii=False,indent=2),encoding='utf8')
+          final=p.existing_bundle(day)
+          if not final or len(final[1])!=7:
+              raise RuntimeError('FINAL_READY_BUNDLE_NOT_VERIFIED')
+          print('FINAL_VERIFIED_BUNDLE_READY',json.dumps({
+              'day':day.isoformat(),'frames':len(final[1]),
+              'visible_concept_scenes':status['concept_scenes'],
+              'critics':[c['score'] for c in critics],
+              'public_posts_created':0,'source_doi':evidence[0]['url']},ensure_ascii=False),flush=True)
+          PY
+      - name: OWNER APPROVED - PUBLISH IMMEDIATELY via NovinHub, dedupe and receipt required
+        env:
+          NOVINHUB_API_TOKEN: ${{ secrets.NOVINHUB_API_TOKEN }}
+          NOVINHUB_TOKEN: ${{ secrets.NOVINHUB_TOKEN }}
+          NOVINHUB_ACCESS_TOKEN: ${{ secrets.NOVINHUB_ACCESS_TOKEN }}
+          ACOLAD_HOURLY_PUBLISH_APPROVAL: ACOLAD_USER_APPROVED_HOURLY_IMMEDIATE_20261107
+        run: python -u acolad_v4_hourly_publish.py --mode immediate
+      - name: Preserve verified frames and no-repeat intents for later scheduled recovery
+        if: always()
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: acolad_v4_daily_publication/
+          key: acolad-v4-hourly-art-${{ steps.clock.outputs.day }}-${{ github.run_id }}
+      - name: Keep private provider status and receipts; green does not equal published
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-nov7-real-three-platform-publication-proof
+          path: acolad_v4_daily_publication/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Summary of actual provider evidence
+        if: always()
+        run: |
+          if test -f acolad_v4_daily_publication/hourly_status.json; then
+            cat acolad_v4_daily_publication/hourly_status.json >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "NOT PUBLISHED: NO PROVIDER RECEIPT" >> "$GITHUB_STEP_SUMMARY"
+          fi
