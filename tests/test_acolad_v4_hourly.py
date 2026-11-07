@@ -28,6 +28,67 @@ class HourlySafety(unittest.TestCase):
    with patch.object(p,"EDITORIAL_CACHE",stale),patch.object(p,"check_verified_editorial") as validator:
     self.assertIsNone(p.saved_editorial(date(2026,11,7)))
     validator.assert_not_called()
+ def test_post_list_inclusive_day_exclusive_next_day_boundary(self):
+  seen={}
+  def fake_get(url,headers,params,timeout):
+   seen.update(params)
+   return Response(200,{"data":[]})
+  with patch.object(p.requests,"get",side_effect=fake_get):
+   self.assertEqual(p.provider_list("key","telegram",date(2026,11,7)),[])
+  self.assertEqual(seen["publish_from"],"2026-11-07")
+  self.assertEqual(seen["publish_to"],"2026-11-08")
+ def test_bale_validation_is_explicit_refusal_not_ambiguous_network_acceptance(self):
+  rejected=Response(400,{"error":{"type":"ValidationException",
+      "message":"Invalid post payload","trace_id":"private-trace"}})
+  with patch.object(p.requests,"post",return_value=rejected):
+   with self.assertRaisesRegex(p.ProviderValidationRejected,"IMMEDIATE_POST_HTTP_bale_400"):
+    p.send_now("key","bale","body",[])
+ def test_unknown_telegram_receipt_does_not_prevent_independent_bale(self):
+  import tempfile
+  from pathlib import Path
+  day=date(2026,11,7)
+  states={"telegram":{"state":"PENDING_OR_UNKNOWN"},
+          "bale":{"state":"ABSENT"},
+          "instagram":{"state":"PENDING_OR_UNKNOWN"}}
+  with tempfile.TemporaryDirectory() as root:
+   with (patch.dict(os.environ,{"ACOLAD_HOURLY_PUBLISH_APPROVAL":p.APPROVAL}),
+        patch.object(p,"OUT",Path(root)),
+        patch.object(p,"token",return_value="key"),
+        patch.object(p,"now",return_value=__import__('datetime').datetime(2026,11,7,19,0,tzinfo=p.TZ)),
+        patch.object(p,"observe",return_value=states),
+        patch.object(p,"provider_list",return_value=[]),
+        patch.object(p,"existing_bundle",return_value=({"captions":{"bale":"approved copy"}},[])),
+        patch.object(p,"send_now",return_value=888) as send,
+        patch.object(p.time,"sleep",return_value=None)):
+    result=p.execute("immediate")
+    self.assertEqual(result["status"],"SUBMITTED_WAITING_EXTERNAL_PUBLICATION")
+    send.assert_called_once_with("key","bale","approved copy",[])
+ def test_failed_bale_validation_does_not_prevent_original_instagram_story(self):
+  import tempfile
+  from pathlib import Path
+  states={"telegram":{"state":"PUBLISHED","ids":[3698156]},
+          "bale":{"state":"ABSENT"},
+          "instagram":{"state":"ABSENT"}}
+  uploads=[Path(f"frame_{i:02d}.png") for i in range(7)]
+  with tempfile.TemporaryDirectory() as root:
+   with (patch.dict(os.environ,{"ACOLAD_HOURLY_PUBLISH_APPROVAL":p.APPROVAL}),
+        patch.object(p,"OUT",Path(root)),
+        patch.object(p,"token",return_value="key"),
+        patch.object(p,"now",return_value=__import__('datetime').datetime(2026,11,7,19,0,tzinfo=p.TZ)),
+        patch.object(p,"observe",return_value=states),
+        patch.object(p,"provider_list",return_value=[]),
+        patch.object(p,"existing_bundle",return_value=({"captions":{"bale":"reviewed bale","instagram":"reviewed instagram"}},uploads)),
+        patch.object(p,"upload_file",side_effect=list(range(100,107))),
+        patch.object(p,"send_now",side_effect=[p.ProviderValidationRejected("IMMEDIATE_POST_HTTP_bale_400"),999]) as send,
+        patch.object(p.time,"sleep",return_value=None)):
+    result=p.execute("immediate")
+    self.assertEqual(send.call_count,2)
+    self.assertEqual(send.call_args_list[0].args[1],"bale")
+    self.assertEqual(send.call_args_list[1].args[1],"instagram")
+    self.assertFalse(result["publication_verified"])
+    import json
+    intents=json.loads((Path(root)/"send_intents.json").read_text(encoding='utf8'))
+    self.assertEqual(intents["sent_or_unknown"]["bale"]["state"],"REJECTED_VALIDATION_400")
  def test_pending_is_never_absent(self):
   a=p.assess([{"id":17,"post":[{"account_id":233472,"status":"in_progress"}]}],"telegram")
   self.assertEqual(a["state"],"PENDING_OR_UNKNOWN")

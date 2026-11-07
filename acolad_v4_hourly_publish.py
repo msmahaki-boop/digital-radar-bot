@@ -2,7 +2,8 @@
 """Acolad hourly IMMEDIATE publisher; fail closed for ambiguous provider receipts."""
 from __future__ import annotations
 import argparse,json,os,sys,time
-from datetime import datetime
+from datetime import datetime,timedelta
+import re
 from pathlib import Path
 from zoneinfo import ZoneInfo
 import requests
@@ -33,7 +34,10 @@ def report(status,networks=None,**extra):
 def provider_list(key,net,day,session=requests):
     res=session.get(API+"/post",headers=headers(key),params={
         "account_ids[]":str(ACCOUNT[net]),"order":"id","with":"post(accountPost)",
-        "publish_from":day.isoformat(),"publish_to":day.isoformat()},timeout=45)
+        # NovinHub publish_to is EXCLUSIVE. End-of-day at the same date
+        # returns zero even when Telegram was published hours ago.
+        "publish_from":day.isoformat(),
+        "publish_to":(day+timedelta(days=1)).isoformat()},timeout=45)
     if res.status_code!=200:raise RuntimeError("PROVIDER_READ_HTTP_"+net+"_"+str(res.status_code))
     obj=res.json();rows=as_items(obj)
     if rows is None:raise RuntimeError("PROVIDER_LIST_UNRECOGNIZED_"+net)
@@ -200,9 +204,17 @@ def prepare(day):
     READY.write_text(json.dumps(document,ensure_ascii=False,indent=2),encoding="utf8")
     return document,frames
 
+class ProviderValidationRejected(RuntimeError):
+    """Documented HTTP400 validation failure: provider refused creation."""
+
+
 def send_now(key,net,caption,media,session=requests):
     if net not in NETWORKS:raise ValueError("Invalid target")
     if not caption or (net=="instagram" and len(media)<6):raise ValueError("Incomplete story")
+    if net=="bale":
+        # Bale doesn't need Telegram/Instagram Markdown wrappers in footer.
+        # Preserve the reviewed prose and URLs; only strip link syntax.
+        caption=re.sub(r"\[([^\]]+)\]\((https?://[^\s)]+)\)",r"\2",caption)
     payload={"type":"story" if net=="instagram" else "text",
         "account_ids":[ACCOUNT[net]],"caption":caption,
         "media_ids":media if net=="instagram" else [],
@@ -212,6 +224,20 @@ def send_now(key,net,caption,media,session=requests):
     r=session.post(API+"/post",headers={**headers(key),"Content-Type":"application/json"},
                    json=payload,timeout=80)
     if r.status_code not in (200,201):
+        if r.status_code==400:
+            try:
+                obj=r.json() if hasattr(r,"json") else {}
+                err=(obj.get("error") or {}) if isinstance(obj,dict) else {}
+                if isinstance(err,list):err=err[0] if err and isinstance(err[0],dict) else {}
+                if not isinstance(err,dict):err={}
+                diagnostic={"network":net,"http":400,
+                    "type":str(err.get("type") or "")[:90],
+                    "message":str(err.get("message") or "")[:180],
+                    "trace_id":str(err.get("trace_id") or "")[:90]}
+                print("NOVINHUB_VALIDATION_REJECTED "+json.dumps(diagnostic,ensure_ascii=False),flush=True)
+            except (ValueError,TypeError,KeyError):
+                print("NOVINHUB_VALIDATION_REJECTED "+json.dumps({"network":net,"http":400}),flush=True)
+            raise ProviderValidationRejected("IMMEDIATE_POST_HTTP_"+net+"_400")
         raise RuntimeError("IMMEDIATE_POST_HTTP_"+net+"_"+str(r.status_code))
     obj=r.json();row=obj.get("data",obj) if isinstance(obj,dict) else {}
     group_id=row.get("id") if isinstance(row,dict) else None
@@ -239,20 +265,23 @@ def execute(mode):
         if states[net]["state"]=="FAILED":
             retry_failed(key,net,states[net]["group_id"])
             states[net]["state"]="RETRY_REQUESTED"
-    if any(s["state"] in ("PENDING_OR_UNKNOWN","RETRY_REQUESTED") for s in states.values()):
-        return report("WAIT_PROVIDER_DO_NOT_DUPLICATE",states)
+    # An unknown receipt on one network must block THAT network only,
+    # not prevent independent unposted accounts from receiving today's story.
+    # Missing accounts are still cross-checked again immediately before POST.
     # A previous run may have got an HTTP timeout after NovinHub accepted
     # an irreversible write. Cross-run cached intent blocks blind resending.
     intent_file=OUT/"send_intents.json"
     intents=json.loads(intent_file.read_text(encoding="utf8")) if intent_file.exists() else {}
     if intents.get("day")==day.isoformat():
         for n in NETWORKS:
-            if n in intents.get("sent_or_unknown",{}) and states[n]["state"]=="ABSENT":
+            record=(intents.get("sent_or_unknown",{}) or {}).get(n) or {}
+            if record.get("state") in ("SENDING_NO_CONFIRMED_RECEIPT","ACCEPTED") and states[n]["state"]=="ABSENT":
                 states[n]={"state":"PENDING_OR_UNKNOWN","intent":"REMOTE_RECEIPT_NOT_VISIBLE"}
-    if any(s["state"]=="PENDING_OR_UNKNOWN" for s in states.values()):
-        return report("WAIT_PROVIDER_OR_UNKNOWN_DELIVERY_NO_DUPLICATES",states)
     missing=[n for n in NETWORKS if states[n]["state"]=="ABSENT"]
-    if not missing:return report("NOTHING_SAFE_TO_SEND",states)
+    if not missing:
+        return report("WAIT_PROVIDER_OR_UNKNOWN_DELIVERY_NO_DUPLICATES" if any(
+            s["state"] in ("PENDING_OR_UNKNOWN","RETRY_REQUESTED") for s in states.values()
+        ) else "NOTHING_SAFE_TO_SEND",states)
     bundle=existing_bundle(day)
     if not bundle and any(s["state"]=="PUBLISHED" for s in states.values()):
         return report("BLOCKED_PARTIAL_PUBLISH_WITHOUT_ORIGINAL_BUNDLE",states)
@@ -276,7 +305,17 @@ def execute(mode):
             intents={"day":day.isoformat(),"sent_or_unknown":{}}
         intents["sent_or_unknown"][net]={"state":"SENDING_NO_CONFIRMED_RECEIPT"}
         intent_file.write_text(json.dumps(intents,ensure_ascii=False,indent=2),encoding="utf8")
-        group_id=send_now(key,net,d["captions"][net],media)
+        try:
+            group_id=send_now(key,net,d["captions"][net],media)
+        except ProviderValidationRejected:
+            # The provider's documented ValidationException HTTP400 is
+            # a refusal, NOT an ambiguous accepted post. Preserve evidence
+            # and continue to the other accounts without retrying this one.
+            intents["sent_or_unknown"][net]={"state":"REJECTED_VALIDATION_400"}
+            intent_file.write_text(json.dumps(intents,ensure_ascii=False,indent=2),encoding="utf8")
+            states[net]={"state":"REJECTED_VALIDATION_400"}
+            print("NO_PUBLIC_POST_CREATED_FOR_VALIDATION_REJECTED "+net,flush=True)
+            continue
         intents["sent_or_unknown"][net]={"state":"ACCEPTED","group_id":group_id}
         intent_file.write_text(json.dumps(intents,ensure_ascii=False,indent=2),encoding="utf8")
         submitted.append({"network":net,"group_id":group_id,
