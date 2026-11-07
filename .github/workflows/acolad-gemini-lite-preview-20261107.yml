@@ -54,6 +54,26 @@ jobs:
           for img in frames:assert Path(img).is_file()
           print("PREVIEW_PASSED_ONLY", {"day":day.isoformat(),"frames":len(frames),"critic_count":len(document["critics"]),"network_copies":list(document["captions"]),"public_posts_created":0},flush=True)
           PY
+      - name: Report fresh source discovery and publication gates (read-only diagnostics)
+        if: always()
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          p=Path('acolad_luna_research_preview/status.json')
+          if p.exists():
+              x=json.loads(p.read_text(encoding='utf8'))
+              print('FRESH_DISCOVERY_STATUS',json.dumps({'status':x.get('status'),
+                'candidates':x.get('source_candidates'),'issues':x.get('issues'),
+                'diagnostics':x.get('research_diagnostics')},ensure_ascii=False))
+          q=Path('acolad_luna_research_preview/sources_all.json')
+          if q.exists():
+              x=json.loads(q.read_text(encoding='utf8'))
+              print('CURRENT_SOURCE_SHORTLIST',json.dumps([{'date':a.get('date'),
+                'publisher':a.get('publisher'),'title':a.get('title'),
+                'evidence_depth':a.get('evidence_depth'),'type':a.get('source_type')}
+                for a in x[:15]],ensure_ascii=False))
+          PY
       - name: Keep private preview artwork and captions
         if: always()
         uses: actions/upload-artifact@v4
