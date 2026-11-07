@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: '3.12'}
-      - run: pip install requests==2.32.5
+      - run: pip install requests==2.32.5 Pillow==11.3.0
       - name: Read safe profile URLs and account types only
         env:
           NOVINHUB_API_TOKEN: ${{ secrets.NOVINHUB_API_TOKEN }}
