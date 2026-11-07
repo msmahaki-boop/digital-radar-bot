@@ -1,1 +1,1 @@
-Run regression only; no GapGPT paid requests and no NovinHub social mutations.\n
+Run regression only; no GapGPT paid requests and no NovinHub social mutations.\nRetest full daily feature gate and real alpha enforcement; no social writes.\n
