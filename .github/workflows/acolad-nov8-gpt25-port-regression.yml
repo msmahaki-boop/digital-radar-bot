@@ -1,0 +1,30 @@
+name: Acolad Nov8 production-port GPT Image 2.5 regression (NO SOCIAL)
+on:
+  push:
+    branches: [feature/acolad-nov8-source-locked-gpt25-release]
+    paths: [ops/acolad-nov8-gpt25-port-qa.trigger]
+permissions:
+  contents: read
+jobs:
+  full-safety-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Install offline unit test requirements
+        run: python -m pip install requests==2.32.5 Pillow==11.3.0 beautifulsoup4==4.14.2
+      - name: Verify compiled real GPT Image scripts and opt-in gate
+        run: python -m py_compile acolad_gapgpt_transparent_art.py acolad_gpt25_strict_renderer.py acolad_gpt25_owner_release_preflight.py acolad_v4_daily_autopublish.py acolad_v4_hourly_publish.py acolad_narrative_visual_v2.py
+      - name: Offline genuine alpha and safe real-provider retry tests
+        run: python -m unittest discover -s tests -p 'test_acolad_gapgpt_transparent_art.py' -v
+      - name: Offline Acolad live feature switch and scene verification
+        run: python -m unittest discover -s tests -p 'test_acolad_gpt25_strict_renderer.py' -v
+      - name: Offline immutable preview and edited caption controls
+        run: python -m unittest discover -s tests -p 'test_acolad_owner_release_preflight.py' -v
+      - name: Do not regress current live user-approved publication checks
+        run: |
+          python -m unittest discover -s tests -p 'test_acolad_v4_hourly.py' -v
+          python -m unittest discover -s tests -p 'test_acolad_social_platform_footers.py' -v
+          python -m unittest discover -s tests -p 'test_acolad_caption_repair.py' -v
