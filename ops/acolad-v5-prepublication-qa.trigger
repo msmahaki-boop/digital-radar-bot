@@ -1,0 +1,1 @@
+2026-11-08 read-only owner-approved original GPT Image story run 42480921324: nine slides, 2 sourced real images, 91/88 critics, brand fonts, frozen pixels, separate social cover; NO SOCIAL API MUTATIONS.
