@@ -4,6 +4,7 @@ Only creates files; publishing is a separate, explicitly gated operation.
 """
 from __future__ import annotations
 import json
+import shutil
 from pathlib import Path
 from PIL import Image,ImageDraw,ImageFont,ImageOps,features
 
@@ -93,8 +94,29 @@ def preview(story,sources,output=ROOT):
     # Each job gets a fresh checkout; cleanup cannot delete receipts anywhere.
     for f in CONCEPT_DIR.glob("scene_[0-9][0-9].png"):
         f.unlink()
-    # Exactly two picture scenes. Scene 3 is text-only as requested.
-    manifest=generate_scenes(visual,[1,2],CONCEPT_DIR)
+    # Resume only a verified actual AI image from prior Actions run 42480255927.
+    # The runner's source is the immutable GitHub artifact downloaded by run-id,
+    # not arbitrary local PNGs. The original log records model and alpha proof.
+    cached=Path("acolad_v5_previous/acolad_concept_assets/scene_01.png")
+    if cached.exists():
+        recovered,stats=verify_png(cached.read_bytes())
+        recovered.close()
+        if stats.get("transparent_fraction",0)<.12:
+            raise RuntimeError("V5_PREVIOUS_IMAGE_NOT_ACTUAL_ALPHA")
+        shutil.copy2(cached,CONCEPT_DIR/"scene_01.png")
+        original={"model":"gpt-image-2.5-flare","provider":"GapGPT",
+             "real_ai_generated":True,"background":"transparent",
+             "source_scene_id":1,"image_response":"GitHub_actions_immutable_artifact",
+             "origin_run_id":42480255927,
+             "transparency_method":"already_validated_GPT_native_alpha",
+             "path":"scene_01.png",**stats}
+        fresh=generate_scenes(visual,[2],CONCEPT_DIR)
+        manifest={**fresh,"image_count":2,
+                  "records":[original]+fresh["records"],
+                  "reused_verified_original_run_id":42480255927}
+    else:
+        # Never silently substitute old story imagery or procedural art.
+        manifest=generate_scenes(visual,[1,2],CONCEPT_DIR)
     if (manifest.get("real_ai_generated") is not True or
         manifest.get("procedural_assets")!=0 or
         manifest.get("stock_assets")!=0 or len(manifest.get("records") or [])!=2):
