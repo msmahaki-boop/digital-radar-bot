@@ -1,0 +1,1 @@
+2026-11-08 owner-approved telegram followups: reuse verified source and 8-slide original GPT2.5 story 42469966562; attach exactly 2 new narrative messages as replies to already published Telegram photo @acoladagency #48. No new photo, no Bale/Instagram writes.
