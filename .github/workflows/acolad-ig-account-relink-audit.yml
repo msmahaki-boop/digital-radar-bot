@@ -1,8 +1,8 @@
 name: Acolad IG reconnect account ID / Business metadata audit (READ ONLY)
 on:
   push:
-    branches: [diagnostics/acolad-20261108-instagram-relinked-account-audit]
-    paths: [ops/acolad-reconnected-instagram-readonly.trigger]
+    branches: [diagnostics/acolad-20261108-after-facebook-relink]
+    paths: [ops/acolad-after-facebook-relink.trigger]
 permissions:
   contents: read
 jobs:
