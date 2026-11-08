@@ -1,0 +1,62 @@
+name: Acolad Nov8 Bale individual published post and Instagram account detail GET ONLY
+on:
+  push:
+    branches: [main]
+    paths: [ops/acolad-nov8-bale-ig-single-detail.trigger]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install requests==2.32.5 Pillow==11.3.0 beautifulsoup4==4.14.2
+      - name: Read detailed provider receipts, print only whitelisted public fields
+        env:
+          NOVINHUB_API_TOKEN: ${{ secrets.NOVINHUB_API_TOKEN }}
+        run: |
+          python -u - <<'PY'
+          import requests,json
+          from acolad_novinhub_bridge import API,headers,token
+          key=token()
+          g=requests.get(API+"/post/3699385",headers=headers(key),
+                         params={"with":"post(accountPost)"},timeout=35)
+          print("ACOLAD_BALE_DETAIL_HTTP",g.status_code,flush=True)
+          if g.status_code==200:
+              raw=g.json()
+              data=raw.get("data",raw) if isinstance(raw,dict) else {}
+              if isinstance(data,list):data=data[0] if data else {}
+              if not isinstance(data,dict):data={}
+              posts=data.get("post") or data.get("posts") or []
+              if isinstance(posts,dict):posts=[posts]
+              for p in posts:
+                  if str(p.get("account_id"))!="233497":continue
+                  remote=p.get("accountPost") or p.get("account_post") or {}
+                  if not isinstance(remote,dict):remote={}
+                  link=str(remote.get("permalink") or "")
+                  print("ACOLAD_BALE_PROVIDER_DETAIL",json.dumps({
+                    "group_id":data.get("id"),"status":p.get("status"),
+                    "remote_post_id":remote.get("post_id") or remote.get("id"),
+                    "permalink":link if link.startswith("https://ble.ir/") else None},
+                    ensure_ascii=False),flush=True)
+          a=requests.get(API+"/account/230527",headers=headers(key),
+                         params={"with":"meta,socialUser"},timeout=35)
+          print("ACOLAD_IG_ACCOUNT_DETAIL_HTTP",a.status_code,flush=True)
+          if a.status_code==200:
+              raw=a.json()
+              row=raw.get("data",raw) if isinstance(raw,dict) else {}
+              if isinstance(row,list):row=row[0] if row else {}
+              if not isinstance(row,dict):row={}
+              meta=row.get("meta") if isinstance(row.get("meta"),dict) else {}
+              whitelist=("account_type","instagram_account_type","professional_account_type",
+                "business_account","business_status","is_business","is_creator")
+              print("ACOLAD_IG_ACCOUNT_DETAIL",json.dumps({
+                "id":row.get("id"),"type":row.get("type"),
+                "login_required":row.get("login_required"),
+                "relogin_reason_present":bool(row.get("relogin_reason")),
+                "recognized_meta":{k:meta.get(k) for k in whitelist if k in meta},
+                "meta_keys_only":list(meta.keys())[:25]},ensure_ascii=False),flush=True)
+          PY
