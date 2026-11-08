@@ -1,0 +1,70 @@
+name: Acolad Nov8 inspect Telegram/Bale REAL NovinHub receipts and Instagram Business GET ONLY
+on:
+  push:
+    branches: [main]
+    paths: [ops/acolad-nov8-check-social-receipts.trigger]
+permissions:
+  contents: read
+jobs:
+  read:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install requests==2.32.5 Pillow==11.3.0 beautifulsoup4==4.14.2
+      - name: Inspect published message IDs and Bale remote status only, zero writes
+        env:
+          NOVINHUB_API_TOKEN: ${{ secrets.NOVINHUB_API_TOKEN }}
+        run: |
+          python -u - <<'PY'
+          import json
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          import requests
+          from acolad_v4_hourly_publish import provider_list,assess,NETWORKS,ACCOUNT
+          from acolad_novinhub_bridge import API,headers,token,as_items
+          day=datetime.now(ZoneInfo("Asia/Tehran")).date()
+          if day.isoformat()!="2026-11-08":raise RuntimeError("DATE_EXPIRED")
+          key=token()
+          for net in NETWORKS:
+              rows=provider_list(key,net,day)
+              report=[]
+              for group in rows:
+                  details=group.get("post") or group.get("posts") or []
+                  if isinstance(details,dict):details=[details]
+                  for row in details:
+                      if str(row.get("account_id"))!=str(ACCOUNT[net]):continue
+                      remote=row.get("accountPost") or row.get("account_post") or {}
+                      if not isinstance(remote,dict):remote={}
+                      permalink=str(remote.get("permalink") or "")
+                      safe=permalink if permalink.startswith((
+                          "https://t.me/","https://ble.ir/","https://www.instagram.com/")) else None
+                      report.append({"group_id":group.get("id"),
+                                     "post_status":row.get("status"),
+                                     "remote_post_id":remote.get("post_id") or remote.get("id"),
+                                     "remote_permalink":safe,
+                                     "type":group.get("type")})
+              print("ACOLAD_LIVE_REMOTE_RECEIPTS "+json.dumps({
+                   "network":net,"day":day.isoformat(),"assessed":assess(rows,net),
+                   "posts":report[:10]},ensure_ascii=False),flush=True)
+          response=requests.get(API+"/account",headers=headers(key),
+                                params={"with":"meta"},timeout=40)
+          if response.status_code!=200:
+              print("ACOLAD_INSTAGRAM_GET_HTTP_"+str(response.status_code),flush=True)
+              raise SystemExit(2)
+          accounts=as_items(response.json()) or []
+          ig=[x for x in accounts if str(x.get("id"))=="230527"]
+          if len(ig)!=1:raise RuntimeError("INSTAGRAM_ACCOUNT_LOOKUP_AMBIGUOUS")
+          a=ig[0]
+          meta=a.get("meta") if isinstance(a.get("meta"),dict) else {}
+          allowed=("account_type","business_account","is_business","professional_account_type",
+                   "instagram_account_type","business_status")
+          print("ACOLAD_IG_PROVIDER_LINK_READ_ONLY "+json.dumps({
+             "id":a.get("id"),"type":a.get("type"),"name":a.get("name"),
+             "login_required":a.get("login_required"),
+             "recognized_meta":{k:meta.get(k) for k in allowed if k in meta},
+             "meta_keys_only":sorted(str(x) for x in meta.keys())[:35]
+             },ensure_ascii=False),flush=True)
+          PY
