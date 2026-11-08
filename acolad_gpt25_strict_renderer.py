@@ -15,6 +15,18 @@ from acolad_narrative_visual_v2 import CONCEPT_DIR, render, scene_chunks
 OUTPUT = Path("acolad_v4_daily_publication")
 
 
+def verify_generated_alpha_file(path:Path):
+    """Validate PNG bytes before reading its real alpha pixels (Pillow order)."""
+    with Image.open(path) as probe:
+        if probe.format != "PNG" or "A" not in probe.getbands():
+            raise RuntimeError("GPT25_ALPHA_PNG_MISSING")
+        probe.verify()
+    with Image.open(path) as image:
+        if image.getchannel("A").getextrema()[0] >= 255:
+            raise RuntimeError("GPT25_ALPHA_NOT_TRANSPARENT")
+    return True
+
+
 def illustrate_strict(story: dict):
     groups = scene_chunks(story)
     scene_ids = [int(group[0]["scene"]) for group in groups]
@@ -32,12 +44,7 @@ def illustrate_strict(story: dict):
         if not row.get("real_ai_generated") or row.get("background") != "transparent":
             raise RuntimeError("GPT25_REAL_AI_CUTOUT_REQUIRED")
         path = CONCEPT_DIR / row["path"]
-        with Image.open(path) as image:
-            if image.format != "PNG" or "A" not in image.getbands():
-                raise RuntimeError("GPT25_ALPHA_PNG_MISSING")
-            if image.getchannel("A").getextrema()[0] >= 255:
-                raise RuntimeError("GPT25_ALPHA_NOT_TRANSPARENT")
-            image.verify()
+        verify_generated_alpha_file(path)
     OUTPUT.mkdir(parents=True, exist_ok=True)
     output = OUTPUT / "frames"
     visual = render(story, output, allow_stock=False)
