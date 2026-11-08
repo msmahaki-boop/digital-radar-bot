@@ -17,7 +17,7 @@ from PIL import Image
 
 BASE_URL = "https://api.gapgpt.app/v1"
 MODEL = "gpt-image-2.5-flare"
-MAX_IMAGES = 4
+MAX_IMAGES = 10
 MAX_BYTES = 25_000_000
 OUT = Path("acolad_concept_assets")
 
