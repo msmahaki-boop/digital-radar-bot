@@ -84,7 +84,7 @@
     {
       "n": 7,
       "beat": "practical_actions",
-      "text": "📌 یعنی چهار آزمایش رو روی سایت امتحان کن، نه وعده معجزه!\n+ کنار سفارشِ خارج از مهلت، دلیل غیرفعال بودن مرجوعی رو واضح بنویس!\n+ اگه تاریخ پایان مهلت مشخصه، همون صفحه نشونش بده!\n+ راه تماس با پشتیبانی رو دم دست بذار!\n+ از چند نفر بخواه سفارش قدیمی رو بدون راهنمایی باز کنن و نتیجه رو ثبت کنن!",
+      "text": "📌 یعنی چهار آزمایش رو روی سایت امتحان کن، نه وعده معجزه!\n+ کنار سفارشِ خارج از مهلت، دلیل نبودن دکمه درخواست رو بنویس!\n+ اگه تاریخ پایان مهلت مشخصه، همون صفحه نشونش بده!\n+ راه تماس با پشتیبانی رو دم دست بذار!\n+ از چند نفر بخواه سفارشِ خارج از مهلت رو بدون کمک بررسی کنن و نتیجه رو ثبت کنن!",
       "overlay": "📌 **دلیل، تاریخ، پشتیبانی و تست واقعی**؛ چهار قدم قابل‌امتحان",
       "scene_id": 3,
       "visual_action": "new_scene",
@@ -106,7 +106,7 @@
     {
       "n": 9,
       "beat": "payoff",
-      "text": "📌 مخلص کلام اینکه؛ یه سایت خوب فقط بلد نیست سفارش بگیره، باید وقتی درخواست مشتری رد می‌شه هم باهاش حرف بزنه. «دکمه رو می‌شه برداشت؛ توضیح رو نه.» + توی فروشگاهت یه سفارش قدیمی رو باز کن؛ ببین دلیل محدودیت رو بی‌دردسر پیدا می‌کنی یا نه. ❤️‍🔥 تو جای محمد بودی، کدوم جواب آرومت می‌کرد! 🌱",
+      "text": "📌 مخلص کلام اینکه؛ یه سایت خوب فقط بلد نیست سفارش بگیره، باید وقتی درخواست مشتری رد می‌شه هم باهاش حرف بزنه. «دکمه رو می‌شه برداشت؛ توضیح رو نه.» + توی فروشگاهت یه سفارش خارج از مهلت رو باز کن؛ ببین دلیل محدودیت رو بی‌دردسر پیدا می‌کنی یا نه. ❤️‍🔥 تو جای محمد بودی، کدوم جواب آرومت می‌کرد! 🌱",
       "overlay": "📌 حرف آخر: **دکمه رو می‌شه برداشت؛ توضیح رو نه!**",
       "scene_id": 3,
       "visual_action": "add_text",
@@ -127,7 +127,7 @@
         "historical 2019 research, not a 2026 news announcement",
         "2019 Baymard benchmarking found 54% of reviewed sites had substantial returns UX issues; historical sample, not a present-day global rate"
       ],
-      "excerpt": "During large-scale user testing of Accounts and Self-Service, return processes and interfaces caused the most usability issues; study published 2019."
+      "excerpt": "Baymard Institute's 2019 paper explicitly reports that its UX performance benchmark found 54% of the benchmarked e-commerce sites had significant usability issues in the returns flow; its large-scale Accounts & Self-Service tests also found returns among the most problematic user tasks. This is a historical benchmark of investigated sites, not all sites today."
     }
   ]
 }
