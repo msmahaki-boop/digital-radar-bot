@@ -36,7 +36,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: acolad-20261108-gpt25-flare-real-cutouts-7slides
-          run-id: 42466907119
+          run-id: 42467233789
           github-token: ${{ github.token }}
           path: .
       - name: Fresh PRIMARY-EVIDENCE editorial + two independent critics + ORIGINAL GPT Image 2.5 cutouts and seven RTL frames
