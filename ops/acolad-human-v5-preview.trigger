@@ -10,3 +10,4 @@ Editor fix sourced 54 percent denominator straight from Baymard original article
 2026-11-08 retest with expected hypothetical-story opening after test failed only on outdated literal, all substantive guards unchanged.
 Resume verified original GPT Image alpha scene1 from immutable run 42480255927; request only scene2 after 403, never procedural fallback. All source and critic checks still required.
 Exact-source-blob-locked editor approvals 91/88 restored from immutable run 42480255927; reuse original GPT alpha scene1, only generate scene2.
+On persistent GapGPT scene2 HTTP403 reuse a different verified original real GPT2.5 transparent Acolad cutout from 42469966562, explicitly logged as NOT generated for this story. No fake/stock art.
