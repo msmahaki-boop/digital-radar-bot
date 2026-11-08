@@ -58,9 +58,21 @@ jobs:
                    'صحت پژوهش بایمرد، خیالی‌بودن محمد، فارسی طبیعی و ترتیب داستان '
                    'و چهار اقدام آزمایشی را مستقل بررسی کن. مطالعه سال ۲۰۱۹ است نه خبر امروز. '
                    'ادعای بی‌سند باید وتو شود. فقط JSON با score عدد صحیح، veto بولین و reason بده.')
-              usage={'requests_sent':0,'cost_estimated_usd':0.0,'budget_usd':0.08,'stages':[]}
-              result=r.api_call(os.environ['GAPGPT_API_KEY'],sys,json.dumps({
-                  'story':story,'primary_source':story['sources'][0]},ensure_ascii=False),1300,usage)
+              result=None
+              for attempt in range(1,4):
+                  usage={'requests_sent':0,'cost_estimated_usd':0.0,'budget_usd':0.08,'stages':[]}
+                  try:
+                      result=r.api_call(os.environ['GAPGPT_API_KEY'],
+                          sys+' فقط JSON معتبر یک شیء برگردان، بدون markdown.',
+                          json.dumps({'story':story,'primary_source':story['sources'][0]},
+                                     ensure_ascii=False),1300,usage)
+                      break
+                  except RuntimeError as error:
+                      if ('invalid JSON/shape' not in str(error)
+                              and 'Empty visible response' not in str(error)):
+                          raise
+                      print('V5_CRITIC_PROVIDER_INVALID_JSON_RETRY',i,attempt,flush=True)
+                      if attempt==3:raise
               score=result.get('score')
               if not isinstance(score,int) or isinstance(score,bool) or not 0<=score<=100 or result.get('veto') is not False:
                   raise RuntimeError('V5_INDEPENDENT_CRITIC_VETO_'+str(i))
