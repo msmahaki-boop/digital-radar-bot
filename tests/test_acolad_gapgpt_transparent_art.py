@@ -89,6 +89,23 @@ class TransparentImageQA(unittest.TestCase):
             art.read_provider_image({"url":"https://localhost/private.png"},session)
         session.get.assert_not_called()
 
+    def test_gapgpt_https_redirect_to_cdn_is_bounded(self):
+        redirected=Mock(status_code=302,headers={"Location":"https://cdn.example.com/generated.png"})
+        image=Mock(status_code=200,content=self.png())
+        session=Mock()
+        session.get.side_effect=[redirected,image]
+        result,origin=art.read_provider_image({"url":"https://images.example.com/start"},session)
+        self.assertEqual(origin,"provider_url")
+        self.assertGreater(len(result),100)
+        self.assertEqual(session.get.call_count,2)
+    def test_gapgpt_redirect_to_local_network_rejected(self):
+        redirected=Mock(status_code=302,headers={"Location":"http://localhost/image"})
+        session=Mock()
+        session.get.return_value=redirected
+        with self.assertRaisesRegex(RuntimeError,"NOT_SAFE_HTTPS"):
+            art.read_provider_image({"url":"https://images.example.com/start"},session)
+        self.assertEqual(session.get.call_count,1)
+
     def test_missing_catalog_model_does_not_buy_images(self):
         session=Mock()
         session.get.return_value=Mock(status_code=200)
