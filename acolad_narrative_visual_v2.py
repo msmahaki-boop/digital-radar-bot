@@ -207,6 +207,10 @@ def add_concept_illustration(background,illustration):
             else:
                 alpha=a
             dst[x,y]=(red,green,blue,alpha)
+    # Original GPT Image RGBA carries artist-generated true transparency.
+    # Preserve its alpha instead of attempting to remove a paper backdrop.
+    if source.getchannel("A").getextrema()[0]<255:
+        ink=source
     mask=ink.getchannel("A")
     bbox=mask.point(lambda a: 255 if a>35 else 0).getbbox()
     if not bbox:

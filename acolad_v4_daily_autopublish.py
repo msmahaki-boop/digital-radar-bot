@@ -241,6 +241,11 @@ def critics_approve(story,evidence,captions):
     return reviews
 
 def illustrate(story):
+    # Genuine GPT Image cutouts are required when the release workflow sets
+    # this gate. The legacy code path stays unchanged without the flag.
+    if os.getenv("ACOLAD_REQUIRE_REAL_GPT25_ART","0")=="1":
+        from acolad_gpt25_strict_renderer import illustrate_strict
+        return illustrate_strict(story)
     CONCEPT_DIR.mkdir(parents=True,exist_ok=True)
     for old in CONCEPT_DIR.glob("scene_[0-9][0-9].png"):old.unlink()
     groups=scene_chunks(story)
