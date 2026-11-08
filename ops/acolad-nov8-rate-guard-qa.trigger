@@ -1,0 +1,1 @@
+Verify 7-second provider rate guard and all existing hourly publication safety tests. No social API calls.\n
