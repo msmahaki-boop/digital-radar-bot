@@ -30,6 +30,7 @@ jobs:
           python -m unittest discover -s tests -p 'test_acolad_v4_hourly.py' -v
           python -m unittest discover -s tests -p 'test_acolad_voice_narrow_passive_repair.py' -v
           python -m unittest discover -s tests -p 'test_acolad_critic_calendar_facts.py' -v
+          python -m unittest discover -s tests -p 'test_acolad_dense_reveal_preserves_facts.py' -v
       - name: Fresh PRIMARY-EVIDENCE editorial + two independent critics + ORIGINAL GPT Image 2.5 cutouts and seven RTL frames
         env:
           GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
