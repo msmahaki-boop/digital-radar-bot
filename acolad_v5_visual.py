@@ -110,10 +110,58 @@ def preview(story,sources,output=ROOT):
              "origin_run_id":42480255927,
              "transparency_method":"already_validated_GPT_native_alpha",
              "path":"scene_01.png",**stats}
-        fresh=generate_scenes(visual,[2],CONCEPT_DIR)
-        manifest={**fresh,"image_count":2,
-                  "records":[original]+fresh["records"],
-                  "reused_verified_original_run_id":42480255927}
+        try:
+            fresh=generate_scenes(visual,[2],CONCEPT_DIR)
+            manifest={**fresh,"image_count":2,
+                      "records":[original]+fresh["records"],
+                      "reused_verified_original_run_id":42480255927}
+        except RuntimeError as error:
+            # Never bypass arbitrary failures or counterfeit an illustration.
+            # Only the known provider-403 may use a second actual model-generated
+            # transparent cutout from Acolad's audited original GPT Image archive.
+            if str(error)!="IMAGE_PROVIDER_HTTP_403":
+                raise
+            archive=Path("acolad_v5_original_library")
+            old_meta=archive/"acolad_v4_daily_publication/image_provenance.json"
+            if not old_meta.is_file():
+                raise RuntimeError("V5_VERIFIED_GPT_ART_LIBRARY_PROVENANCE_MISSING") from error
+            provenance=json.loads(old_meta.read_text(encoding="utf8"))
+            if (provenance.get("model")!="gpt-image-2.5-flare" or
+                provenance.get("real_ai_generated") is not True or
+                provenance.get("procedural_assets")!=0 or
+                provenance.get("stock_assets")!=0):
+                raise RuntimeError("V5_OLDER_GPT_ART_PROVENANCE_UNVERIFIED") from error
+            record=next((x for x in (provenance.get("records") or [])
+                 if x.get("source_scene_id")==2 and x.get("real_ai_generated") is True
+                 and x.get("background")=="transparent"),None)
+            if not record:raise RuntimeError("V5_REUSED_REAL_SCENE_RECORD_MISSING") from error
+            candidate=archive/"acolad_concept_assets"/str(record.get("path") or "")
+            if not candidate.is_file():
+                raise RuntimeError("V5_ORIGINAL_LIBRARY_IMAGE_FILE_MISSING") from error
+            reused,st=verify_png(candidate.read_bytes())
+            reused.close()
+            import hashlib
+            current=CONCEPT_DIR/"scene_01.png"
+            if hashlib.sha256(candidate.read_bytes()).digest()==hashlib.sha256(current.read_bytes()).digest():
+                raise RuntimeError("V5_CANNOT_REUSE_IDENTICAL_ARTWORK_TWICE")
+            shutil.copy2(candidate,CONCEPT_DIR/"scene_02.png")
+            older={**record,**st,"path":"scene_02.png",
+                   "source_scene_id":2,"real_ai_generated":True,
+                   "background":"transparent",
+                   "reused_verified_archive_run_id":42469966562}
+            manifest={"provider":"GapGPT","model":"gpt-image-2.5-flare",
+                     "image_count":2,"real_ai_generated":True,
+                     "procedural_assets":0,"stock_assets":0,
+                     "records":[original,older],
+                     "original_ai_library_reuse":True,
+                     "reused_verified_original_run_id":42480255927,
+                     "reused_verified_archive_run_id":42469966562,
+                     "publication":"PREVIEW_ONLY"}
+            print("ACOLAD_V5_GENUINE_OLDER_GPT_ART_REUSED_AFTER_403 "+
+                  json.dumps({"original_model":"gpt-image-2.5-flare",
+                     "scene":2,"library_run":42469966562,
+                     "newly_generated_for_this_story":False,
+                     "synthetic_substitute":False},ensure_ascii=False),flush=True)
     else:
         # Never silently substitute old story imagery or procedural art.
         manifest=generate_scenes(visual,[1,2],CONCEPT_DIR)
