@@ -64,7 +64,7 @@ jobs:
               score=result.get('score')
               if not isinstance(score,int) or isinstance(score,bool) or not 0<=score<=100 or result.get('veto') is not False:
                   raise RuntimeError('V5_INDEPENDENT_CRITIC_VETO_'+str(i))
-              critics.append({'score':score,'veto':False,'reason':str(result.get('reason',''))[:240]})
+              critics.append({'score':score,'veto':False,'reason':str(result.get('reason',''))[:900]})
           output=Path('acolad_human_story_v5_output')
           output.mkdir(exist_ok=True)
           (output/'critics.json').write_text(json.dumps(critics,ensure_ascii=False,indent=2),encoding='utf8')
