@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   instagram-only:
-    if: github.event_name == 'schedule' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[ACOLAD_OWNER_APPROVED_NOV08_INSTAGRAM_RETRY]'))
+    if: false # retired: owner replaced V4 story with redesigned V5, never replay Nov8 artifact
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
