@@ -111,9 +111,8 @@ def access_preflight(network:str,bot:str,channel:str,session=requests):
 def publish_thread(network:str,story:dict,cover:Path,day:date,
                    *, state_dir:Path=ROOT,session=requests)->dict:
     """No automatic retries after an ambiguous send; preserve every receipt locally."""
-    if day!=date.today() and os.getenv("ACOLAD_TEST_CLOCK")!="1":
-        # Strict real publication is controlled by the calling workflow's
-        # Tehran date; wrong-day artifacts must never be replayed.
+    if os.getenv("ACOLAD_TEST_CLOCK")!="1":
+        # Compare against Tehran date, not runner's potentially different UTC date.
         from datetime import datetime
         from zoneinfo import ZoneInfo
         if day != datetime.now(ZoneInfo("Asia/Tehran")).date():
