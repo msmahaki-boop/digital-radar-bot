@@ -19,6 +19,9 @@ concurrency:
   cancel-in-progress: false
 jobs:
   retry-until-verified:
+    # V5 replaces obsolete V4 public storytelling. Retain only manual PREVIEW;
+    # all scheduled and push publications from this legacy workflow are disabled.
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'preview'
     runs-on: ubuntu-latest
     timeout-minutes: 95
     steps:
