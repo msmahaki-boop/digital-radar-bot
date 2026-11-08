@@ -22,9 +22,21 @@ STORY=Path("acolad_daily_editorial_output/current_story.json")
 STATUS=Path("acolad_daily_editorial_output/preview_status.json")
 ACCOUNTS={"telegram":233472,"bale":233497,"instagram":230527}
 CLOCK={"telegram":(17,30),"bale":(17,35),"instagram":(18,0)}
-FOOTER=("🌐 [acolad.ir](https://acolad.ir/)\n"
- "📢 کانال تلگرام: [@acoladagency](https://t.me/acoladagency)\n"
- "ارتباط و مشاوره: [@acolad_agency](https://t.me/acolad_agency)")
+FOOTERS={
+    "telegram": "🌐 acolad.ir\n📢 کانال تلگرام: @acoladagency\n💬 ارتباط و مشاوره: @acolad_agency",
+    "bale": "🌐 acolad.ir\n📢 کانال بله: @acoladagency",
+}
+# Legacy tests/consumers reference FOOTER. New posts must use footer_for(network).
+FOOTER=FOOTERS["telegram"]
+def footer_for(network):
+    if network not in FOOTERS:raise ValueError("Unsupported social footer")
+    return FOOTERS[network]
+
+def clean_old_markup(text):
+    """Protect newly authored social posts from literal, unrendered MD links."""
+    if not isinstance(text,str):raise ValueError("Empty social text")
+    return re.sub(r"\[([^\]\n]+)\]\((https?://[^\s)]+)\)",r"\1",text)
+
 APPROVAL="APPROVED_AUTO_PUBLISH_ALL_THREE_20261104"
 MAX_IMAGE_CALLS=8
 
@@ -199,7 +211,7 @@ def make_channel_copies(story,evidence):
         if issues:
             print("CAPTION_QA_VETO",{"network":net,"length":len(message) if isinstance(message,str) else None,"issues":issues},flush=True)
             raise RuntimeError("LOW_QUALITY_OR_INVALID_COPY_"+net+"_"+",".join(issues))
-        captions[net]=message.strip()+("\n\n"+FOOTER if net in ("telegram","bale") else "")
+        captions[net]=clean_old_markup(message.strip())+("\n\n"+footer_for(net) if net in ("telegram","bale") else "")
     return captions
 
 def critics_approve(story,evidence,captions):
