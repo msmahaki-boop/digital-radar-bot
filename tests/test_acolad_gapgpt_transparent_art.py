@@ -168,8 +168,8 @@ class TransparentImageQA(unittest.TestCase):
         self.assertEqual(submitted["background"],"transparent")
 
     def test_alpha_retries_only_actual_gpt_generations_and_records_count(self):
-        with patch.dict(art.os.environ,{"GAPGPT_API_KEY":"safe-test"}), \\
-             patch.object(art,"models_available",return_value=True), \\
+        with patch.dict(art.os.environ,{"GAPGPT_API_KEY":"safe-test"}), \
+             patch.object(art,"models_available",return_value=True), \
              patch.object(art,"generate",side_effect=[
                 ValueError("NOT_A_VISIBLE_TRANSPARENT_CUTOUT"),
                 ValueError("AI_IMAGE_NOT_A_SPARSE_WHITE_PAPER_INK_DRAWING"),
@@ -183,8 +183,8 @@ class TransparentImageQA(unittest.TestCase):
         self.assertEqual(manifest["procedural_assets"],0)
 
     def test_three_failed_alphas_block_without_procedural_substitute(self):
-        with patch.dict(art.os.environ,{"GAPGPT_API_KEY":"safe-test"}), \\
-             patch.object(art,"models_available",return_value=True), \\
+        with patch.dict(art.os.environ,{"GAPGPT_API_KEY":"safe-test"}), \
+             patch.object(art,"models_available",return_value=True), \
              patch.object(art,"generate",
                           side_effect=ValueError("NOT_A_VISIBLE_TRANSPARENT_CUTOUT")) as api:
             with TemporaryDirectory() as root:
@@ -194,8 +194,8 @@ class TransparentImageQA(unittest.TestCase):
         self.assertEqual(api.call_count,3)
 
     def test_quota_error_never_retries_image_api(self):
-        with patch.dict(art.os.environ,{"GAPGPT_API_KEY":"safe-test"}), \\
-             patch.object(art,"models_available",return_value=True), \\
+        with patch.dict(art.os.environ,{"GAPGPT_API_KEY":"safe-test"}), \
+             patch.object(art,"models_available",return_value=True), \
              patch.object(art,"generate",side_effect=RuntimeError(
                           "GAPGPT_IMAGE_KEY_PRECONSUME_QUOTA_BLOCKED")) as api:
             with TemporaryDirectory() as root:
