@@ -179,11 +179,25 @@ def read_provider_image(row: dict, session=requests) -> tuple[bytes, str]:
 
 
 def generate(story: dict, scene: int, output: Path, session=requests, *,
-             key: str | None = None) -> dict:
+             key: str | None = None, alpha_retry: int = 0) -> dict:
     key = key if key is not None else os.environ.get("GAPGPT_API_KEY", "").strip()
     if not key:
         raise RuntimeError("GAPGPT_SECRET_MISSING")
-    payload = {"model": MODEL, "prompt": prompt_for_scene(story, scene),
+    instruction = prompt_for_scene(story, scene)
+    if alpha_retry:
+        # The original model occasionally ignores transparency even when the
+        # API explicitly requests it. A second genuine GPT Image request is
+        # permitted, but NEVER an artificial replacement illustration.
+        instruction += ("\\nSTRICT CUTOUT CORRECTION "+str(alpha_retry)+": "
+            "The previous picture was a full rectangular background image. "
+            "That is invalid. Draw ONLY the isolated foreground subject. "
+            "All pixels outside the thin black pen contours MUST be alpha=0. "
+            "No full-canvas fill, no colored sky, no room or landscape, "
+            "no white/off-white paper, no frames, no vignette, no poster. "
+            "Leave at least 35 percent of the canvas completely transparent. "
+            "Use black ink contour strokes and sparse interior hatch marks. "
+            "Keep exactly the same visual idea and no written words.")
+    payload = {"model": MODEL, "prompt": instruction,
                "n": 1, "size": "1024x1024", "quality": "medium",
                "background": "transparent", "output_format": "png"}
     r = session.post(BASE_URL + "/images/generations",
@@ -230,11 +244,35 @@ def generate_scenes(story: dict, scenes: list[int], output: Path = OUT,
     records = []
     for scene in scenes:
         dest = output / ("scene_%02d.png" % scene)
-        records.append(generate(story, scene, dest, session=session, key=key))
+        # Up to three actual GPT Image generations, only for inadequate alpha.
+        # Do NOT retry transport 403/429, malformed source or unrelated faults.
+        for attempt in range(3):
+            try:
+                record = generate(story, scene, dest, session=session, key=key,
+                                  alpha_retry=attempt)
+                record["transparent_image_attempts"] = attempt + 1
+                records.append(record)
+                break
+            except ValueError as error:
+                if str(error) not in (
+                    "NOT_A_VISIBLE_TRANSPARENT_CUTOUT",
+                    "NO_REAL_ALPHA_CHANNEL",
+                    "AI_IMAGE_NOT_A_SPARSE_WHITE_PAPER_INK_DRAWING"):
+                    raise
+                dest.unlink(missing_ok=True)
+                print("ACOLAD_REAL_AI_ALPHA_REJECTED " + json.dumps({
+                    "scene":scene,"attempt":attempt+1,"reason":str(error),
+                    "original_gpt_generation":True,
+                    "procedural_substitute":False},ensure_ascii=False),flush=True)
+                if attempt == 2:
+                    raise RuntimeError(
+                        "REAL_GPT_IMAGE_ALPHA_EXHAUSTED_SCENE_"+str(scene)) from error
         print("ACOLAD_REAL_TRANSPARENT_AI_SCENE " + json.dumps({
             "scene": scene, "model": MODEL,
             "transparent_fraction": records[-1]["transparent_fraction"],
-            "real_ai_generated": True}, ensure_ascii=False), flush=True)
+            "real_ai_generated": True,
+            "generation_attempts":records[-1]["transparent_image_attempts"]},
+            ensure_ascii=False), flush=True)
     manifest = {"provider": "GapGPT", "model": MODEL,
                 "image_count": len(records), "real_ai_generated": True,
                 "procedural_assets": 0, "stock_assets": 0,
