@@ -15,6 +15,7 @@ jobs:
         with: {python-version: '3.12'}
       - run: pip install requests==2.32.5 Pillow==11.3.0 beautifulsoup4==4.14.2
       - run: python -m unittest discover -s tests -p 'test_acolad_social_platform_footers.py' -v
+      - run: python -m unittest discover -s tests -p 'test_acolad_native_story_threads.py' -v
       - name: Check native Bot API presence and channel access (GET ONLY NO POSTS)
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
