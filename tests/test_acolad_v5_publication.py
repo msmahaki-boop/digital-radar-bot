@@ -71,14 +71,14 @@ class V5PublicationSafetyQA(unittest.TestCase):
    with ExitStack() as st:
     for cm in self.mock_paths(d):st.enter_context(cm)
     st.enter_context(patch.object(p,"upload_file",return_value=800))
-    st.enter_context(patch.object(p,"send_now",side_effect=[991,992,993])) as send:
-     st.enter_context(patch.object(p.time,"sleep",return_value=None))
-     p._bale_via_novinhub("mock",self.story,Path(d)/"cover.png")
-     self.assertEqual(send.call_count,3)
-     self.assertEqual([a.args[1] for a in send.call_args_list],["bale"]*3)
-     self.assertEqual(send.call_args_list[0].args[3],[800])
-     self.assertEqual(send.call_args_list[1].args[3],[])
-     self.assertEqual(send.call_args_list[2].args[3],[])
+    send=st.enter_context(patch.object(p,"send_now",side_effect=[991,992,993]))
+    st.enter_context(patch.object(p.time,"sleep",return_value=None))
+    p._bale_via_novinhub("mock",self.story,Path(d)/"cover.png")
+    self.assertEqual(send.call_count,3)
+    self.assertEqual([a.args[1] for a in send.call_args_list],["bale"]*3)
+    self.assertEqual(send.call_args_list[0].args[3],[800])
+    self.assertEqual(send.call_args_list[1].args[3],[])
+    self.assertEqual(send.call_args_list[2].args[3],[])
    data=json.loads((Path(d)/"receipts.json").read_text())["network"]["bale"]
    self.assertEqual(data["status"],"SUBMITTED_NOT_PROVEN_PUBLISHED")
    self.assertFalse(data["native_reply_to_first"])
@@ -100,10 +100,10 @@ class V5PublicationSafetyQA(unittest.TestCase):
     for cm in self.mock_paths(d):st.enter_context(cm)
     st.enter_context(patch.object(p,"_provider_seen_story",return_value=False))
     st.enter_context(patch.object(p,"upload_file",return_value=99))
-    st.enter_context(patch.object(p,"send_now",
-            side_effect=ProviderValidationRejected("HTTP 400"))) as send:
-     p._instagram("mock",self.story,[Path(d)/f"story{i}.png" for i in range(9)])
-     send.assert_called_once()
+    send=st.enter_context(patch.object(p,"send_now",
+            side_effect=ProviderValidationRejected("HTTP 400")))
+    p._instagram("mock",self.story,[Path(d)/f"story{i}.png" for i in range(9)])
+    send.assert_called_once()
    receipt=json.loads((Path(d)/"receipts.json").read_text())["network"]["instagram"]
    self.assertEqual(receipt["status"],"HTTP_400_NOT_PUBLISHED")
    self.assertFalse(receipt["publication_verified"])
