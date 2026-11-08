@@ -1,0 +1,73 @@
+name: Acolad IG reconnect account ID / Business metadata audit (READ ONLY)
+on:
+  push:
+    branches: [diagnostics/acolad-20261108-instagram-relinked-account-audit]
+    paths: [ops/acolad-reconnected-instagram-readonly.trigger]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python -m pip install requests==2.32.5 Pillow==11.3.0
+      - name: Identify duplicate or newly added Instagram account and exposed category fields - GET only
+        env:
+          NOVINHUB_API_TOKEN: ${{ secrets.NOVINHUB_API_TOKEN }}
+        run: |
+          python -u - <<'PY'
+          import json,requests
+          from acolad_novinhub_bridge import API,headers,as_items,token
+          key=token()
+          response=requests.get(API+"/account",headers=headers(key),
+              params={"with":"meta,socialUser"},timeout=40)
+          print("ACOLAD_IG_ACCOUNTS_GET_HTTP",response.status_code,flush=True)
+          if response.status_code!=200:raise RuntimeError("CANNOT_CHECK_CONNECTED_ACCOUNTS")
+          rows=as_items(response.json())
+          if rows is None:raise RuntimeError("INVALID_NOVINHUB_ACCOUNT_LIST")
+          allowed=("account_type","instagram_account_type","professional_account_type",
+                   "is_business","business_account","business_status",
+                   "is_creator","category","is_professional","type")
+          report=[]
+          for row in rows:
+              if not isinstance(row,dict) or "instagram" not in str(row.get("type") or "").lower():continue
+              social=row.get("socialUser") or row.get("social_user") or {}
+              if not isinstance(social,dict):social={}
+              meta=row.get("meta") or {}
+              if not isinstance(meta,dict):meta={}
+              info=row.get("info") or {}
+              if not isinstance(info,dict):info={}
+              identity=str(row.get("name") or row.get("username") or row.get("title") or "")
+              report.append({
+                "id":row.get("id"),"name":identity[:80],
+                "type":row.get("type"),"sub_type":row.get("sub_type"),
+                "can_send_post":row.get("can_send_post"),
+                "login_required":row.get("login_required"),
+                "visible_flags":{k:row[k] for k in allowed if k in row and
+                    isinstance(row[k],(str,int,bool,type(None)))},
+                "meta_flags":{k:meta[k] for k in allowed if k in meta and
+                    isinstance(meta[k],(str,int,bool,type(None)))},
+                "social_flags":{k:social[k] for k in allowed if k in social and
+                    isinstance(social[k],(str,int,bool,type(None)))},
+                "present_account_fields":sorted(k for k in row if k not in (
+                    "token","access_token","refresh_token","session","cookies",
+                    "credential","secret","password","socialUser","meta"))[:50],
+                "present_social_fields":sorted(social.keys())[:25],
+                "info_flags":{k:info[k] for k in allowed if k in info and
+                    isinstance(info[k],(str,int,bool,type(None)))},
+                "present_info_fields":sorted(info.keys())[:35],
+              })
+          print("ACOLAD_IG_ALL_CONNECTED_ACCOUNTS "+json.dumps(report,
+              ensure_ascii=False),flush=True)
+          matches=[r for r in report if r.get("name","").lower().replace("@","")=="acolad.agency"]
+          print("ACOLAD_IG_ACCOUNT_MATCH_SUMMARY "+json.dumps({
+             "all_instagram_accounts":len(report),
+             "acolad_name_matches":len(matches),
+             "matching_ids":[r.get("id") for r in matches],
+             "expected_old_id_present":any(str(r.get("id"))=="230527" for r in report),
+             "alternative_id_available":any(str(r.get("id"))!="230527" for r in matches)
+           },ensure_ascii=False),flush=True)
+          PY
