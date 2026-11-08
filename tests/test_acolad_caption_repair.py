@@ -14,7 +14,7 @@ class CaptionRetry(unittest.TestCase):
    res=p.make_channel_copies({"slides":[{"text":"یک روایت اصلی"}]},[{"title":"Original","excerpt":"Evidence"}])
   self.assertEqual(model.call_count,2)
   self.assertTrue(res["telegram"].endswith(p.FOOTER))
-  self.assertTrue(res["bale"].endswith(p.FOOTER))
+  self.assertTrue(res["bale"].endswith(p.footer_for("bale")))
   self.assertEqual(res["instagram"],good)
  def test_two_bad_rewrites_remain_blocked(self):
   tg="این یک متن با شواهد معتبر است و درباره تجربه خرید مشتری صحبت می‌کنه. "*9
