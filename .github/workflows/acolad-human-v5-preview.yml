@@ -48,6 +48,13 @@ jobs:
           run-id: 42480255927
           github-token: ${{ github.token }}
           path: acolad_v5_previous
+      - name: Restore prior verified Acolad genuine GPT Image 2.5 art library ONLY if current scene-2 gets HTTP403
+        uses: actions/download-artifact@v4
+        with:
+          name: acolad-20261108-gpt25-flare-real-cutouts-7slides
+          run-id: 42469966562
+          github-token: ${{ github.token }}
+          path: acolad_v5_original_library
       - name: Two independent GPT critics verify actual editorial correctness and natural Persian
         env:
           GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
