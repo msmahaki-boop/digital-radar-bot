@@ -1,0 +1,53 @@
+name: Acolad native Telegram and Bale thread permissions READ ONLY
+on:
+  push:
+    branches: [feature/acolad-20261108-social-media-footer-threads]
+    paths: [ops/acolad-native-threads-preflight.trigger]
+permissions:
+  contents: read
+jobs:
+  read:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install requests==2.32.5 Pillow==11.3.0 beautifulsoup4==4.14.2
+      - run: python -m unittest discover -s tests -p 'test_acolad_social_platform_footers.py' -v
+      - run: python -m unittest discover -s tests -p 'test_acolad_v4_hourly.py' -v
+      - run: python -m unittest discover -s tests -p 'test_acolad_caption_repair.py' -v
+      - run: python -m unittest discover -s tests -p 'test_acolad_native_story_threads.py' -v
+      - name: Check native Bot API presence and channel access (GET ONLY NO POSTS)
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          BALE_BOT_TOKEN: ${{ secrets.BALE_BOT_TOKEN }}
+          TELEGRAM_CHANNEL_ID: ${{ vars.TELEGRAM_CHANNEL_ID }}
+          BALE_CHANNEL_ID: ${{ vars.BALE_CHANNEL_ID }}
+        run: |
+          python -u - <<'PY'
+          import os,requests,json
+          for name,token,channel,host in [
+            ("telegram",os.getenv("BOT_TOKEN","").strip(),
+             os.getenv("TELEGRAM_CHANNEL_ID","").strip(),"https://api.telegram.org/bot"),
+            ("bale",os.getenv("BALE_BOT_TOKEN","").strip(),
+             os.getenv("BALE_CHANNEL_ID","").strip() or "@acoladagency",
+             "https://tapi.bale.ai/bot")
+          ]:
+            record={"network":name,"secret_present":bool(token),"channel_present":bool(channel)}
+            if token:
+              try:
+                # No token is printed. GET-only command with no social side effects.
+                res=requests.post(host+token+"/getMe",timeout=22)
+                result=res.json() if res.status_code==200 else {}
+                record["bot_http"]=res.status_code
+                record["bot_ok"]=result.get("ok") is True
+                if result.get("ok") and channel:
+                  check=requests.post(host+token+"/getChat",json={"chat_id":channel},timeout=22)
+                  payload=check.json() if check.status_code==200 else {}
+                  record["channel_get_http"]=check.status_code
+                  record["channel_get_ok"]=payload.get("ok") is True
+              except requests.RequestException:
+                record["bot_network_error"]=True
+            print("ACOLAD_NATIVE_THREAD_PREFLIGHT",json.dumps(record,ensure_ascii=False),flush=True)
+          PY
