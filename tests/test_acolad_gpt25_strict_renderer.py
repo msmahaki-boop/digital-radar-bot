@@ -38,8 +38,8 @@ class StrictPipelineTests(unittest.TestCase):
                 strict.illustrate_strict(bad)
             api.assert_not_called()
 
-    def test_more_than_four_scenes_rejected_before_billing(self):
-        story={"slides":[{"n":i,"scene_id":i,"visual_action":"new_scene"} for i in range(1,6)]}
+    def test_above_strict_max_scenes_rejected_before_billing(self):
+        story={"slides":[{"n":i,"scene_id":i,"visual_action":"new_scene"} for i in range(1,strict.MAX_IMAGES+2)]}
         with patch.object(strict,"generate_scenes") as api:
             with self.assertRaisesRegex(RuntimeError,"DISTINCT_SCENE_COUNT"):
                 strict.illustrate_strict(story)
