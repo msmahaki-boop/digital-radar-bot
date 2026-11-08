@@ -7,3 +7,4 @@ Re-run source, two independent critics, original art and nine progressive visual
 Editor fix sourced 54 percent denominator straight from Baymard original article, exact expired-order UI test and missing return request action.
 
 2026-11-08 15:52 Tehran: actual Baymard original source now states 42 benchmarked sites and 660 ratings and distinguishes no request from rejection; rerun unchanged 85 threshold and only render after both pass.
+2026-11-08 retest with expected hypothetical-story opening after test failed only on outdated literal, all substantive guards unchanged.
