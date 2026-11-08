@@ -5,6 +5,7 @@ on:
     paths: [ops/acolad-gpt25-fresh-preview.trigger]
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: acolad-nov8-real-image-preview
   cancel-in-progress: false
