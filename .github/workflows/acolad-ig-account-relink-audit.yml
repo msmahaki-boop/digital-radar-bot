@@ -38,10 +38,14 @@ jobs:
               if not isinstance(social,dict):social={}
               meta=row.get("meta") or {}
               if not isinstance(meta,dict):meta={}
+              info=row.get("info") or {}
+              if not isinstance(info,dict):info={}
               identity=str(row.get("name") or row.get("username") or row.get("title") or "")
               report.append({
                 "id":row.get("id"),"name":identity[:80],
-                "type":row.get("type"),"login_required":row.get("login_required"),
+                "type":row.get("type"),"sub_type":row.get("sub_type"),
+                "can_send_post":row.get("can_send_post"),
+                "login_required":row.get("login_required"),
                 "visible_flags":{k:row[k] for k in allowed if k in row and
                     isinstance(row[k],(str,int,bool,type(None)))},
                 "meta_flags":{k:meta[k] for k in allowed if k in meta and
@@ -52,6 +56,9 @@ jobs:
                     "token","access_token","refresh_token","session","cookies",
                     "credential","secret","password","socialUser","meta"))[:50],
                 "present_social_fields":sorted(social.keys())[:25],
+                "info_flags":{k:info[k] for k in allowed if k in info and
+                    isinstance(info[k],(str,int,bool,type(None)))},
+                "present_info_fields":sorted(info.keys())[:35],
               })
           print("ACOLAD_IG_ALL_CONNECTED_ACCOUNTS "+json.dumps(report,
               ensure_ascii=False),flush=True)
