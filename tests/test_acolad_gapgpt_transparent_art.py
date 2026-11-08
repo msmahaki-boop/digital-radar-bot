@@ -116,9 +116,9 @@ class TransparentImageQA(unittest.TestCase):
                     art.generate_scenes(self.story(),[1],Path(root),session=session)
         session.post.assert_not_called()
 
-    def test_limit_four_scenes(self):
+    def test_limit_max_ten_scenes(self):
         with self.assertRaisesRegex(RuntimeError,"SCENE_COUNT_OUT_OF_RANGE"):
-            art.generate_scenes(self.story(),[1,2,3,4,5])
+            art.generate_scenes(self.story(),list(range(1,art.MAX_IMAGES+2)))
 
     def test_no_ai_art_with_json_url_only(self):
         response=Mock(status_code=200)
