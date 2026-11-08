@@ -1,0 +1,21 @@
+name: Acolad V5 separate social cover and native reply publication OFFLINE QA
+on:
+  push:
+    branches: [feature/acolad-human-story-v5-20261108]
+    paths: [ops/acolad-v5-publication-offline.trigger]
+permissions:
+  contents: read
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python -m pip install requests==2.32.5 Pillow==11.3.0 beautifulsoup4==4.14.2
+      - run: python -m py_compile acolad_human_story_v5.py acolad_v5_visual.py acolad_v5_publication.py
+      - run: python -m unittest discover -s tests -p 'test_acolad_v5_publication.py' -v
+      - run: python -m unittest discover -s tests -p 'test_acolad_human_story_v5.py' -v
+      - run: python -m unittest discover -s tests -p 'test_acolad_social_platform_footers.py' -v
+      - run: python -m unittest discover -s tests -p 'test_acolad_native_story_threads.py' -v

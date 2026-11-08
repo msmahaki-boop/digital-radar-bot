@@ -1,0 +1,51 @@
+name: Acolad V5 immutable nine-story artifact READ-ONLY pre-publication QA
+on:
+  push:
+    branches: [feature/acolad-human-story-v5-20261108]
+    paths: [ops/acolad-v5-prepublication-qa.trigger]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python -m pip install requests==2.32.5 Pillow==11.3.0 beautifulsoup4==4.14.2
+      - name: Restore exact 9-slide original GPT picture artifact and independent editorial verdicts
+        uses: actions/download-artifact@v4
+        with:
+          name: acolad-human-v5-nine-frames-original-gpt-art-social-cover-preview
+          run-id: 42480921324
+          github-token: ${{ github.token }}
+          path: .
+      - name: Check real art source, logo, independent scores, 9-slide pixel-freeze, separate square social artwork and day lock
+        run: |
+          python -m py_compile acolad_human_story_v5.py acolad_v5_visual.py acolad_v5_publication.py
+          python -u - <<'PY'
+          import json,hashlib
+          from pathlib import Path
+          from acolad_v5_publication import validate_immutable_preview
+          from acolad_human_story_v5 import thread_parts
+          story,cover,frames=validate_immutable_preview()
+          checks=json.loads((Path('acolad_human_story_v5_output')/'stories/pixel_freeze_checks.json').read_text(encoding='utf8'))
+          if len(checks)!=6 or any(x.get('previous_pixels_identical') is not True for x in checks):
+              raise RuntimeError('V5_PRIOR_TEXT_PIXEL_FREEZE_CHECKS_MISSING')
+          if len(thread_parts(story,'telegram'))!=3 or len(thread_parts(story,'bale'))!=3:
+              raise RuntimeError('V5_NATIVE_STORY_SEGMENTS_INVALID')
+          manifest=json.loads(Path('acolad_human_story_v5_output/image_provenance.json').read_text(encoding='utf8'))
+          if manifest.get('reused_verified_archive_run_id') not in (None,42469966562):
+              raise RuntimeError('V5_UNVERIFIED_FALLBACK_ART_LIBRARY')
+          print('ACOLAD_V5_IMMUTABLE_PUBLISH_GATES_PASSED '+json.dumps({
+              'day':'2026-11-08','frames':len(frames),'sourced_original_gpt_pictures':2,
+              'source_blob_sha256':hashlib.sha256(Path('examples/acolad_human_story_v5_returns_example.json').read_bytes()).hexdigest(),
+              'cover_dimensions':[1080,1080],'freeze_checks':len(checks),
+              'brand_fonts':['Regular','Medium','Bold','Black'],
+              'library_reuse_truthful':manifest.get('original_ai_library_reuse',False),
+              'published':False,'social_api_calls':0},ensure_ascii=False),flush=True)
+          PY
+      - name: Native and NovinHub no-duplicate regression with zero external POST
+        run: python -m unittest discover -s tests -p 'test_acolad_v5_publication.py' -v
