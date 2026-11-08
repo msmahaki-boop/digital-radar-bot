@@ -151,9 +151,29 @@ def build_from_gapgpt(sources:list[dict], *, key:str|None=None):
         "human_voice_exemplar":EXEMPLAR_NOTE,
         "avoid_duplication":"Do not copy the user exemplar or earlier Nov8 site-performance story.",
         "narrative_brief":"Write a NEW grounded nine-part story about a concrete human dilemma."}
-    usage={"requests_sent":0,"cost_estimated_usd":0.0,"budget_usd":0.22,"stages":[]}
-    draft=research.api_call(key,SYSTEM_INSTRUCTION,
-       json.dumps(brief,ensure_ascii=False),7900,usage)
-    issues=validate(draft,sources)
-    if issues:raise RuntimeError("V5_HUMAN_STORY_VETO:"+",".join(issues[:9]))
-    return draft,usage
+    usage={"requests_sent":0,"cost_estimated_usd":0.0,"budget_usd":0.80,"stages":[]}
+    draft=None
+    issues=["INITIAL_GENERATION_REQUIRED"]
+    for attempt in range(3):
+        if attempt==0:
+            system=SYSTEM_INSTRUCTION
+            request=brief
+        else:
+            system=(SYSTEM_INSTRUCTION+
+                "\nویراستاری دور "+str(attempt)+": فقط مشکل‌های دقیق زیر را با "
+                "همان منابع اصلاح کن؛ حق نداری عدد، شرکت‌کننده، مطالعه یا "
+                "سخن تاریخی تازه‌ای اختراع کنی. مشکل‌ها: "+", ".join(issues))
+            request={"sources":brief["sources"],"draft":draft,
+                     "issues":issues,"character_fictional":True}
+        draft=research.api_call(key,system,json.dumps(request,
+              ensure_ascii=False),7900,usage)
+        if not isinstance(draft,dict):
+            raise RuntimeError("V5_MODEL_RESPONSE_NOT_JSON_OBJECT")
+        draft["sources"]=sources
+        # Genre is part of the factual source contract, not model creativity.
+        draft["genre"]="مرور پژوهش + روایت فرضی، نه خبر امروز"
+        issues=validate(draft,sources)
+        if not issues:return draft,usage
+        print("V5_TEXT_GENERATION_EDIT_QA "+json.dumps({
+             "attempt":attempt+1,"issues":issues[:10]},ensure_ascii=False),flush=True)
+    raise RuntimeError("V5_HUMAN_STORY_VETO_AFTER_THREE_SOURCE_LOCKED_EDITS:"+",".join(issues[:9]))
