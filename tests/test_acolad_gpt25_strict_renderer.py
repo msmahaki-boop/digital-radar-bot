@@ -21,6 +21,23 @@ class StrictPipelineTests(unittest.TestCase):
         self.assertEqual(result,(["image"],[]))
         generate.assert_called_once()
 
+    def test_real_pillow_alpha_verify_order_does_not_false_fail(self):
+        from PIL import Image, ImageDraw
+        with TemporaryDirectory() as root:
+            path=Path(root)/"genuine.png"
+            image=Image.new("RGBA",(1024,1024),(255,255,255,0))
+            ImageDraw.Draw(image).ellipse((300,280,725,770),fill=(15,15,15,255))
+            image.save(path,"PNG")
+            self.assertTrue(strict.verify_generated_alpha_file(path))
+
+    def test_solid_opaque_png_still_refused(self):
+        from PIL import Image
+        with TemporaryDirectory() as root:
+            path=Path(root)/"bad.png"
+            Image.new("RGBA",(1024,1024),(255,255,255,255)).save(path,"PNG")
+            with self.assertRaisesRegex(RuntimeError,"GPT25_ALPHA_NOT_TRANSPARENT"):
+                strict.verify_generated_alpha_file(path)
+
     def test_no_procedural_fallback_after_api_403(self):
         with TemporaryDirectory() as root:
             with patch.object(strict,"CONCEPT_DIR",Path(root)/"cutouts"), \
