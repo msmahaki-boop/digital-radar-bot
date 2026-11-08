@@ -1,0 +1,1 @@
+2026-11-08 OWNER-APPROVED real GPT Image 2.5 delivery to Telegram 233472, Bale 233497 and Instagram Business 230527, missing-only. Verify approved preview run 42469966562, 4 true transparent RGBA cutouts, 8 slides, critic scores 88/94; no duplicate writes. Preserve provider receipts.
