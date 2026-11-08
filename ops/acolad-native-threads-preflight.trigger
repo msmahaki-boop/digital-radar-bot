@@ -1,0 +1,1 @@
+Read bot access booleans and channel GET only; verify distinct platform footers and no publish.\n
