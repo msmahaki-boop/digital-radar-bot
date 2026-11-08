@@ -182,7 +182,7 @@ def repair_colloquial_passive_without_new_claims(story:dict)->tuple[dict,bool]:
     changed=False
     for slide in result.get("slides",[]):
         before=str(slide.get("text") or "")
-        after=re.sub(r"(?:دیده|مشاهده|بررسی|انجام|ارائه)\\s+شد(?:ه)?\\b",
+        after=re.sub(r"(?:دیده|مشاهده|بررسی|انجام|ارائه)\s+شد(?:ه)?\b",
           lambda m:substitutions.get(m.group(0),m.group(0)),before)
         if before!=after:
             slide["text"]=after
