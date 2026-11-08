@@ -39,7 +39,7 @@ class HumanStoryV5QA(unittest.TestCase):
    self.assertNotIn("از ۳", "".join(parts))
    self.assertIn("اولین جایی که محمد",parts[0])
    self.assertIn("حالا پیچ قصه",parts[1])
-   self.assertIn("یعنی چهار تغییر",parts[2])
+   self.assertIn("یعنی چهار آزمایش",parts[2])
    self.assertLess(len(parts[0]),986)
    self.assertEqual(sum(p.count("اولین جایی که محمد") for p in parts),1)
    self.assertNotIn("](","".join(parts))
