@@ -1,0 +1,132 @@
+{
+  "version": "acolad-human-story-v5.0",
+  "title": "وقتی جواب مرجوعی «نه» است، چرا توضیحش غیب می‌شود!",
+  "topic": "شفافیت تجربه مرجوعی در فروشگاه اینترنتی",
+  "genre": "مرور پژوهش + روایت فرضی، نه خبر امروز",
+  "source_url": "https://baymard.com/research-articles/order-returns-ecommerce-ux",
+  "source_date": "2019-06-03",
+  "fictional_example": true,
+  "character": {
+    "name": "محمد",
+    "fictional": true
+  },
+  "slides": [
+    {
+      "n": 1,
+      "beat": "hook",
+      "text": "💭 فرض کن محمد یه خرید اینترنتی کرده و حالا می‌خواد یکی از کالاها رو پس بده. نه دعوا داره، نه دنبال امتیاز اضافه‌ست؛ فقط می‌خواد بدونه از کدوم صفحه باید درخواست مرجوعی رو شروع کنه. 📌 این یه شخصیت فرضیه، اما مسئله‌ش بی‌ربط به واقعیت نیست؛ پژوهش‌های تجربه کاربری بایمرد نشون می‌دن مسیر مرجوعی می‌تونه برای خریدار گیج‌کننده باشه.",
+      "overlay": "💭 محمد فقط یه جواب می‌خواست؛ **مرجوعی رو از کجا شروع کنم!**",
+      "scene_id": 1,
+      "visual_action": "new_scene",
+      "visual_idea": "An anxious fictional Iranian online customer holding a small return parcel and looking at two enormous blank doorways, one with an outline of a question-mark-shaped keyhole, hand-drawn ink, transparent PNG, no text.",
+      "source_ids": [],
+      "claim_type": "hypothetical"
+    },
+    {
+      "n": 2,
+      "beat": "old_path",
+      "text": "📌 اولین جایی که محمد سر می‌زنه، فهرست سفارش‌هاست. خب طبیعی هم هست؛ کاری که به خرید قبلی مربوطه، باید نزدیک همون سفارش پیدا بشه. سفارش رو باز می‌کنه، روی جزئیات می‌زنه و چشم می‌چرخونه دنبال دکمه مرجوعی. خبری نیست. برمی‌گرده، صفحه رو بالا و پایین می‌کنه و آخرش با خودش می‌گه: «شاید باید برم سراغ...»",
+      "overlay": "📌 سفارش رو باز کرد؛ **دکمه مرجوعی کجا بود!**",
+      "scene_id": 1,
+      "visual_action": "add_text",
+      "visual_idea": "",
+      "source_ids": [
+        "baymard-return-2019"
+      ],
+      "claim_type": "hypothetical"
+    },
+    {
+      "n": 3,
+      "beat": "dialogue",
+      "text": "📌 «...بخش راهنما!» محمد وارد راهنمای سایت می‌شه. چندتا سؤال پرتکرار می‌بینه، اما هنوز نمی‌دونه حکم سفارش خودش چیه. توی جست‌وجو می‌نویسه «پس دادن کالا» و از این صفحه به اون صفحه می‌ره. + شاید زیر لب بگه: «مگه من قراره کارآگاه باشم! فقط بگین این خرید رو می‌تونم پس بدم یا نه!»",
+      "overlay": "📌 رفت سراغ راهنما؛ جواب سفارش خودش **هنوز معلوم نبود**",
+      "scene_id": 1,
+      "visual_action": "add_text",
+      "visual_idea": "",
+      "source_ids": [],
+      "claim_type": "hypothetical"
+    },
+    {
+      "n": 4,
+      "beat": "turn",
+      "text": "📌 حالا پیچ قصه رو ببین. توی این مثال فرضی، مهلت مرجوعیِ سفارش محمد تموم شده و فروشگاه دکمه شروع درخواست رو برداشته. این تصمیم شاید از نظر فنی قابل‌فهم باشه؛ وقتی فرصت گذشته، نمی‌خوان یه روند بی‌نتیجه باز بشه. اما محمد از پشت پرده خبر نداره. فقط یه جای خالی می‌بینه؛ بدون توضیح، بدون تاریخ و بدون راه بعدی.",
+      "overlay": "📌 مهلت گذشته بود؛ اما **دلیل ناپدید شدن دکمه** کجا بود!",
+      "scene_id": 2,
+      "visual_action": "new_scene",
+      "visual_idea": "A friendly little humanoid padlock and a confused shopper examining a clipboard and an hourglass, no printed characters, black hand-drawn ink only, isolated figures.",
+      "source_ids": [],
+      "claim_type": "hypothetical"
+    },
+    {
+      "n": 5,
+      "beat": "new_expectation",
+      "text": "📌 محمد قرار نبود حتماً جواب مثبت بشنوه. حتی اگه سایت همون‌جا می‌گفت «مهلت مرجوعی این سفارش تموم شده»، باز دست‌کم می‌فهمید داستان چیه. + شاید دلخور می‌شد، اما مجبور نبود دنبال یه قانون پنهان بگرده. فرقِ مهم همین‌جاست؛ مشتری همیشه اختیار تغییر نتیجه رو نداره، ولی حق داره جواب روشن و مسیر بعدی رو راحت پیدا کنه.",
+      "overlay": "📌 شاید جواب «نه» بود؛ **بی‌جواب موندن** بدتر می‌شد",
+      "scene_id": 2,
+      "visual_action": "add_text",
+      "visual_idea": "",
+      "source_ids": [],
+      "claim_type": "hypothetical"
+    },
+    {
+      "n": 6,
+      "beat": "science_knot",
+      "text": "📌 این فقط حس ما نیست. در پژوهش‌های تجربه کاربری بایمرد، روند برگشت کالا جزو بخش‌هایی معرفی شده که برای کاربران اصطکاک و سردرگمی زیادی ایجاد می‌کنه. البته بایمرد درباره محمدِ فرضی ما تحقیق نکرده؛ داستان فقط کمک می‌کنه مسئله رو ببینیم. + پس راهکار، وعده مرجوعیِ همیشگی نیست؛ راهکار اینه که مشتری وضعیت خودش رو بفهمه. یعنی...",
+      "overlay": "📌 پژوهش بایمرد هم از **دشواری مسیر مرجوعی** می‌گه؛ یعنی...",
+      "scene_id": 2,
+      "visual_action": "add_text",
+      "visual_idea": "",
+      "source_ids": [],
+      "claim_type": "fact"
+    },
+    {
+      "n": 7,
+      "beat": "practical_actions",
+      "text": "📌 یعنی چهار تغییر کوچیک رو روی سایت خودت امتحان کن، نه اینکه وعده بدی همه‌چی درست می‌شه.\n+ کنار سفارشِ خارج از مهلت، دلیل غیرفعال بودن مرجوعی رو واضح بنویس!\n+ تاریخ پایان مهلت رو همون صفحه نشون بده!\n+ راه تماس با پشتیبانی رو دم دست بذار!\n+ از چند نفر بخواه سفارش قدیمی رو بدون راهنمایی باز کنن و نتیجه رو ثبت کنن!",
+      "overlay": "📌 **دلیل، تاریخ، پشتیبانی و تست واقعی**؛ چهار قدم قابل‌امتحان",
+      "scene_id": 3,
+      "visual_action": "new_scene",
+      "visual_idea": "",
+      "source_ids": [
+        "baymard-return-2019"
+      ],
+      "claim_type": "testable"
+    },
+    {
+      "n": 8,
+      "beat": "emotional_cost",
+      "text": "📌 این چهار کار معجزه نمی‌کنه. ممکنه مشتری باز هم ناراحت بشه و ممکنه بعضی درخواست‌ها طبق قانون فروشگاه پذیرفته نشن. اما دست‌کم می‌تونی ببینی چند نفر جواب رو همون‌جا پیدا می‌کنن و کجا هنوز گیر می‌افتن. + اگه نتیجه بهتر نشد، طراحی رو دوباره آزمایش کن. تجربه مشتری بعد از پرداخت هم ادامه داره؛ اون لحظه‌ای که دنبال جواب می‌گرده، بخشی از همون تجربه‌ست.",
+      "overlay": "📌 همیشه جواب مثبت نیست؛ **مسیرِ روشن** هنوز ارزش داره",
+      "scene_id": 3,
+      "visual_action": "add_text",
+      "visual_idea": "",
+      "source_ids": [],
+      "claim_type": "interpretation"
+    },
+    {
+      "n": 9,
+      "beat": "payoff",
+      "text": "📌 مخلص کلام اینکه؛ یه سایت خوب فقط بلد نیست سفارش بگیره، باید وقتی درخواست مشتری رد می‌شه هم باهاش حرف بزنه. «دکمه رو می‌شه برداشت؛ توضیح رو نه.» + توی فروشگاهت یه سفارش قدیمی رو باز کن؛ ببین دلیل محدودیت رو بی‌دردسر پیدا می‌کنی یا نه. ❤️‍🔥 تو جای محمد بودی، کدوم جواب آرومت می‌کرد! 🌱",
+      "overlay": "📌 حرف آخر: **دکمه رو می‌شه برداشت؛ توضیح رو نه!**",
+      "scene_id": 3,
+      "visual_action": "add_text",
+      "visual_idea": "",
+      "source_ids": [],
+      "claim_type": "testable"
+    }
+  ],
+  "sources": [
+    {
+      "id": "baymard-return-2019",
+      "url": "https://baymard.com/research-articles/order-returns-ecommerce-ux",
+      "date": "2019-06-03",
+      "publisher": "Baymard Institute",
+      "title": "The ‘Order Returns’ Experience is Critical for Customer Retention — Yet 54% of Sites Have a Returns Interface with Substantial UX Issues",
+      "verified_claims": [
+        "returns flow produces substantial UX frustrations in usability tests",
+        "historical 2019 research, not a 2026 news announcement"
+      ],
+      "excerpt": "During large-scale user testing of Accounts and Self-Service, return processes and interfaces caused the most usability issues; study published 2019."
+    }
+  ]
+}
