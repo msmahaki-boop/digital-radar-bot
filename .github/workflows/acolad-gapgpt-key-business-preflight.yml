@@ -1,0 +1,73 @@
+name: ACOLAD GapGPT image credit and NovinHub Business PREVIEW ONLY
+on:
+  push:
+    branches: [feature/acolad-gapgpt-transparent-gptimage-20261107]
+    paths: [ops/acolad-gapgpt-key-and-ig-preflight.trigger]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install requests==2.32.5 Pillow==11.3.0
+      - name: Test ONE real transparent GPT Image 2.5 using stored GitHub secret (NO SOCIAL)
+        env:
+          GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
+        run: |
+          python -u - <<'PY'
+          import json,os
+          from pathlib import Path
+          import acolad_gapgpt_transparent_art as art
+          key=os.getenv("GAPGPT_API_KEY","").strip()
+          if not key:raise SystemExit("GITHUB_GAPGPT_SECRET_MISSING")
+          art.MODEL="gpt-image-2.5-flare"
+          if not art.models_available(key):raise SystemExit("GPT_IMAGE_25_NOT_IN_CATALOG")
+          sample={"slides":[{"scene_id":1,"visual_idea":
+          "An ORIGINAL humorous black ink doodle of a small business owner looking through a large magnifying glass at a shopping cart, without a background."}]}
+          try:
+              row=art.generate(sample,1,Path("probe_art/scene_01.png"),key=key)
+              print("GPT25_REAL_IMAGE_ACCESS_OK",json.dumps({
+              "model":row["model"],"image_response":row["image_response"],
+              "transparent_fraction":row["transparent_fraction"]},ensure_ascii=False),flush=True)
+          except Exception as e:
+              # This result is for owner diagnosis; no token or HTTP body is logged.
+              print("GPT25_IMAGE_ACCESS_BLOCKED",type(e).__name__,str(e)[:95],flush=True)
+              raise
+          PY
+      - name: Read Instagram account's provider connection and business metadata (GET ONLY)
+        if: always()
+        env:
+          NOVINHUB_API_TOKEN: ${{ secrets.NOVINHUB_API_TOKEN }}
+          NOVINHUB_TOKEN: ${{ secrets.NOVINHUB_TOKEN }}
+          NOVINHUB_ACCESS_TOKEN: ${{ secrets.NOVINHUB_ACCESS_TOKEN }}
+        run: |
+          python -u - <<'PY'
+          import json
+          import requests
+          from acolad_novinhub_bridge import API,headers,token,as_items
+          try:
+              response=requests.get(API+"/account",headers=headers(token()),timeout=40)
+              if response.status_code!=200:raise RuntimeError("NOVINHUB_ACCOUNT_READ_"+str(response.status_code))
+              rows=as_items(response.json()) or []
+              match=[x for x in rows if str(x.get("id"))=="230527"]
+              if len(match)!=1:raise RuntimeError("INSTAGRAM_ACCOUNT_NOT_UNIQUE")
+              account=match[0]
+              fields=("id","type","name","login_required","account_type","is_business","business_account","status")
+              print("ACOLAD_INSTAGRAM_ACCOUNT_READ_ONLY",json.dumps({
+                x:account.get(x) for x in fields if x in account},ensure_ascii=False),flush=True)
+          except Exception as e:
+              print("INSTAGRAM_ACCOUNT_GET_FAILED",type(e).__name__,str(e)[:95],flush=True)
+              raise
+          PY
+      - name: Upload genuine transparent preview only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-gpt-image-25-transparent-key-test
+          path: probe_art/
+          if-no-files-found: ignore
+          retention-days: 7
