@@ -1,6 +1,6 @@
 {
   "version": "acolad-human-story-v5.0",
-  "title": "وقتی جواب مرجوعی «نه» است، چرا توضیحش غیب می‌شود!",
+  "title": "وقتی مهلت مرجوعی گذشته، چرا توضیحش گم می‌شه!",
   "topic": "شفافیت تجربه مرجوعی در فروشگاه اینترنتی",
   "genre": "مرور پژوهش + روایت فرضی، نه خبر امروز",
   "source_url": "https://baymard.com/research-articles/order-returns-ecommerce-ux",
@@ -27,7 +27,7 @@
     {
       "n": 2,
       "beat": "old_path",
-      "text": "📌 اولین جایی که محمد سر می‌زنه، فهرست سفارش‌هاست. خب طبیعی هم هست؛ کاری که به خرید قبلی مربوطه، باید نزدیک همون سفارش پیدا بشه. سفارش رو باز می‌کنه، روی جزئیات می‌زنه و چشم می‌چرخونه دنبال دکمه مرجوعی. خبری نیست. برمی‌گرده، صفحه رو بالا و پایین می‌کنه و آخرش با خودش می‌گه: شاید باید برم سراغ...",
+      "text": "📌 اولین جایی که محمد سر می‌زنه، فهرست سفارش‌هاست. به ذهنش می‌رسه که حتماً راه مرجوعی رو همون حوالی پیدا می‌کنه. سفارش رو باز می‌کنه، روی جزئیات می‌زنه و چشم می‌چرخونه دنبال دکمه مرجوعی. خبری نیست. برمی‌گرده، صفحه رو بالا و پایین می‌کنه و آخرش با خودش می‌گه: شاید باید برم سراغ...",
       "overlay": "📌 سفارش رو باز کرد؛ **دکمه مرجوعی کجا بود!**",
       "scene_id": 1,
       "visual_action": "add_text",
@@ -71,7 +71,7 @@
     {
       "n": 6,
       "beat": "science_knot",
-      "text": "📌 این فقط حدس ما نیست. در پژوهش تجربه کاربری بایمرد که سال ۲۰۱۹ منتشر شد، روند برگشت کالا جزو بخش‌هایی معرفی شده که برای کاربران اصطکاک و سردرگمی زیادی ایجاد می‌کنه. البته بایمرد درباره محمدِ فرضی ما تحقیق نکرده؛ داستان فقط کمک می‌کنه مسئله رو ببینیم. + پس راهکار، وعده مرجوعیِ همیشگی نیست؛ راهکار اینه که مشتری وضعیت خودش رو بفهمه. یعنی...",
+      "text": "📌 حالا ببین بایمرد چی پیدا کرده بود. در بررسی منتشرشده سال ۲۰۱۹، ۵۴٪ سایت‌های بررسی‌شده در رابط مرجوعی مشکل جدی تجربه کاربری داشتن. این آمار درباره همون سایت‌هاست، نه همه فروشگاه‌های امروز و نه محمدِ فرضی ما. + قصه محمد فقط کمک می‌کنه این اصطکاک رو تصور کنیم. راهکار هم قول مرجوعی همیشگی نیست؛ جواب روشن و مسیر معلومه. یعنی...",
       "overlay": "📌 پژوهش بایمرد هم از **دشواری مسیر مرجوعی** می‌گه؛ یعنی...",
       "scene_id": 2,
       "visual_action": "add_text",
@@ -124,7 +124,8 @@
       "title": "The ‘Order Returns’ Experience is Critical for Customer Retention — Yet 54% of Sites Have a Returns Interface with Substantial UX Issues",
       "verified_claims": [
         "returns flow produces substantial UX frustrations in usability tests",
-        "historical 2019 research, not a 2026 news announcement"
+        "historical 2019 research, not a 2026 news announcement",
+        "2019 Baymard benchmarking found 54% of reviewed sites had substantial returns UX issues; historical sample, not a present-day global rate"
       ],
       "excerpt": "During large-scale user testing of Accounts and Self-Service, return processes and interfaces caused the most usability issues; study published 2019."
     }
