@@ -174,7 +174,7 @@ def repair_dense_frame_as_progressive_reveal(story:dict,issues:list)->tuple[dict
     import copy
     indices=set()
     for issue in issues:
-        found=re.fullmatch(r"frame (\\d+): (\\d+) new words make this frame too dense",str(issue))
+        found=re.fullmatch(r"frame (\d+): (\d+) new words make this frame too dense",str(issue))
         if found:
             indices.add(int(found.group(1)))
     if not indices:return story,False
