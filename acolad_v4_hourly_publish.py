@@ -204,6 +204,25 @@ def prepare(day):
     READY.write_text(json.dumps(document,ensure_ascii=False,indent=2),encoding="utf8")
     return document,frames
 
+def verify_real_gpt25_art():
+    """Only a provider-confirmed GPT 2.5 alpha PNG is publishable as AI art."""
+    manifest=OUT/"image_provenance.json"
+    if not manifest.exists():raise RuntimeError("REAL_GPT25_ART_PROVENANCE_MISSING")
+    try:payload=json.loads(manifest.read_text(encoding="utf8"))
+    except (ValueError,OSError) as exc:raise RuntimeError("REAL_GPT25_ART_PROVENANCE_INVALID") from exc
+    if not isinstance(payload,dict) or not payload.get("real_ai_generated"):
+        raise RuntimeError("REAL_GPT25_ART_NOT_MODEL_GENERATED")
+    if payload.get("model") not in ("gpt-image-2.5-flare","gpt-image-2.5-sunburst"):
+        raise RuntimeError("REAL_GPT25_MODEL_NOT_VERIFIED")
+    if payload.get("procedural_assets")!=0 or payload.get("stock_assets")!=0:
+        raise RuntimeError("REAL_GPT25_ART_FALLBACK_FORBIDDEN")
+    records=payload.get("records") or []
+    if len(records)<2 or any(x.get("real_ai_generated") is not True or
+            x.get("background")!="transparent" for x in records):
+        raise RuntimeError("REAL_GPT25_ASSETS_NOT_ALL_TRANSPARENT")
+    return True
+
+
 class ProviderValidationRejected(RuntimeError):
     """Documented HTTP400 validation failure: provider refused creation."""
 
@@ -211,13 +230,15 @@ class ProviderValidationRejected(RuntimeError):
 def send_now(key,net,caption,media,session=requests):
     if net not in NETWORKS:raise ValueError("Invalid target")
     if not caption or (net=="instagram" and len(media)<6):raise ValueError("Incomplete story")
+    if os.getenv("ACOLAD_REQUIRE_REAL_GPT25_ART")=="1" and net!="instagram" and len(media)!=1:
+        raise ValueError("Original AI cover image required for native social copy")
     # Render public copy as plain UTF-8 on both Telegram and Bale.
     caption=engine.clean_old_markup(caption)
     if re.search(r"\[[^\]\n]+\]\(https?://",caption):
         raise RuntimeError("SOCIAL_MARKDOWN_LITERAL_BLOCKED")
-    payload={"type":"story" if net=="instagram" else "text",
+    payload={"type":"story" if net=="instagram" else ("image" if media else "text"),
         "account_ids":[ACCOUNT[net]],"caption":caption,
-        "media_ids":media if net=="instagram" else [],
+        "media_ids":media if net=="instagram" else media[:1],
         "is_draft":0,"is_scheduled":0,
         "schedule_date":int(datetime.now().timestamp())}
     if net=="bale":payload["bale_has_signature"]=0
@@ -289,10 +310,16 @@ def execute(mode):
         bundle=prepare(day)
         if not bundle:return report("EDITORIAL_VETO_TRY_AGAIN_NEXT_HOUR",states)
     d,frames=bundle
+    strict_art=os.getenv("ACOLAD_REQUIRE_REAL_GPT25_ART")=="1"
+    if strict_art:verify_real_gpt25_art()
     media=[]
     if "instagram" in missing:
         media=[upload_file(key,path) for path in frames]
         if len(media)!=len(frames):raise RuntimeError("INCOMPLETE_MEDIA_UPLOAD")
+    elif strict_art and any(n in missing for n in ("telegram","bale")):
+        media=[upload_file(key,frames[0])]
+    if strict_art and not media:
+        raise RuntimeError("NO_REAL_ART_MEDIA_READY")
     submitted=[]
     for net in missing:
         fresh=assess(provider_list(key,net,day),net)
@@ -306,7 +333,7 @@ def execute(mode):
         intents["sent_or_unknown"][net]={"state":"SENDING_NO_CONFIRMED_RECEIPT"}
         intent_file.write_text(json.dumps(intents,ensure_ascii=False,indent=2),encoding="utf8")
         try:
-            group_id=send_now(key,net,d["captions"][net],media)
+            group_id=send_now(key,net,d["captions"][net],media if net=="instagram" else (media[:1] if strict_art else []))
         except ProviderValidationRejected:
             # The provider's documented ValidationException HTTP400 is
             # a refusal, NOT an ambiguous accepted post. Preserve evidence
