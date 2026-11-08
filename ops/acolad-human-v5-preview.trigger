@@ -8,3 +8,4 @@ Editor fix sourced 54 percent denominator straight from Baymard original article
 
 2026-11-08 15:52 Tehran: actual Baymard original source now states 42 benchmarked sites and 660 ratings and distinguishes no request from rejection; rerun unchanged 85 threshold and only render after both pass.
 2026-11-08 retest with expected hypothetical-story opening after test failed only on outdated literal, all substantive guards unchanged.
+Resume verified original GPT Image alpha scene1 from immutable run 42480255927; request only scene2 after 403, never procedural fallback. All source and critic checks still required.
