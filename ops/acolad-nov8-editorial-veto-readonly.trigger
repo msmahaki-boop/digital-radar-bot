@@ -1,0 +1,1 @@
+Read only 2026-11-08 cached editorial QA reasons; no API model calls, no provider writes.\n
