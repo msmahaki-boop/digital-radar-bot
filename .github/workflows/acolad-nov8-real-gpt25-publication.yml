@@ -1,0 +1,76 @@
+name: Acolad Nov8 owner-approved REAL GPT Image 2.5 immediate publish (3 networks)
+on:
+  push:
+    branches: [main]
+    paths: [ops/acolad-nov8-activate-real-gpt25-publication.trigger]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: acolad-v4-one-publish-attempt-at-a-time
+  cancel-in-progress: false
+jobs:
+  verified-three-platform-release:
+    if: contains(github.event.head_commit.message, '[ACOLAD_OWNER_APPROVED_NOV08_GPT25_PUBLIC]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Install existing Persian-safe layout and publication dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-core fonts-noto-color-emoji libharfbuzz0b libfribidi0 >/dev/null
+          python -m pip install --disable-pip-version-check requests==2.32.5 Pillow==11.3.0 beautifulsoup4==4.14.2
+      - name: Only original externally verified real-source story preview
+        uses: actions/download-artifact@v4
+        with:
+          name: acolad-20261108-gpt25-flare-real-cutouts-7slides
+          run-id: 42469606799
+          github-token: ${{ github.token }}
+          path: .
+      - name: Check true fresh evidence, two independent critics, real GPT2.5 alpha and correct social footers WITHOUT posting
+        run: |
+          python -m py_compile acolad_gpt25_owner_release_preflight.py acolad_gapgpt_transparent_art.py
+          python -u acolad_gpt25_owner_release_preflight.py
+      - name: Restore prior ambiguous intents if any
+        uses: actions/cache/restore@v4
+        with:
+          path: acolad_v4_daily_publication/send_intents.json
+          key: acolad-nov8-owner-gpt25-intents-${{ github.run_id }}
+          restore-keys: |
+            acolad-nov8-owner-gpt25-intents-
+      - name: Owner-authorized real POSTs, one per still-unposted network, strict AI and 7s provider spacing
+        env:
+          NOVINHUB_API_TOKEN: ${{ secrets.NOVINHUB_API_TOKEN }}
+          NOVINHUB_TOKEN: ${{ secrets.NOVINHUB_TOKEN }}
+          NOVINHUB_ACCESS_TOKEN: ${{ secrets.NOVINHUB_ACCESS_TOKEN }}
+          ACOLAD_REQUIRE_REAL_GPT25_ART: '1'
+          ACOLAD_HOURLY_PUBLISH_APPROVAL: ACOLAD_USER_APPROVED_HOURLY_IMMEDIATE_20261107
+        run: python -u acolad_v4_hourly_publish.py --mode immediate
+      - name: Preserve idempotency intents and network receipts (even after API errors)
+        if: always()
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: acolad_v4_daily_publication/send_intents.json
+          key: acolad-nov8-owner-gpt25-intents-${{ github.run_id }}
+      - name: Upload factual, art, provider and partial receipt evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-20261108-owner-gpt25-three-network-publication-receipts
+          path: |
+            acolad_concept_assets/
+            acolad_v4_daily_publication/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Summary - Submitted is not Published
+        if: always()
+        run: |
+          if test -f acolad_v4_daily_publication/hourly_status.json; then
+            cat acolad_v4_daily_publication/hourly_status.json >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "NO PUBLIC RECEIPT: nothing confirmed published" >> "$GITHUB_STEP_SUMMARY"
+          fi
