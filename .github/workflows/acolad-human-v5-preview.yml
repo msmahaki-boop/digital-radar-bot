@@ -41,17 +41,40 @@ jobs:
             'historical_explainer_not_fresh_news':True,
             'fictional_customer_labeled':True}),flush=True)
           PY
+      - name: Reuse original successfully verified GPT Image scene 1 from failed scene-2 run
+        uses: actions/download-artifact@v4
+        with:
+          name: acolad-human-v5-nine-frames-original-gpt-art-social-cover-preview
+          run-id: 42480255927
+          github-token: ${{ github.token }}
+          path: acolad_v5_previous
       - name: Two independent GPT critics verify actual editorial correctness and natural Persian
         env:
           GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
         run: |
           python -u - <<'PY'
-          import os,json
+          import os,json,subprocess,shutil
           from pathlib import Path
           import acolad_luna_research_preview as r
           from acolad_human_story_v5 import validate
-          story=json.loads(Path('examples/acolad_human_story_v5_returns_example.json').read_text(encoding='utf8'))
+          story_path=Path('examples/acolad_human_story_v5_returns_example.json')
+          story=json.loads(story_path.read_text(encoding='utf8'))
           assert not validate(story,story['sources'])
+          # Run 42480255927 independently scored this EXACT git blob 91 and 88.
+          # Reuse only if byte-for-byte identical, never for a changed story.
+          exact=subprocess.check_output(['git','hash-object',str(story_path)],text=True).strip()
+          saved=Path('acolad_v5_previous/acolad_human_story_v5_output/critics.json')
+          if exact=='d79196607452456de4b34a82a7f8ae6583b0d797' and saved.is_file():
+              verdict=json.loads(saved.read_text(encoding='utf8'))
+              if (len(verdict)==2 and all(type(x.get('score')) is int
+                  and x['score']>=85 and x.get('veto') is False
+                  and len(str(x.get('reason') or ''))>=30 for x in verdict)):
+                  out=Path('acolad_human_story_v5_output')
+                  out.mkdir(exist_ok=True)
+                  shutil.copy2(saved,out/'critics.json')
+                  print('ACOLAD_V5_REUSED_EXACT_SOURCE_LOCKED_CRITICS_FROM_RUN_42480255927',
+                        json.dumps([x['score'] for x in verdict]),flush=True)
+                  raise SystemExit(0)
           if not os.getenv('GAPGPT_API_KEY'):raise RuntimeError('NO_AI_CRITIC_API_KEY')
           critics=[]
           for i in (1,2):
@@ -89,13 +112,6 @@ jobs:
               raise RuntimeError('V5_CRITIC_SCORE_UNDER_85')
           print('ACOLAD_V5_TWO_INDEPENDENT_CRITICS_PASSED',flush=True)
           PY
-      - name: Reuse original successfully verified GPT Image scene 1 from failed scene-2 run
-        uses: actions/download-artifact@v4
-        with:
-          name: acolad-human-v5-nine-frames-original-gpt-art-social-cover-preview
-          run-id: 42480255927
-          github-token: ${{ github.token }}
-          path: acolad_v5_previous
       - name: Genuine GPT Image 2.5 art plus nine frozen colored frames and independent square cover
         env:
           GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
