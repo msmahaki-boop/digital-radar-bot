@@ -71,6 +71,24 @@ class TransparentImageQA(unittest.TestCase):
                              Mock(post=Mock(return_value=response)),key="mock")
             self.assertFalse(dest.exists())
 
+    def test_gapgpt_documented_image_url_is_supported(self):
+        response=Mock(status_code=200)
+        response.json.return_value={"data":[{"url":"https://images.example.com/art.png"}]}
+        image_response=Mock(status_code=200,content=self.png())
+        session=Mock(post=Mock(return_value=response),get=Mock(return_value=image_response))
+        with TemporaryDirectory() as root:
+            report=art.generate(self.story(),1,Path(root)/"scene_01.png",session,key="mock")
+            self.assertEqual(report["image_response"],"provider_url")
+            self.assertTrue(Path(root,"scene_01.png").exists())
+        self.assertEqual(session.get.call_args.args[0],"https://images.example.com/art.png")
+        self.assertFalse(session.get.call_args.kwargs["allow_redirects"])
+
+    def test_image_url_localhost_refused_before_download(self):
+        session=Mock()
+        with self.assertRaisesRegex(RuntimeError,"UNSAFE_HOST"):
+            art.read_provider_image({"url":"https://localhost/private.png"},session)
+        session.get.assert_not_called()
+
     def test_missing_catalog_model_does_not_buy_images(self):
         session=Mock()
         session.get.return_value=Mock(status_code=200)
@@ -89,7 +107,7 @@ class TransparentImageQA(unittest.TestCase):
         response=Mock(status_code=200)
         response.json.return_value={"data":[{"url":"https://example.com/image.png"}]}
         with TemporaryDirectory() as root:
-            with self.assertRaisesRegex(RuntimeError,"NO_BASE64"):
+            with self.assertRaisesRegex(RuntimeError,"IMAGE_RETURN_DOWNLOAD_HTTP_"):
                 art.generate(self.story(),1,Path(root)/"scene_01.png",
                              Mock(post=Mock(return_value=response)),key="mock")
 
