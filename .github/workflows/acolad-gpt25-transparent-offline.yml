@@ -19,6 +19,8 @@ jobs:
       - name: Test real transparency, no fallback, no endpoint writes
         run: python -m unittest discover -s tests -p 'test_acolad_gapgpt_transparent_art.py' -v
       - run: python -m unittest discover -s tests -p 'test_acolad_gpt25_strict_renderer.py' -v
+      - run: python -m py_compile acolad_gpt25_owner_release_preflight.py
+      - run: python -m unittest discover -s tests -p 'test_acolad_owner_release_preflight.py' -v
       - name: Do not weaken pre-existing editorial and social guards
         run: |
           python -m unittest discover -s tests -p 'test_acolad_v4_hourly.py' -v
