@@ -1,0 +1,39 @@
+name: Acolad Nov8 editorial veto diagnostic FROM artifact GET ONLY
+on:
+  push:
+    branches: [feature/acolad-gapgpt-transparent-gptimage-20261107]
+    paths: [ops/acolad-nov8-editorial-veto-readonly.trigger]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore failed fresh editorial preview artifact without rerunning billing
+        uses: actions/download-artifact@v4
+        with:
+          name: acolad-20261108-gpt25-flare-real-cutouts-7slides
+          run-id: 42465313199
+          github-token: ${{ github.token }}
+          path: artifact
+      - name: Only sanitized editorial status and veto reasons
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          files=sorted(Path("artifact").rglob("*.json"))
+          for path in files:
+              if path.name not in ("preview_status.json","status.json","hourly_ready.json","verified_story_checkpoint.json"):
+                  continue
+              try:data=json.loads(path.read_text(encoding="utf8"))
+              except (ValueError,OSError):continue
+              if not isinstance(data,dict):continue
+              allow=("status","ready","day_tehran","dynamic_story_ready_for_design","reason","issues","warnings",
+                     "hard_vetoes","voice_v4_gate","source_gate","topic_gate","novin_hub",
+                     "publication","quality","gate","date","hook","error","rejection_reason")
+              result={k:data[k] for k in allow if k in data}
+              print("ACOLAD_EDITORIAL_DIAG",path.name,json.dumps(result,ensure_ascii=False)[:3500],flush=True)
+          PY
