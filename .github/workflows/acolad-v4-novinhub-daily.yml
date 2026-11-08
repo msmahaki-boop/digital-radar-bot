@@ -62,6 +62,7 @@ jobs:
           NOVINHUB_TOKEN: ${{ secrets.NOVINHUB_TOKEN }}
           NOVINHUB_ACCESS_TOKEN: ${{ secrets.NOVINHUB_ACCESS_TOKEN }}
           ACOLAD_HOURLY_PUBLISH_APPROVAL: ACOLAD_USER_APPROVED_HOURLY_IMMEDIATE_20261107
+          ACOLAD_REQUIRE_REAL_GPT25_ART: '1' # never publish procedural/stock art as AI
           SEND_MODE: ${{ github.event_name == 'push' && 'immediate' || 'hourly' }}
         run: python -u acolad_v4_hourly_publish.py --mode "$SEND_MODE"
       - name: Save reviewed bundle and no-duplicate intents even after incomplete runs
