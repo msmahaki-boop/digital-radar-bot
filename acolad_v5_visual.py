@@ -43,7 +43,17 @@ def social_cover(art_path:Path, title:str, dest:Path):
     head=font("Black",63)
     medium=font("Medium",32)
     reg=font("Regular",27)
-    lines=["وقتی دکمه مرجوعی", "ناپدید می‌شه", "مشتری چی می‌فهمه!"]
+    # The cover title follows each real story; never hardcode a prior topic.
+    words=str(title).strip().split()
+    if not 4<=len(words)<=18:raise RuntimeError("V5_COVER_TITLE_WORDS_INVALID")
+    lines=[];current=""
+    for word in words:
+        candidate=(current+" "+word).strip()
+        if current and d.textlength(candidate,font=head,direction="rtl",language="fa")>820:
+            lines.append(current);current=word
+        else:current=candidate
+    if current:lines.append(current)
+    if len(lines)>3:raise RuntimeError("V5_COVER_TITLE_OVERFLOWS_THREE_LINES")
     y=755
     for line in lines:
         d.text((540,y),line,font=head,anchor="ma",direction="rtl",
