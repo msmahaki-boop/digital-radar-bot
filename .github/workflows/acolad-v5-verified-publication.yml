@@ -24,7 +24,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: acolad-human-v5-nine-frames-original-gpt-art-social-cover-preview
-          run-id: 00000000000
+          run-id: 42480921324
           github-token: ${{ github.token }}
           path: .
       - name: Validate source, 9 beats, critics >=85, 2 genuine cutouts, square cover and nine story frames
