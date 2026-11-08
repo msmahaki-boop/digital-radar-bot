@@ -37,4 +37,30 @@ class FooterRules(unittest.TestCase):
    ident=live.send_now("dummy","bale",
      "قبول شد\n🌐 [acolad.ir](https://acolad.ir/)",[])
   self.assertEqual(ident,52)
+ def test_bale_image_post_attaches_one_verified_media_id(self):
+  def fakepost(*args,**kwargs):
+   payload=kwargs["json"]
+   self.assertEqual(payload["type"],"image")
+   self.assertEqual(payload["media_ids"],[774])
+   self.assertEqual(payload["account_ids"],[live.ACCOUNT["bale"]])
+   return Mock(status_code=201,json=lambda:{"data":{"id":54}})
+  with patch.object(live.requests,"post",side_effect=fakepost), \
+       patch.dict(live.os.environ,{"ACOLAD_REQUIRE_REAL_GPT25_ART":"1"}):
+   self.assertEqual(live.send_now("dummy","bale","متن کامل", [774]),54)
+ def test_strict_telegram_image_missing_blocks_before_api_post(self):
+  with patch.dict(live.os.environ,{"ACOLAD_REQUIRE_REAL_GPT25_ART":"1"}), \
+       patch.object(live.requests,"post") as network:
+   with self.assertRaisesRegex(ValueError,"cover image required"):
+    live.send_now("dummy","telegram","متن کامل",[])
+   network.assert_not_called()
+ def test_strict_provenance_rejects_pillow_drawings(self):
+  import json
+  from tempfile import TemporaryDirectory
+  from pathlib import Path
+  with TemporaryDirectory() as d:
+   Path(d,"image_provenance.json").write_text(json.dumps([
+    {"scene":1,"original_procedural":True}]),encoding="utf8")
+   with patch.object(live,"OUT",Path(d)):
+    with self.assertRaisesRegex(RuntimeError,"NOT_MODEL_GENERATED"):
+     live.verify_real_gpt25_art()
 if __name__=="__main__":unittest.main()
