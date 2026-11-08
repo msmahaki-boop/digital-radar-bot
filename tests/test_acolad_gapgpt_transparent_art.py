@@ -153,6 +153,56 @@ class TransparentImageQA(unittest.TestCase):
                     art.generate_scenes(self.story(),[1],Path(root),session=session)
         session.post.assert_not_called()
 
+    def test_stricter_gpt_api_prompt_after_alpha_failure(self):
+        from unittest.mock import patch
+        original=art.prompt_for_scene(self.story(),1)
+        response=Mock(status_code=200)
+        response.json.return_value={"data":[{"b64_json":base64.b64encode(self.png()).decode()}]}
+        session=Mock(post=Mock(return_value=response))
+        with TemporaryDirectory() as root:
+            art.generate(self.story(),1,Path(root)/"a.png",session,key="mock",alpha_retry=1)
+        submitted=session.post.call_args.kwargs["json"]
+        self.assertIn(original,submitted["prompt"])
+        self.assertIn("STRICT CUTOUT CORRECTION 1",submitted["prompt"])
+        self.assertEqual(submitted["model"],"gpt-image-2.5-flare")
+        self.assertEqual(submitted["background"],"transparent")
+
+    def test_alpha_retries_only_actual_gpt_generations_and_records_count(self):
+        with patch.dict(art.os.environ,{"GAPGPT_API_KEY":"safe-test"}), \\
+             patch.object(art,"models_available",return_value=True), \\
+             patch.object(art,"generate",side_effect=[
+                ValueError("NOT_A_VISIBLE_TRANSPARENT_CUTOUT"),
+                ValueError("AI_IMAGE_NOT_A_SPARSE_WHITE_PAPER_INK_DRAWING"),
+                {"path":"scene_01.png","real_ai_generated":True,
+                 "transparent_fraction":0.64,"model":"gpt-image-2.5-flare"}]) as api:
+            with TemporaryDirectory() as root:
+                manifest=art.generate_scenes(self.story(),[1],Path(root))
+        self.assertEqual(api.call_count,3)
+        self.assertEqual([x.kwargs["alpha_retry"] for x in api.call_args_list],[0,1,2])
+        self.assertEqual(manifest["records"][0]["transparent_image_attempts"],3)
+        self.assertEqual(manifest["procedural_assets"],0)
+
+    def test_three_failed_alphas_block_without_procedural_substitute(self):
+        with patch.dict(art.os.environ,{"GAPGPT_API_KEY":"safe-test"}), \\
+             patch.object(art,"models_available",return_value=True), \\
+             patch.object(art,"generate",
+                          side_effect=ValueError("NOT_A_VISIBLE_TRANSPARENT_CUTOUT")) as api:
+            with TemporaryDirectory() as root:
+                with self.assertRaisesRegex(RuntimeError,"REAL_GPT_IMAGE_ALPHA_EXHAUSTED_SCENE_1"):
+                    art.generate_scenes(self.story(),[1],Path(root))
+                self.assertFalse((Path(root)/"transparent_ai_provenance.json").exists())
+        self.assertEqual(api.call_count,3)
+
+    def test_quota_error_never_retries_image_api(self):
+        with patch.dict(art.os.environ,{"GAPGPT_API_KEY":"safe-test"}), \\
+             patch.object(art,"models_available",return_value=True), \\
+             patch.object(art,"generate",side_effect=RuntimeError(
+                          "GAPGPT_IMAGE_KEY_PRECONSUME_QUOTA_BLOCKED")) as api:
+            with TemporaryDirectory() as root:
+                with self.assertRaisesRegex(RuntimeError,"PRECONSUME_QUOTA_BLOCKED"):
+                    art.generate_scenes(self.story(),[1],Path(root))
+        api.assert_called_once()
+
     def test_limit_max_ten_scenes(self):
         with self.assertRaisesRegex(RuntimeError,"SCENE_COUNT_OUT_OF_RANGE"):
             art.generate_scenes(self.story(),list(range(1,art.MAX_IMAGES+2)))
