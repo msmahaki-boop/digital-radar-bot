@@ -1,0 +1,95 @@
+name: Acolad V5 9-frame human story + real GPT2.5 ink PREVIEW ONLY
+on:
+  push:
+    branches: [feature/acolad-human-story-v5-20261108]
+    paths: [ops/acolad-human-v5-preview.trigger]
+permissions:
+  contents: read
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Install original Persian typography system
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-core fonts-noto-color-emoji libharfbuzz0b libfribidi0 >/dev/null
+          python -m pip install requests==2.32.5 Pillow==11.3.0 beautifulsoup4==4.14.2
+      - name: Fail-closed human story evidence thread and weighted IRANSans contract
+        run: |
+          python -m py_compile acolad_human_story_v5.py acolad_v5_visual.py
+          python -m unittest discover -s tests -p 'test_acolad_human_story_v5.py' -v
+          python -m unittest discover -s tests -p 'test_acolad_gapgpt_transparent_art.py' -v
+          python -m unittest discover -s tests -p 'test_acolad_native_story_threads.py' -v
+      - name: Validate genuine original Baymard paper, not breaking news
+        run: |
+          python -u - <<'PY'
+          import requests,json
+          from pathlib import Path
+          story=json.loads(Path('examples/acolad_human_story_v5_returns_example.json').read_text(encoding='utf8'))
+          response=requests.get(story['source_url'],timeout=45,headers={'User-Agent':'AcoladResearchReview/1.0'})
+          if response.status_code!=200:raise RuntimeError('PRIMARY_SOURCE_NOT_FETCHABLE_HTTP_'+str(response.status_code))
+          content=response.text.lower()
+          if not all(x in content for x in ('order','return','baymard')):
+              raise RuntimeError('PRIMARY_SOURCE_BODY_DOES_NOT_MATCH_EDITORIAL')
+          print('ACOLAD_V5_PRIMARY_RESEARCH_VERIFIED',json.dumps({
+            'source_url':story['source_url'],'source_date':story['source_date'],
+            'historical_explainer_not_fresh_news':True,
+            'fictional_customer_labeled':True}),flush=True)
+          PY
+      - name: Two independent GPT critics verify actual editorial correctness and natural Persian
+        env:
+          GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
+        run: |
+          python -u - <<'PY'
+          import os,json
+          from pathlib import Path
+          import acolad_luna_research_preview as r
+          from acolad_human_story_v5 import validate
+          story=json.loads(Path('examples/acolad_human_story_v5_returns_example.json').read_text(encoding='utf8'))
+          assert not validate(story,story['sources'])
+          if not os.getenv('GAPGPT_API_KEY'):raise RuntimeError('NO_AI_CRITIC_API_KEY')
+          critics=[]
+          for i in (1,2):
+              sys=('تو داور مستقل سختگیر شماره '+str(i)+' برای آکولاد هستی. '
+                   'صحت پژوهش بایمرد، خیالی‌بودن محمد، فارسی طبیعی و ترتیب داستان '
+                   'و چهار اقدام آزمایشی را مستقل بررسی کن. مطالعه سال ۲۰۱۹ است نه خبر امروز. '
+                   'ادعای بی‌سند باید وتو شود. فقط JSON با score عدد صحیح، veto بولین و reason بده.')
+              usage={'requests_sent':0,'cost_estimated_usd':0.0,'budget_usd':0.08,'stages':[]}
+              result=r.api_call(os.environ['GAPGPT_API_KEY'],sys,json.dumps({
+                  'story':story,'primary_source':story['sources'][0]},ensure_ascii=False),1300,usage)
+              score=result.get('score')
+              if not isinstance(score,int) or isinstance(score,bool) or not 0<=score<=100 or result.get('veto') is not False:
+                  raise RuntimeError('V5_INDEPENDENT_CRITIC_VETO_'+str(i))
+              critics.append({'score':score,'veto':False,'reason':str(result.get('reason',''))[:240]})
+          if any(c['score']<85 for c in critics):
+              raise RuntimeError('V5_CRITIC_SCORE_UNDER_85')
+          output=Path('acolad_human_story_v5_output')
+          output.mkdir(exist_ok=True)
+          (output/'critics.json').write_text(json.dumps(critics,ensure_ascii=False,indent=2),encoding='utf8')
+          print('ACOLAD_V5_TWO_INDEPENDENT_CRITICS_PASSED',json.dumps(critics,ensure_ascii=False),flush=True)
+          PY
+      - name: Genuine GPT Image 2.5 art plus nine frozen colored frames and independent square cover
+        env:
+          GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
+        run: |
+          python -u - <<'PY'
+          import json
+          from pathlib import Path
+          from acolad_v5_visual import preview
+          data=json.loads(Path('examples/acolad_human_story_v5_returns_example.json').read_text(encoding='utf8'))
+          preview(data,data['sources'])
+          PY
+      - name: Save story, two critics, original art, nine PNGs and square cover (never publish)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-human-v5-nine-frames-original-gpt-art-social-cover-preview
+          path: |
+            acolad_human_story_v5_output/
+            acolad_concept_assets/scene_*.png
+          retention-days: 14
+          if-no-files-found: warn
