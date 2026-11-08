@@ -25,7 +25,7 @@ class TransparentImageQA(unittest.TestCase):
         return out.getvalue()
 
     def test_expected_provider_model_and_background(self):
-        self.assertEqual(art.MODEL,"gpt-image-2.5-sunburst")
+        self.assertEqual(art.MODEL,"gpt-image-2.5-flare")
         self.assertIn("transparent",art.prompt_for_scene(self.story(),1))
         self.assertIn("No text",art.prompt_for_scene(self.story(),1))
         api=Mock(status_code=200)
