@@ -156,6 +156,17 @@ def colloquialize_safe_inflections(message):
     )
     for pattern,change in variants:
         message=re.sub(pattern,change,message,flags=re.I)
+    # Change grammatical register only: preserve source, numbers, names,
+    # attribution and the substance of the reviewed statement.
+    passive={
+        "دیده شد":"به چشم اومد","دیده شده":"به چشم اومده",
+        "مشاهده شد":"به چشم اومد","مشاهده شده":"به چشم اومده",
+        "بررسی شد":"بررسیش کردن","بررسی شده":"بررسیش کردن",
+        "انجام شد":"انجامش دادن","انجام شده":"انجامش دادن",
+        "ارائه شد":"ارائه‌اش کردن","ارائه شده":"ارائه‌اش کردن",
+    }
+    message=re.sub(r"(?:دیده|مشاهده|بررسی|انجام|ارائه)\s+شد(?:ه)?\b",
+        lambda m:passive.get(m.group(0),m.group(0)),message)
     return message
 
 
@@ -217,9 +228,27 @@ def make_channel_copies(story,evidence):
 def critics_approve(story,evidence,captions):
     research_genre=any("doi.org/" in str(x.get("url") or "") for x in evidence[:3])
     reviews=[]
-    evidence_short=[{k:s.get(k) for k in ("title","excerpt","date")} for s in evidence[:3]]
+    today=tehran_now().date()
+    evidence_short=[]
+    for item in evidence[:3]:
+        row={k:item.get(k) for k in ("title","excerpt","date")}
+        try:
+            published=datetime.fromisoformat(str(item.get("date") or "")).date()
+            age_days=(today-published).days
+        except (TypeError,ValueError):
+            age_days=None
+        row["days_before_today_calculated"]=age_days
+        row["date_is_future_calculated"]=(age_days is not None and age_days<0)
+        evidence_short.append(row)
+    timeline_note=(
+       "محاسبه تقویمی با Python انجام شده: today="+today.isoformat()+
+       "، برای هر منبع days_before_today_calculated>=0 یعنی تاریخ انتشار گذشته، "
+       "و مقدار منفی یعنی آینده. مثال دقیق: 2026-10-24 نسبت به 2026-11-08 "
+       "پانزده روز قبل است، نه بعد. فقط به‌خاطر خواندن غلط ماه یا تاریخ، "
+       "به منبع نمره صفر نده؛ در صورت شواهد واقعیِ جعل/بدعت/دروغ، وتو الزامی است. "
+       "تا ۲۱ روز گذشته برای بررسی خبر تازه قابل قبول است، اما خبرسازی ممنوع. ")
     for i in (1,2):
-        prompt=("تو منتقد سختگیر شماره "+str(i)+" هستی، مستقل از پاسخ منتقد دیگر. "
+        prompt=(timeline_note+"تو منتقد سختگیر شماره "+str(i)+" هستی، مستقل از پاسخ منتقد دیگر. "
             "امروز به وقت تهران "+tehran_now().date().isoformat()+" است. "
             "تاریخ هر منبع را نسبت به این تاریخ واقعی بررسی کن؛ سال ۲۰۲۶ به تنهایی آینده نیست. "
             "تاریخ منبع اگر بعد از امروز است یا با ادعای خبر ناسازگار است، جدی رد کن. "
@@ -241,6 +270,11 @@ def critics_approve(story,evidence,captions):
     return reviews
 
 def illustrate(story):
+    # Explicit feature gate: no live behavior change until real 2.5 alpha
+    # previews pass and this mode is deliberately activated by the owner.
+    if os.getenv("ACOLAD_REQUIRE_REAL_GPT25_ART","0")=="1":
+        from acolad_gpt25_strict_renderer import illustrate_strict
+        return illustrate_strict(story)
     CONCEPT_DIR.mkdir(parents=True,exist_ok=True)
     for old in CONCEPT_DIR.glob("scene_[0-9][0-9].png"):old.unlink()
     groups=scene_chunks(story)

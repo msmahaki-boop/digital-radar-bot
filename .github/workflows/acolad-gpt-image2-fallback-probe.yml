@@ -1,0 +1,46 @@
+name: Acolad GapGPT GPT Image 2 transparent fallback ONE TEST (NO SOCIAL)
+on:
+  push:
+    branches: [feature/acolad-gapgpt-transparent-gptimage-20261107]
+    paths: [ops/acolad-gpt-image2-access-check.trigger]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install requests==2.32.5 Pillow==11.3.0
+      - name: Exactly one image model 2 using stored key, no publishing
+        env:
+          GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
+        run: |
+          python -u - <<'PY'
+          import os,json
+          from pathlib import Path
+          import acolad_gapgpt_transparent_art as p
+          p.MODEL="gpt-image-2"
+          key=os.getenv("GAPGPT_API_KEY","").strip()
+          if not key:raise RuntimeError("GAPGPT_SECRET_MISSING")
+          if not p.models_available(key):raise RuntimeError("GPT_IMAGE_2_NOT_LISTED")
+          sample={"slides":[{"scene_id":1,"visual_idea":
+          "One original comical black ink pen drawing of a small online-store owner looking at a giant shopping cart through a magnifying glass."}]}
+          try:
+              result=p.generate(sample,1,Path("access_probe/scene_01.png"),key=key)
+              print("GPT_IMAGE2_REAL_TRANSPARENT",json.dumps({
+              "model":result["model"],"response":result["image_response"],
+              "transparent_fraction":result["transparent_fraction"]}))
+          except Exception as error:
+              print("GPT_IMAGE2_ACCESS_CLASSIFICATION",type(error).__name__,str(error)[:100])
+              raise
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: acolad-original-gpt-image2-transparent-probe
+          path: access_probe/
+          retention-days: 7
+          if-no-files-found: ignore

@@ -113,6 +113,12 @@ def narrative_prompts(day):
         " فناوری، پلتفرم‌ها، تجربه مشتری، شبکه‌های اجتماعی، بازاریابی و رشد کسب‌وکار."
         " منبع علمی باید به قصه مربوط باشد؛ دو منبع نامرتبط را به زور یکی نکن."
         "\n پایان باید گره را ببندد، نه اینکه فقط بگوید «آکولاد کمک می‌کند»."
+        "\n الزام غیرقابل‌چشم‌پوشی در قاب پایانی: آخرین فریم نباید علامت سؤال،"
+        " پرسش باز، «چی می‌شه؟» یا دعوت به پاسخِ بی‌نتیجه داشته باشد."
+        " همان گره طرح‌شده در آغاز را با نتیجه دقیق و مشروط به شاهد موجود ببند،"
+        " سپس یک اقدام کوچک قابل‌آزمایش پیشنهاد بده. هیچ عدد یا نتیجه پژوهشی"
+        " جدید اختراع نکن؛ اگر منبع نتیجه قطعی ندارد، محدودیت را بگو."
+        " ویرایشگر باید هر سؤال بی‌پاسخ در آخرین فریم را قبل از تحویل اصلاح کند."
         "\n خروجی بصری با جمله‌های کوتاه و هر دو یا سه قاب یک زمینه مفهومی مناسب است."
         "\n برای هر ادعای مشخص source_ids بده؛ ادعای قطعی درباره ایران بدون سند ممنوع."
     )
@@ -158,6 +164,90 @@ def repair_all_new_scenes(story:dict)->tuple[dict,bool]:
             i+=2
         else:i+=1
     return result,True
+
+def repair_dense_frame_as_progressive_reveal(story:dict,issues:list)->tuple[dict,bool]:
+    """Split only flagged long frames into two sequential same-scene reveals.
+
+    Keep EVERY ORIGINAL WORD in order, all evidence IDs, original visual,
+    beat semantics and chronology. Never rewrite facts or make a new claim.
+    """
+    import copy
+    indices=set()
+    for issue in issues:
+        found=re.fullmatch(r"frame (\d+): (\d+) new words make this frame too dense",str(issue))
+        if found:
+            indices.add(int(found.group(1)))
+    if not indices:return story,False
+    original=story.get("slides") if isinstance(story,dict) else None
+    if not isinstance(original,list) or len(original)+len(indices)>15:
+        return story,False
+    result=copy.deepcopy(story)
+    slides=[]
+    changed=False
+    for frame in result["slides"]:
+        index=frame.get("n")
+        if index not in indices:
+            slides.append(frame)
+            continue
+        text=str(frame.get("text") or "")
+        words=text.split()
+        if len(words)<25:
+            slides.append(frame)
+            continue
+        half=len(words)//2
+        valid=[k for k in range(9,len(words)-8) if words[k-1].endswith(("،",",","؛","؛",".","؟","!"))]
+        cut=min(valid,key=lambda k:abs(k-half)) if valid else half
+        if max(cut,len(words)-cut)>25:
+            slides.append(frame)
+            continue
+        first=copy.deepcopy(frame)
+        second=copy.deepcopy(frame)
+        first["text"]=" ".join(words[:cut])
+        second["text"]=" ".join(words[cut:])
+        second["visual_action"]="add_text"
+        second["scene_id"]=first.get("scene_id")
+        if "visual_idea" in first:second["visual_idea"]=first["visual_idea"]
+        if (first["text"]+" "+second["text"]).split()!=words:
+            raise RuntimeError("DENSE_REVEAL_CHANGED_FACTUAL_TEXT")
+        slides.extend([first,second])
+        changed=True
+    if not changed:return story,False
+    for n,frame in enumerate(slides,1):
+        frame["n"]=n
+    result["slides"]=slides
+    return result,True
+
+
+def repair_colloquial_passive_without_new_claims(story:dict)->tuple[dict,bool]:
+    """Rewrite only the five known formal passive verb phrases, with no new facts.
+
+    Deliberately cannot rewrite numbers, names, evidence references, scene metadata,
+    causality or arguments. All independent fact/cinema/voice guards run afterward.
+    """
+    import copy
+    substitutions={
+        "دیده شد":"به چشم اومد",
+        "دیده شده":"به چشم اومده",
+        "مشاهده شد":"به چشم اومد",
+        "مشاهده شده":"به چشم اومده",
+        "بررسی شد":"بررسیش کردن",
+        "بررسی شده":"بررسیش کردن",
+        "انجام شد":"انجامش دادن",
+        "انجام شده":"انجامش دادن",
+        "ارائه شد":"ارائه‌اش کردن",
+        "ارائه شده":"ارائه‌اش کردن",
+    }
+    result=copy.deepcopy(story)
+    changed=False
+    for slide in result.get("slides",[]):
+        before=str(slide.get("text") or "")
+        after=re.sub(r"(?:دیده|مشاهده|بررسی|انجام|ارائه)\s+شد(?:ه)?\b",
+          lambda m:substitutions.get(m.group(0),m.group(0)),before)
+        if before!=after:
+            slide["text"]=after
+            changed=True
+    return result,changed
+
 
 def repair_excess_terminal_dots(story:dict)->tuple[dict,bool]:
     """Remove ONLY redundant final full stops; no facts or figures changed."""
@@ -378,6 +468,7 @@ def run_preview(day=None,budget_usd=0.018,output=OUT):
                 or x=="cinema: too many final periods"
                 or x=="cinema: missing conflict beat"
                 or re.fullmatch(r"frame \d+: accumulated scene text \d+ words, change background sooner",x)
+                or re.fullmatch(r"frame \d+: \d+ new words make this frame too dense",x)
                 or (x.startswith("cinema: frame ")
                     and x.endswith(" unnecessary publisher mention"))
                 for x in possible_cosmetic_issues)
@@ -386,6 +477,8 @@ def run_preview(day=None,budget_usd=0.018,output=OUT):
            (good or allowed_cosmetic_problem) else {})
     if allowed_cosmetic_problem:
         revised,copy_repaired=repair_unnecessary_publisher_mentions(story)
+        revised,dense_repaired=repair_dense_frame_as_progressive_reveal(
+            revised,possible_cosmetic_issues)
         if "cinema: too many final periods" in possible_cosmetic_issues:
             revised,period_repaired=repair_excess_terminal_dots(revised)
         else:period_repaired=False
@@ -404,6 +497,7 @@ def run_preview(day=None,budget_usd=0.018,output=OUT):
             status["editorial_scene_lock_repaired_without_text_changes"]=scene_repaired
             status["publisher_name_dropped_without_changing_source"]=copy_repaired
             status["trailing_punctuation_repaired"]=period_repaired
+            status["long_frames_repaired_by_same_scene_reveal"]=dense_repaired
             status["prior_machine_status"]=original
             status["story_scenes"]=len({s.get("scene_id") for s in story["slides"]})
             (output/"editorially_repaired_story.json").write_text(
@@ -460,9 +554,26 @@ def run_preview(day=None,budget_usd=0.018,output=OUT):
        "passed":False,"hard_vetoes":["UPSTREAM_RESEARCH_OR_STORY_FAILED"],
        "human_approved":False,"publish_allowed":False}
     status["independent_editorial_gate"]=editorial_gate
-    # Voice V4 is an ADDITIONAL veto, not an aesthetic auto-approval.
-    # Evaluate only public slide copy; source evidence stays internal.
+    # A sole FORMAL_1 issue is a grammatical style flaw, not permission
+    # to invent a new story or lower editorial thresholds. Repair only fixed
+    # passive-verb forms, then rerun all independent gates on the same facts.
     from acolad_voice_v4_guard import audience_issues
+    if good and distinct and editorial_gate["passed"] and isinstance(story,dict):
+        initial_voice=[p for frame in story.get("slides",[]) for p in audience_issues(frame.get("text",""))]
+        if initial_voice and set(initial_voice)=={"FORMAL_1"}:
+            candidate,changed=repair_colloquial_passive_without_new_claims(story)
+            if changed:
+                source_ok=evaluate(candidate,evidence).get("passed") is True
+                factual_issues=news.story_quality(candidate,evidence)
+                cinema_issues=news.cinematic_quality(candidate,evidence)
+                still_formal=[p for frame in candidate.get("slides",[])
+                              for p in audience_issues(frame.get("text",""))]
+                if source_ok and not factual_issues and not cinema_issues and not still_formal:
+                    story=candidate
+                    status["voice_grammar_only_repaired"]=True
+                    (output/"editorially_repaired_story.json").write_text(
+                        json.dumps(story,ensure_ascii=False,indent=2),encoding="utf8")
+    # Voice V4 remains a hard veto. No content is publishable without passing.
     voice_issues=[]
     if good and distinct and editorial_gate["passed"] and isinstance(story,dict):
         for slide in story.get("slides") or []:

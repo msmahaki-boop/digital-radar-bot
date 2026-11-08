@@ -207,6 +207,10 @@ def add_concept_illustration(background,illustration):
             else:
                 alpha=a
             dst[x,y]=(red,green,blue,alpha)
+    # Genuine GPT Image transparent PNGs already carry artist-produced alpha.
+    # Preserve it exactly instead of attempting white-paper background removal.
+    if source.getchannel("A").getextrema()[0] < 255:
+        ink=source
     mask=ink.getchannel("A")
     bbox=mask.point(lambda a: 255 if a>35 else 0).getbbox()
     if not bbox:

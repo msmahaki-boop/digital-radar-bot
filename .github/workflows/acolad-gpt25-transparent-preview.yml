@@ -1,0 +1,58 @@
+name: Acolad REAL GapGPT GPT Image 2.5 transparent story PREVIEW (NO SOCIAL)
+on:
+  push:
+    branches: [feature/acolad-gapgpt-transparent-gptimage-20261107]
+    paths: [ops/acolad-gpt25-transparent-preview.trigger]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: acolad-gpt25-original-transparent-preview
+  cancel-in-progress: false
+jobs:
+  art-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Install RTL brand typography and image validation libraries
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fonts-noto-core fonts-noto-color-emoji libharfbuzz0b libfribidi0 >/dev/null
+          python -m pip install --disable-pip-version-check requests==2.32.5 beautifulsoup4==4.14.2 Pillow==11.3.0
+      - name: Hard QA before billable art
+        run: |
+          python -m py_compile acolad_gapgpt_transparent_art.py acolad_gapgpt_transparent_preview.py acolad_narrative_visual_v2.py
+          python -m unittest discover -s tests -p 'test_acolad_gapgpt_transparent_art.py' -v
+          python -m unittest discover -s tests -p 'test_acolad_v4_hourly.py' -v
+      - name: Restore exact source-verified editor-approved narrative, never invent copy
+        uses: actions/download-artifact@v4
+        with:
+          name: acolad-gemini-lite-preview-20261107
+          run-id: 42384710220
+          github-token: ${{ github.token }}
+          path: checked_editorial
+      - name: Real GPT Image 2.5 transparent PNG cutouts + branded composition (NO SOCIAL)
+        env:
+          GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
+        run: python -u acolad_gapgpt_transparent_preview.py --source checked_editorial
+      - name: Save original alpha cutouts and composited 1080x1920 story for review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acolad-real-gapgpt-gpt25-transparent-art-and-story-20261107
+          path: |
+            acolad_concept_assets/
+            acolad_v4_daily_publication/
+          retention-days: 14
+          if-no-files-found: warn
+      - name: Publish strictly preview evidence to Actions summary (not social)
+        if: always()
+        run: |
+          if test -f acolad_v4_daily_publication/transparent_preview_status.json; then
+            cat acolad_v4_daily_publication/transparent_preview_status.json >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "IMAGE PREVIEW DID NOT PASS; NOTHING POSTED OR QUEUED" >> "$GITHUB_STEP_SUMMARY"
+          fi

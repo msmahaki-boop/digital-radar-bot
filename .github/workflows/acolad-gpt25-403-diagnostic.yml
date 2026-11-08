@@ -1,0 +1,56 @@
+name: Acolad GapGPT GPT Image 2.5 model-specific 403 code diagnostic (NO SOCIAL)
+on:
+  push:
+    branches: [feature/acolad-gapgpt-transparent-gptimage-20261107]
+    paths: [ops/acolad-gpt25-403-code-diagnostic.trigger]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install requests==2.32.5 Pillow==11.3.0
+      - name: One bounded generation request, emit only whitelisted provider error code
+        env:
+          GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
+        run: |
+          python -u - <<'PY'
+          import os,re,requests,json
+          key=os.getenv("GAPGPT_API_KEY","").strip()
+          if not key:raise SystemExit("IMAGE_SECRET_MISSING")
+          url="https://api.gapgpt.app/v1/images/generations"
+          prompt=("One cute original black ink hand-drawn doodle of a curious little shopper "
+             "holding a magnifying glass in front of a tiny empty shopping cart. "
+             "Whimsical wobbly pen lines, isolated figure, no typography, transparent background.")
+          p={"model":"gpt-image-2.5-flare","prompt":prompt,"n":1,
+             "size":"1024x1024","quality":"low","background":"transparent","output_format":"png"}
+          r=requests.post(url,headers={"Authorization":"Bearer "+key,
+             "Content-Type":"application/json"},json=p,timeout=195)
+          code="UNKNOWN";kind="UNKNOWN"
+          if r.status_code>=400:
+            try:
+              obj=r.json();e=obj.get("error",{}) if isinstance(obj,dict) else {}
+              if isinstance(e,list):e=e[0] if e and isinstance(e[0],dict) else {}
+              if isinstance(e,dict):
+                c=e.get("code");t=e.get("type")
+                if isinstance(c,str) and re.fullmatch(r"[a-zA-Z0-9_\-]{1,70}",c):code=c
+                if isinstance(t,str) and re.fullmatch(r"[a-zA-Z0-9_\-]{1,70}",t):kind=t
+            except Exception:pass
+          print("GPT25_IMAGE_PROVIDER_CLASSIFICATION",json.dumps({
+             "http":r.status_code,"error_code":code,"error_type":kind,
+             "retry_after_header_present":"Retry-After" in r.headers},ensure_ascii=False))
+          if r.status_code!=200:raise SystemExit(2)
+          # Never falsely label a 200 response as a successful image without PNG alpha QA.
+          import base64,io
+          from PIL import Image
+          obj=r.json()
+          row=(obj.get("data") or [{}])[0]
+          value=row.get("b64_json")
+          if not isinstance(value,str):raise SystemExit("IMAGE_RETURN_FORMAT_NOT_BASE64")
+          im=Image.open(io.BytesIO(base64.b64decode(value,validate=True)))
+          print("GPT25_IMAGE_RETURN",{"format":im.format,"has_alpha":"A" in im.getbands()})
+          PY
