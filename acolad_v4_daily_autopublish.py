@@ -144,6 +144,17 @@ def colloquialize_safe_inflections(message):
     )
     for pattern,change in variants:
         message=re.sub(pattern,change,message,flags=re.I)
+    # Change grammatical register only: preserve source, numbers, names,
+    # attribution and the substance of the reviewed statement.
+    passive={
+        "دیده شد":"به چشم اومد","دیده شده":"به چشم اومده",
+        "مشاهده شد":"به چشم اومد","مشاهده شده":"به چشم اومده",
+        "بررسی شد":"بررسیش کردن","بررسی شده":"بررسیش کردن",
+        "انجام شد":"انجامش دادن","انجام شده":"انجامش دادن",
+        "ارائه شد":"ارائه‌اش کردن","ارائه شده":"ارائه‌اش کردن",
+    }
+    message=re.sub(r"(?:دیده|مشاهده|بررسی|انجام|ارائه)\s+شد(?:ه)?\b",
+        lambda m:passive.get(m.group(0),m.group(0)),message)
     return message
 
 
