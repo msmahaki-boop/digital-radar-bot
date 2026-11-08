@@ -159,6 +159,37 @@ def repair_all_new_scenes(story:dict)->tuple[dict,bool]:
         else:i+=1
     return result,True
 
+def repair_colloquial_passive_without_new_claims(story:dict)->tuple[dict,bool]:
+    """Rewrite only the five known formal passive verb phrases, with no new facts.
+
+    Deliberately cannot rewrite numbers, names, evidence references, scene metadata,
+    causality or arguments. All independent fact/cinema/voice guards run afterward.
+    """
+    import copy
+    substitutions={
+        "دیده شد":"به چشم اومد",
+        "دیده شده":"به چشم اومده",
+        "مشاهده شد":"به چشم اومد",
+        "مشاهده شده":"به چشم اومده",
+        "بررسی شد":"بررسیش کردن",
+        "بررسی شده":"بررسیش کردن",
+        "انجام شد":"انجامش دادن",
+        "انجام شده":"انجامش دادن",
+        "ارائه شد":"ارائه‌اش کردن",
+        "ارائه شده":"ارائه‌اش کردن",
+    }
+    result=copy.deepcopy(story)
+    changed=False
+    for slide in result.get("slides",[]):
+        before=str(slide.get("text") or "")
+        after=re.sub(r"(?:دیده|مشاهده|بررسی|انجام|ارائه)\\s+شد(?:ه)?\\b",
+          lambda m:substitutions.get(m.group(0),m.group(0)),before)
+        if before!=after:
+            slide["text"]=after
+            changed=True
+    return result,changed
+
+
 def repair_excess_terminal_dots(story:dict)->tuple[dict,bool]:
     """Remove ONLY redundant final full stops; no facts or figures changed."""
     import copy
@@ -460,9 +491,26 @@ def run_preview(day=None,budget_usd=0.018,output=OUT):
        "passed":False,"hard_vetoes":["UPSTREAM_RESEARCH_OR_STORY_FAILED"],
        "human_approved":False,"publish_allowed":False}
     status["independent_editorial_gate"]=editorial_gate
-    # Voice V4 is an ADDITIONAL veto, not an aesthetic auto-approval.
-    # Evaluate only public slide copy; source evidence stays internal.
+    # A sole FORMAL_1 issue is a grammatical style flaw, not permission
+    # to invent a new story or lower editorial thresholds. Repair only fixed
+    # passive-verb forms, then rerun all independent gates on the same facts.
     from acolad_voice_v4_guard import audience_issues
+    if good and distinct and editorial_gate["passed"] and isinstance(story,dict):
+        initial_voice=[p for frame in story.get("slides",[]) for p in audience_issues(frame.get("text",""))]
+        if initial_voice and set(initial_voice)=={"FORMAL_1"}:
+            candidate,changed=repair_colloquial_passive_without_new_claims(story)
+            if changed:
+                source_ok=evaluate(candidate,evidence).get("passed") is True
+                factual_issues=news.story_quality(candidate,evidence)
+                cinema_issues=news.cinematic_quality(candidate,evidence)
+                still_formal=[p for frame in candidate.get("slides",[])
+                              for p in audience_issues(frame.get("text",""))]
+                if source_ok and not factual_issues and not cinema_issues and not still_formal:
+                    story=candidate
+                    status["voice_grammar_only_repaired"]=True
+                    (output/"editorially_repaired_story.json").write_text(
+                        json.dumps(story,ensure_ascii=False,indent=2),encoding="utf8")
+    # Voice V4 remains a hard veto. No content is publishable without passing.
     voice_issues=[]
     if good and distinct and editorial_gate["passed"] and isinstance(story,dict):
         for slide in story.get("slides") or []:
