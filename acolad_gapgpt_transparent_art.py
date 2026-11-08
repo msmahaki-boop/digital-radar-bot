@@ -89,6 +89,40 @@ def verify_png(raw: bytes) -> tuple[Image.Image, dict]:
                    "opaque_fraction": round(opaque, 4), "visible_bbox": list(crop)}
 
 
+def read_provider_image(row: dict, session=requests) -> tuple[bytes, str]:
+    """GapGPT may respond with hosted image URL instead of OpenAI base64."""
+    if isinstance(row.get("b64_json"), str):
+        try:
+            return base64.b64decode(row["b64_json"], validate=True), "b64_json"
+        except (ValueError, base64.binascii.Error) as exc:
+            raise RuntimeError("IMAGE_INVALID_BASE64") from exc
+    url = row.get("url")
+    if not isinstance(url, str):
+        raise RuntimeError("IMAGE_PROVIDER_NEITHER_B64_NOR_URL")
+    from urllib.parse import urlsplit
+    import ipaddress
+    parts = urlsplit(url)
+    host = (parts.hostname or "").lower()
+    if parts.scheme != "https" or not host or parts.username or parts.password:
+        raise RuntimeError("IMAGE_RETURN_URL_NOT_SAFE_HTTPS")
+    if host in ("localhost",) or host.endswith((".localhost", ".local", ".internal")):
+        raise RuntimeError("IMAGE_RETURN_URL_UNSAFE_HOST")
+    try:
+        address = ipaddress.ip_address(host.strip("[]"))
+        if not address.is_global:
+            raise RuntimeError("IMAGE_RETURN_URL_UNSAFE_IP")
+    except ValueError:
+        pass
+    if len(url) > 4096:
+        raise RuntimeError("IMAGE_RETURN_URL_TOO_LONG")
+    reply = session.get(url, timeout=75, allow_redirects=False)
+    if reply.status_code != 200:
+        raise RuntimeError("IMAGE_RETURN_DOWNLOAD_HTTP_" + str(reply.status_code))
+    if len(reply.content) > MAX_BYTES:
+        raise RuntimeError("IMAGE_RETURN_TOO_LARGE")
+    return reply.content, "provider_url"
+
+
 def generate(story: dict, scene: int, output: Path, session=requests, *,
              key: str | None = None) -> dict:
     key = key if key is not None else os.environ.get("GAPGPT_API_KEY", "").strip()
@@ -118,16 +152,13 @@ def generate(story: dict, scene: int, output: Path, session=requests, *,
     data = body.get("data") if isinstance(body, dict) else None
     if not isinstance(data, list) or len(data) != 1 or not isinstance(data[0], dict):
         raise RuntimeError("IMAGE_PROVIDER_RESULT_MALFORMED")
-    encoded = data[0].get("b64_json")
-    if not isinstance(encoded, str):
-        # No arbitrary remote URL downloads; only verified returned bytes.
-        raise RuntimeError("IMAGE_PROVIDER_NO_BASE64")
-    image, stats = verify_png(base64.b64decode(encoded, validate=True))
+    raw, image_source = read_provider_image(data[0], session=session)
+    image, stats = verify_png(raw)
     output.parent.mkdir(parents=True, exist_ok=True)
     image.save(output, "PNG", optimize=True)
     return {"model": MODEL, "provider": "GapGPT",
             "real_ai_generated": True, "background": "transparent",
-            "source_scene_id": scene, "path": output.name, **stats}
+            "source_scene_id": scene, "image_response": image_source, "path": output.name, **stats}
 
 
 def generate_scenes(story: dict, scenes: list[int], output: Path = OUT,
