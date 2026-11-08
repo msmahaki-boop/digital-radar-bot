@@ -90,7 +90,7 @@ def existing_bundle(day):
     if set(copies)!=set(NETWORKS):raise RuntimeError("CACHED_COPIES_INCOMPLETE")
     if any(not isinstance(copies[n],str) or len(copies[n])<40 for n in NETWORKS):
         raise RuntimeError("CACHED_COPY_EMPTY")
-    if any(not copies[n].endswith(engine.FOOTER) for n in ("telegram","bale")):
+    if any(not copies[n].endswith(engine.footer_for(n)) for n in ("telegram","bale")):
         raise RuntimeError("CACHED_BRAND_SIGNATURE_INVALID")
     images=sorted((OUT/"frames").glob("story_*.png"))
     if not 6<=len(images)<=15 or len(images)!=d.get("nframes"):
@@ -211,10 +211,10 @@ class ProviderValidationRejected(RuntimeError):
 def send_now(key,net,caption,media,session=requests):
     if net not in NETWORKS:raise ValueError("Invalid target")
     if not caption or (net=="instagram" and len(media)<6):raise ValueError("Incomplete story")
-    if net=="bale":
-        # Bale doesn't need Telegram/Instagram Markdown wrappers in footer.
-        # Preserve the reviewed prose and URLs; only strip link syntax.
-        caption=re.sub(r"\[([^\]]+)\]\((https?://[^\s)]+)\)",r"\2",caption)
+    # Render public copy as plain UTF-8 on both Telegram and Bale.
+    caption=engine.clean_old_markup(caption)
+    if re.search(r"\[[^\]\n]+\]\(https?://",caption):
+        raise RuntimeError("SOCIAL_MARKDOWN_LITERAL_BLOCKED")
     payload={"type":"story" if net=="instagram" else "text",
         "account_ids":[ACCOUNT[net]],"caption":caption,
         "media_ids":media if net=="instagram" else [],
