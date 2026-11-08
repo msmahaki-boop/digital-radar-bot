@@ -89,6 +89,49 @@ def verify_png(raw: bytes) -> tuple[Image.Image, dict]:
                    "opaque_fraction": round(opaque, 4), "visible_bbox": list(crop)}
 
 
+def white_paper_to_alpha_for_real_ai_drawing(raw: bytes) -> bytes:
+    """Remove near-white paper ONLY from a real returned GPT Image pen drawing.
+
+    This is postprocessing the API's genuine art, not a procedural illustration.
+    It fails closed if the source is a colored/full-scene photo or nearly blank.
+    """
+    from PIL import ImageOps
+    with Image.open(io.BytesIO(raw)) as source:
+        if source.format!="PNG":raise ValueError("IMAGE_NOT_PNG_FOR_ALPHA_KNOCKOUT")
+        rgb=source.convert("RGB")
+        rgb.load()
+    small=rgb.resize((64,64))
+    pixels=list(small.getdata())
+    total=len(pixels)
+    paper=sum(1 for r,g,b in pixels if min(r,g,b)>=235 and
+              max(r,g,b)-min(r,g,b)<=35)/total
+    ink=sum(1 for r,g,b in pixels if min(r,g,b)<125 and
+            max(r,g,b)-min(r,g,b)<75)/total
+    if paper<0.48 or ink<0.002 or ink>0.50:
+        raise ValueError("AI_IMAGE_NOT_A_SPARSE_WHITE_PAPER_INK_DRAWING")
+    # Original RGB strokes are preserved. Only neutral near-white background
+    # is made transparent; all authorial details come from the GPT API.
+    grayscale=ImageOps.grayscale(rgb)
+    mask=grayscale.point(lambda v: max(0,min(255,(240-v)*3)) if v<240 else 0)
+    rgba=rgb.convert("RGBA")
+    rgba.putalpha(mask)
+    out=io.BytesIO()
+    rgba.save(out,format="PNG")
+    return out.getvalue()
+
+
+def prepare_real_ai_cutout(raw: bytes) -> tuple[Image.Image,dict,str]:
+    try:
+        image,stats=verify_png(raw)
+        return image,stats,"native_api_alpha"
+    except ValueError as original:
+        if str(original) not in ("NO_REAL_ALPHA_CHANNEL","NOT_A_VISIBLE_TRANSPARENT_CUTOUT"):
+            raise
+        prepared=white_paper_to_alpha_for_real_ai_drawing(raw)
+        image,stats=verify_png(prepared)
+        return image,stats,"white_paper_knockout_on_gpt_generated_art"
+
+
 def read_provider_image(row: dict, session=requests) -> tuple[bytes, str]:
     """GapGPT may respond with hosted image URL instead of OpenAI base64."""
     if isinstance(row.get("b64_json"), str):
@@ -165,12 +208,13 @@ def generate(story: dict, scene: int, output: Path, session=requests, *,
     if not isinstance(data, list) or len(data) != 1 or not isinstance(data[0], dict):
         raise RuntimeError("IMAGE_PROVIDER_RESULT_MALFORMED")
     raw, image_source = read_provider_image(data[0], session=session)
-    image, stats = verify_png(raw)
+    image, stats, transparency_method = prepare_real_ai_cutout(raw)
     output.parent.mkdir(parents=True, exist_ok=True)
     image.save(output, "PNG", optimize=True)
     return {"model": MODEL, "provider": "GapGPT",
             "real_ai_generated": True, "background": "transparent",
-            "source_scene_id": scene, "image_response": image_source, "path": output.name, **stats}
+            "source_scene_id": scene, "image_response": image_source,
+            "transparency_method": transparency_method, "path": output.name, **stats}
 
 
 def generate_scenes(story: dict, scenes: list[int], output: Path = OUT,
