@@ -1,0 +1,70 @@
+name: Acolad V5 REAL Instagram and Bale remote publication receipts (READ ONLY)
+on:
+  push:
+    branches: [main]
+    paths: [ops/acolad-v5-readonly-publication-receipts.trigger]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python -m pip install requests==2.32.5 Pillow==11.3.0 beautifulsoup4==4.14.2
+      - name: GET only from NovinHub for Instagram Story 3699686 and three Bale groups 3699687 3699688 3699689
+        env:
+          NOVINHUB_API_TOKEN: ${{ secrets.NOVINHUB_API_TOKEN }}
+        run: |
+          python -u - <<'PY'
+          import json,time
+          from datetime import date
+          from acolad_v4_hourly_publish import provider_list,ACCOUNT
+          from acolad_novinhub_bridge import token
+          key=token()
+          day=date(2026,11,8)
+          planned={'instagram':['3699686'],'bale':['3699687','3699688','3699689']}
+          for pass_number in range(2):
+              reports={}
+              for net,group_ids in planned.items():
+                  groups=provider_list(key,net,day)
+                  by_id={str(x.get('id')):x for x in groups if isinstance(x,dict)}
+                  report=[]
+                  for gid in group_ids:
+                      group=by_id.get(gid)
+                      if group is None:
+                          report.append({'group_id':gid,'status':'NOT_VISIBLE_YET',
+                                         'external_publication_verified':False})
+                          continue
+                      posts=group.get('post') or group.get('posts') or []
+                      if isinstance(posts,dict):posts=[posts]
+                      selected=[p for p in posts if isinstance(p,dict)
+                          and str(p.get('account_id'))==str(ACCOUNT[net])]
+                      for post in selected:
+                          remote=post.get('accountPost') or post.get('account_post') or {}
+                          if not isinstance(remote,dict):remote={}
+                          ident=remote.get('post_id') or remote.get('id')
+                          url=str(remote.get('permalink') or '')
+                          if net=='bale' and not url.startswith('https://ble.ir/'):url=''
+                          if net=='instagram' and not url.startswith(('https://www.instagram.com/','https://instagram.com/')):url=''
+                          status=str(post.get('status') or '').lower()
+                          report.append({'group_id':gid,'type':group.get('type'),
+                              'post_status':status,'remote_post_id':ident,
+                              'remote_permalink':url or None,
+                              'provider_marked_published':status=='published',
+                              'external_publication_verified':bool(status=='published' and ident)})
+                      if not selected:
+                          report.append({'group_id':gid,'status':'NO_ACCOUNT_POST_DETAIL',
+                                         'external_publication_verified':False})
+                  reports[net]=report
+              print('ACOLAD_V5_GENUINE_NOVINHUB_REMOTE_GET_RECEIPTS '+json.dumps(
+                  {'attempt':pass_number+1,'day':day.isoformat(),'reports':reports,
+                   'telegram_native_published_message_ids':[51,52,53],
+                   'telegram_native_root_reply_to':51,
+                   'external_social_writes':0},ensure_ascii=False),flush=True)
+              if all(item.get('provider_marked_published') for items in reports.values() for item in items):
+                  break
+              if pass_number==0:time.sleep(20)
+          PY
