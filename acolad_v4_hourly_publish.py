@@ -321,6 +321,7 @@ def execute(mode):
     if strict_art and not media:
         raise RuntimeError("NO_REAL_ART_MEDIA_READY")
     submitted=[]
+    post_attempts=0
     for net in missing:
         fresh=assess(provider_list(key,net,day),net)
         if fresh["state"]!="ABSENT":
@@ -332,6 +333,12 @@ def execute(mode):
             intents={"day":day.isoformat(),"sent_or_unknown":{}}
         intents["sent_or_unknown"][net]={"state":"SENDING_NO_CONFIRMED_RECEIPT"}
         intent_file.write_text(json.dumps(intents,ensure_ascii=False,indent=2),encoding="utf8")
+        if post_attempts:
+            # NovinHub rejects back-to-back public submissions within 5s.
+            # This applies after a documented validation 400 too; do not
+            # let an unrelated network fail due to provider rate-limiting.
+            time.sleep(7)
+        post_attempts+=1
         try:
             group_id=send_now(key,net,d["captions"][net],media if net=="instagram" else (media[:1] if strict_art else []))
         except ProviderValidationRejected:
