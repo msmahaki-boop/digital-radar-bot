@@ -99,28 +99,40 @@ def read_provider_image(row: dict, session=requests) -> tuple[bytes, str]:
     url = row.get("url")
     if not isinstance(url, str):
         raise RuntimeError("IMAGE_PROVIDER_NEITHER_B64_NOR_URL")
-    from urllib.parse import urlsplit
+    from urllib.parse import urlsplit, urljoin
     import ipaddress
-    parts = urlsplit(url)
-    host = (parts.hostname or "").lower()
-    if parts.scheme != "https" or not host or parts.username or parts.password:
-        raise RuntimeError("IMAGE_RETURN_URL_NOT_SAFE_HTTPS")
-    if host in ("localhost",) or host.endswith((".localhost", ".local", ".internal")):
-        raise RuntimeError("IMAGE_RETURN_URL_UNSAFE_HOST")
-    try:
-        address = ipaddress.ip_address(host.strip("[]"))
-        if not address.is_global:
-            raise RuntimeError("IMAGE_RETURN_URL_UNSAFE_IP")
-    except ValueError:
-        pass
-    if len(url) > 4096:
-        raise RuntimeError("IMAGE_RETURN_URL_TOO_LONG")
-    reply = session.get(url, timeout=75, allow_redirects=False)
-    if reply.status_code != 200:
-        raise RuntimeError("IMAGE_RETURN_DOWNLOAD_HTTP_" + str(reply.status_code))
-    if len(reply.content) > MAX_BYTES:
-        raise RuntimeError("IMAGE_RETURN_TOO_LARGE")
-    return reply.content, "provider_url"
+
+    def validated_https(uri: str):
+        parts=urlsplit(uri)
+        host=(parts.hostname or "").lower()
+        if parts.scheme!="https" or not host or parts.username or parts.password:
+            raise RuntimeError("IMAGE_RETURN_URL_NOT_SAFE_HTTPS")
+        if host=="localhost" or host.endswith((".localhost",".local",".internal")):
+            raise RuntimeError("IMAGE_RETURN_URL_UNSAFE_HOST")
+        try:
+            address=ipaddress.ip_address(host.strip("[]"))
+            if not address.is_global:
+                raise RuntimeError("IMAGE_RETURN_URL_UNSAFE_IP")
+        except ValueError:
+            pass
+        if len(uri)>4096:raise RuntimeError("IMAGE_RETURN_URL_TOO_LONG")
+        return uri
+
+    current=validated_https(url)
+    for hop in range(4):
+        reply=session.get(current,timeout=75,allow_redirects=False)
+        if reply.status_code in (301,302,303,307,308):
+            if hop==3:raise RuntimeError("IMAGE_RETURN_TOO_MANY_REDIRECTS")
+            location=reply.headers.get("Location","")
+            if not location:raise RuntimeError("IMAGE_RETURN_REDIRECT_WITHOUT_LOCATION")
+            current=validated_https(urljoin(current,location))
+            continue
+        if reply.status_code!=200:
+            raise RuntimeError("IMAGE_RETURN_DOWNLOAD_HTTP_"+str(reply.status_code))
+        if len(reply.content)>MAX_BYTES:
+            raise RuntimeError("IMAGE_RETURN_TOO_LARGE")
+        return reply.content, "provider_url"
+    raise RuntimeError("IMAGE_RETURN_REDIRECT_FAILED")
 
 
 def generate(story: dict, scene: int, output: Path, session=requests, *,
