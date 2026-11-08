@@ -31,6 +31,13 @@ jobs:
           python -m unittest discover -s tests -p 'test_acolad_voice_narrow_passive_repair.py' -v
           python -m unittest discover -s tests -p 'test_acolad_critic_calendar_facts.py' -v
           python -m unittest discover -s tests -p 'test_acolad_dense_reveal_preserves_facts.py' -v
+      - name: Restore already source-verified November 8 editorial (not images or any public receipts)
+        uses: actions/download-artifact@v4
+        with:
+          name: acolad-20261108-gpt25-flare-real-cutouts-7slides
+          run-id: 42466907119
+          github-token: ${{ github.token }}
+          path: .
       - name: Fresh PRIMARY-EVIDENCE editorial + two independent critics + ORIGINAL GPT Image 2.5 cutouts and seven RTL frames
         env:
           GAPGPT_API_KEY: ${{ secrets.GAPGPT_API_KEY }}
