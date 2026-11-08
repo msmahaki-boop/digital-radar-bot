@@ -63,7 +63,7 @@ def verify_owner_release_artifact(today=None):
             or manifest.get("stock_assets")!=0):
         raise RuntimeError("ORIGINAL_GPT_IMAGE_25_REQUIRED")
     records=manifest.get("records") or []
-    if not 2<=len(records)<=4 or len(records)!=manifest.get("image_count"):
+    if not 2<=len(records)<=10 or len(records)!=manifest.get("image_count"):
         raise RuntimeError("AI_ART_ASSET_COUNT_INVALID")
     seen=set()
     for row in records:
