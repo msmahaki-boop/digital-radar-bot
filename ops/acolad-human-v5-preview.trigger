@@ -1,1 +1,2 @@
 V5 owner-inspired natural Persian nine slides; original Baymard research, two independent critics, authentic transparent GPT Image art, original square social cover, 9 frozen highlighted PNGs. PREVIEW ONLY.
+Second diagnostic run logs two independent critic scores and reasons before any artwork if veto. No social writes.
