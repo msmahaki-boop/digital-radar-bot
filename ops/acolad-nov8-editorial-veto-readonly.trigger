@@ -1,1 +1,1 @@
-Read only 2026-11-08 cached editorial QA reasons; no API model calls, no provider writes.\n
+Read only 2026-11-08 cached editorial QA reasons; no API model calls, no provider writes.\nInspect non-published daily preview attempt 42466079494 after calendar correction.\n
