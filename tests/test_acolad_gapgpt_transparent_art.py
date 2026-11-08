@@ -106,6 +106,43 @@ class TransparentImageQA(unittest.TestCase):
             art.read_provider_image({"url":"https://images.example.com/start"},session)
         self.assertEqual(session.get.call_count,1)
 
+    def test_actual_gpt_black_ink_on_white_can_be_knocked_out_without_new_art(self):
+        from PIL import ImageDraw
+        src=Image.new("RGB",(1024,1024),"white")
+        draw=ImageDraw.Draw(src)
+        draw.ellipse((300,250,720,780),outline="black",width=14)
+        raw=io.BytesIO()
+        src.save(raw,"PNG")
+        converted=art.white_paper_to_alpha_for_real_ai_drawing(raw.getvalue())
+        image,stats=art.verify_png(converted)
+        self.assertGreater(stats["transparent_fraction"],0.12)
+        self.assertEqual(image.getpixel((0,0))[3],0)
+        self.assertGreater(image.getpixel((300,500))[3],0)
+
+    def test_white_blank_is_not_accepted_as_real_ai_line_art(self):
+        blank=io.BytesIO()
+        Image.new("RGB",(1024,1024),"white").save(blank,"PNG")
+        with self.assertRaisesRegex(ValueError,"NOT_A_SPARSE"):
+            art.white_paper_to_alpha_for_real_ai_drawing(blank.getvalue())
+
+    def test_provider_opaque_ink_art_is_reported_as_genuine_art_with_alpha_postprocess(self):
+        from PIL import ImageDraw
+        src=Image.new("RGB",(1024,1024),"white")
+        d=ImageDraw.Draw(src)
+        d.rectangle((260,250,760,770),outline="black",width=20)
+        raw=io.BytesIO()
+        src.save(raw,"PNG")
+        response=Mock(status_code=200)
+        response.json.return_value={"data":[{"b64_json":base64.b64encode(raw.getvalue()).decode()}]}
+        with TemporaryDirectory() as root:
+            dest=Path(root)/"scene_01.png"
+            report=art.generate(self.story(),1,dest,Mock(post=Mock(return_value=response)),key="mock")
+            self.assertEqual(report["transparency_method"],"white_paper_knockout_on_gpt_generated_art")
+            self.assertTrue(report["real_ai_generated"])
+            with Image.open(dest) as im:
+                self.assertIn("A",im.getbands())
+                self.assertEqual(im.getpixel((0,0))[3],0)
+
     def test_missing_catalog_model_does_not_buy_images(self):
         session=Mock()
         session.get.return_value=Mock(status_code=200)
