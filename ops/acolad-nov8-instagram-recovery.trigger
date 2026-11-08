@@ -1,0 +1,1 @@
+2026-11-08 authorized single Instagram Business recheck and upload approved 8-slide original GPT Image story ONLY if missing. Never resend Telegram message 48,49,50 or Bale group 3699385. If provider Creator400 reject and hold.
