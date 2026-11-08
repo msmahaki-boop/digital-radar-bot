@@ -16,7 +16,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: acolad-20261108-gpt25-flare-real-cutouts-7slides
-          run-id: 42466079494
+          run-id: 42466367922
           github-token: ${{ github.token }}
           path: artifact
       - name: Only sanitized editorial status and veto reasons
