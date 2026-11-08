@@ -25,6 +25,13 @@ class FormalPassiveNarrowRepairQA(unittest.TestCase):
         self.assertFalse(changed)
         self.assertEqual(fixed,story)
 
+    def test_story_prompt_requires_evidence_based_closed_ending(self):
+        from datetime import date
+        instruction=editorial.narrative_prompts(date(2026,11,8))
+        self.assertIn("آخرین فریم نباید",instruction)
+        self.assertIn("قابل‌آزمایش",instruction)
+        self.assertIn("هیچ عدد",instruction)
+
     def test_only_actual_passive_phrases(self):
         story={"slides":[{"n":1,"text":"این طرح در شهر دیده شده و نتیجه ارائه شد"}]}
         fixed,changed=editorial.repair_colloquial_passive_without_new_claims(story)
