@@ -2,3 +2,5 @@ Owner authorized 2026-11-08 fresh editorial/real GPT Image 2.5 transparent art p
 2026-11-08 resumed full-story GPT2.5 Flare preview after 53 offline checks of bounded real-model alpha retries; PREVIEW ONLY.
 
 2026-11-08 rerun after strict copy voice passive fix, bounded per-scene real GPT Image alpha retry, no procedural assets, no socials.
+
+2026-11-08: retry after Pillow verify-before-pixel fix; previous same-day four real transparent GPT Image scenes passed alpha. No social calls.
