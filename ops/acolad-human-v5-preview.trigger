@@ -5,3 +5,5 @@ Editorial repair from 82/72 feedback: remove legal-right assertion and unnatural
 User-driven factual line: source supports historical returns UX only, never button expiration; testable four experiments, no universal entitlement.
 Re-run source, two independent critics, original art and nine progressive visual frames after fixing stale test expectation.
 Editor fix sourced 54 percent denominator straight from Baymard original article, exact expired-order UI test and missing return request action.
+
+2026-11-08 15:52 Tehran: actual Baymard original source now states 42 benchmarked sites and 660 ratings and distinguishes no request from rejection; rerun unchanged 85 threshold and only render after both pass.
