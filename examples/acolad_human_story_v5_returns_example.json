@@ -1,6 +1,6 @@
 {
   "version": "acolad-human-story-v5.0",
-  "title": "وقتی مهلت مرجوعی گذشته، چرا توضیحش گم می‌شه!",
+  "title": "دکمه مرجوعی نیست؛ اما توضیحش کجاست!",
   "topic": "شفافیت تجربه مرجوعی در فروشگاه اینترنتی",
   "genre": "مرور پژوهش + روایت فرضی، نه خبر امروز",
   "source_url": "https://baymard.com/research-articles/order-returns-ecommerce-ux",
@@ -49,7 +49,7 @@
     {
       "n": 4,
       "beat": "turn",
-      "text": "📌 حالا پیچ قصه رو ببین. توی این مثال فرضی، مهلت مرجوعیِ سفارش محمد تموم شده و فروشگاه دکمه شروع درخواست رو برداشته. این تصمیم شاید از نظر فنی قابل‌فهم باشه؛ وقتی فرصت گذشته، نمی‌خوان یه روند بی‌نتیجه باز بشه. اما محمد از پشت پرده خبر نداره. فقط یه جای خالی می‌بینه؛ بدون توضیح، بدون تاریخ و بدون راه بعدی.",
+      "text": "📌 اما پیچ قصه اینجاست. توی مثال ساختگی ما، مهلت مرجوعی سفارش محمد تموم شده و طراح فروشگاه تصمیم گرفته دکمه شروع درخواست رو پنهان کنه. این فقط یکی از تصمیم‌های احتمالی طراحی سایته، نه دستور پژوهش بایمرد. محمد هنوز نمی‌دونه چه اتفاقی افتاده؛ فقط جای دکمه خالیه. هیچ درخواستی ثبت نکرده که رد شده باشه. حالا چطور باید دلیلش رو پیدا کنه!",
       "overlay": "📌 مهلت گذشته بود؛ اما **دلیل ناپدید شدن دکمه** کجا بود!",
       "scene_id": 2,
       "visual_action": "new_scene",
@@ -71,7 +71,7 @@
     {
       "n": 6,
       "beat": "science_knot",
-      "text": "📌 پژوهش بایمرد چی می‌گه! در بررسی منتشرشده سال ۲۰۱۹، ۵۴٪ از سایت‌های بررسی‌شده توی رابط مرجوعی مشکلات جدی تجربه کاربری داشتن. این عدد درباره همون نمونه‌ست، نه همه فروشگاه‌های امروز. پژوهش نگفته دکمه بعد از مهلت باید بماند یا حذف شود؛ این بخش قصه محمد یه فرضیه‌ست. + برای سایت خودت باید بفهمی توضیحِ محدودیت به مشتری کمک می‌کنه یا نه. یعنی...",
+      "text": "📌 بایمرد واقعاً چی بررسی کرده بود! سال ۲۰۱۹، روند مرجوعی ۴۲ فروشگاه اینترنتی بزرگ رو با ۶۶۰ ارزیابی تجربه کاربری سنجید. در همون نمونه، ۵۴٪ سایت‌ها در مسیر مرجوعی مشکل جدی داشتن. نه درباره همه فروشگاه‌های امروز حرف می‌زنیم، نه می‌گیم پژوهش حذف دکمه محمد رو بررسی کرده. + قصه ساختگیِ ما فقط یه پرسش برای آزمایش توی سایت خودت می‌سازه؛ یعنی...",
       "overlay": "📌 پژوهش بایمرد هم از **دشواری مسیر مرجوعی** می‌گه؛ یعنی...",
       "scene_id": 2,
       "visual_action": "add_text",
@@ -95,7 +95,7 @@
     {
       "n": 8,
       "beat": "emotional_cost",
-      "text": "📌 این چهار کار معجزه نمی‌کنه. ممکنه مشتری باز هم ناراحت بشه و ممکنه بعضی درخواست‌ها طبق قانون فروشگاه پذیرفته نشن. اما دست‌کم می‌تونی ببینی چند نفر جواب رو همون‌جا پیدا می‌کنن و کجا هنوز گیر می‌افتن. + اگه نتیجه بهتر نشد، طراحی رو دوباره آزمایش کن. تجربه مشتری بعد از پرداخت هم ادامه داره؛ اون لحظه‌ای که دنبال جواب می‌گرده، بخشی از همون تجربه‌ست.",
+      "text": "📌 این چهار کار معجزه نمی‌کنه. ممکنه مشتری باز هم ناراحت بشه و ممکنه بعضی درخواست‌ها طبق سیاست فروشگاه پذیرفته نشن. اما دست‌کم می‌تونی ببینی چند نفر جواب رو همون‌جا پیدا می‌کنن و کجا هنوز گیر می‌افتن. + اگه نتیجه بهتر نشد، طراحی رو دوباره آزمایش کن. تجربه مشتری بعد از پرداخت هم ادامه داره؛ اون لحظه‌ای که دنبال جواب می‌گرده، بخشی از همون تجربه‌ست.",
       "overlay": "📌 همیشه جواب مثبت نیست؛ **مسیرِ روشن** هنوز ارزش داره",
       "scene_id": 3,
       "visual_action": "add_text",
@@ -106,7 +106,7 @@
     {
       "n": 9,
       "beat": "payoff",
-      "text": "📌 مخلص کلام اینکه؛ یه سایت خوب فقط بلد نیست سفارش بگیره، باید وقتی درخواست مشتری رد می‌شه هم باهاش حرف بزنه. «دکمه رو می‌شه برداشت؛ توضیح رو نه.» + توی فروشگاهت یه سفارش خارج از مهلت رو باز کن؛ ببین دلیل محدودیت رو بی‌دردسر پیدا می‌کنی یا نه. ❤️‍🔥 تو جای محمد بودی، کدوم جواب آرومت می‌کرد! 🌱",
+      "text": "📌 مخلص کلام اینکه؛ یه سایت خوب فقط بلد نیست سفارش بگیره، باید وقتی دکمه درخواست در دسترس نیست هم بهش توضیح بده. «دکمه رو می‌شه برداشت؛ توضیح رو نه.» + توی فروشگاهت یه سفارش خارج از مهلت رو باز کن؛ ببین دلیل محدودیت رو بی‌دردسر پیدا می‌کنی یا نه. ❤️‍🔥 تو جای محمد بودی، کدوم جواب آرومت می‌کرد! 🌱",
       "overlay": "📌 حرف آخر: **دکمه رو می‌شه برداشت؛ توضیح رو نه!**",
       "scene_id": 3,
       "visual_action": "add_text",
@@ -123,11 +123,10 @@
       "publisher": "Baymard Institute",
       "title": "The ‘Order Returns’ Experience is Critical for Customer Retention — Yet 54% of Sites Have a Returns Interface with Substantial UX Issues",
       "verified_claims": [
-        "returns flow produces substantial UX frustrations in usability tests",
-        "historical 2019 research, not a 2026 news announcement",
-        "2019 Baymard benchmarking found 54% of reviewed sites had substantial returns UX issues; historical sample, not a present-day global rate"
+        "2019 return-flow benchmark scored 660 manually rated UX measures across the return experiences of 42 largest ecommerce sites; 54% of benchmarked sites had significant returns UX issues, not all current sites",
+        "During account and self-service user tests, returns caused major usability confusion; fictional button disappearance is not an observed research finding"
       ],
-      "excerpt": "Baymard Institute's 2019 paper explicitly reports that its UX performance benchmark found 54% of the benchmarked e-commerce sites had significant usability issues in the returns flow; its large-scale Accounts & Self-Service tests also found returns among the most problematic user tasks. This is a historical benchmark of investigated sites, not all sites today."
+      "excerpt": "Published June 3, 2019 by Christian Holst. Analyzing 660 manually assigned UX performance ratings for return flows across 42 major ecommerce sites, 54% of benchmarked sites had significant usability issues within the return flow. This research does NOT say hiding a button after expiry is universally good/bad."
     }
   ]
 }
