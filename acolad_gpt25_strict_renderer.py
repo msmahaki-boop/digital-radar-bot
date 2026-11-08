@@ -32,12 +32,16 @@ def illustrate_strict(story: dict):
         if not row.get("real_ai_generated") or row.get("background") != "transparent":
             raise RuntimeError("GPT25_REAL_AI_CUTOUT_REQUIRED")
         path = CONCEPT_DIR / row["path"]
-        with Image.open(path) as image:
-            if image.format != "PNG" or "A" not in image.getbands():
+        # Pillow.verify() must be called before decoding any pixels.
+        # getchannel() loads pixels; verify after it raises an unrelated
+        # RuntimeError even for a valid GPT Image alpha PNG.
+        with Image.open(path) as probe:
+            if probe.format != "PNG" or "A" not in probe.getbands():
                 raise RuntimeError("GPT25_ALPHA_PNG_MISSING")
+            probe.verify()
+        with Image.open(path) as image:
             if image.getchannel("A").getextrema()[0] >= 255:
                 raise RuntimeError("GPT25_ALPHA_NOT_TRANSPARENT")
-            image.verify()
     OUTPUT.mkdir(parents=True, exist_ok=True)
     output = OUTPUT / "frames"
     visual = render(story, output, allow_stock=False)
