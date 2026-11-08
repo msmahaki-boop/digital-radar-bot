@@ -165,6 +165,59 @@ def repair_all_new_scenes(story:dict)->tuple[dict,bool]:
         else:i+=1
     return result,True
 
+def repair_dense_frame_as_progressive_reveal(story:dict,issues:list)->tuple[dict,bool]:
+    """Split only flagged long frames into two sequential same-scene reveals.
+
+    Keep EVERY ORIGINAL WORD in order, all evidence IDs, original visual,
+    beat semantics and chronology. Never rewrite facts or make a new claim.
+    """
+    import copy
+    indices=set()
+    for issue in issues:
+        found=re.fullmatch(r"frame (\\d+): (\\d+) new words make this frame too dense",str(issue))
+        if found:
+            indices.add(int(found.group(1)))
+    if not indices:return story,False
+    original=story.get("slides") if isinstance(story,dict) else None
+    if not isinstance(original,list) or len(original)+len(indices)>15:
+        return story,False
+    result=copy.deepcopy(story)
+    slides=[]
+    changed=False
+    for frame in result["slides"]:
+        index=frame.get("n")
+        if index not in indices:
+            slides.append(frame)
+            continue
+        text=str(frame.get("text") or "")
+        words=text.split()
+        if len(words)<25:
+            slides.append(frame)
+            continue
+        half=len(words)//2
+        valid=[k for k in range(9,len(words)-8) if words[k-1].endswith(("،",",","؛","؛",".","؟","!"))]
+        cut=min(valid,key=lambda k:abs(k-half)) if valid else half
+        if max(cut,len(words)-cut)>25:
+            slides.append(frame)
+            continue
+        first=copy.deepcopy(frame)
+        second=copy.deepcopy(frame)
+        first["text"]=" ".join(words[:cut])
+        second["text"]=" ".join(words[cut:])
+        second["visual_action"]="add_text"
+        second["scene_id"]=first.get("scene_id")
+        if "visual_idea" in first:second["visual_idea"]=first["visual_idea"]
+        if (first["text"]+" "+second["text"]).split()!=words:
+            raise RuntimeError("DENSE_REVEAL_CHANGED_FACTUAL_TEXT")
+        slides.extend([first,second])
+        changed=True
+    if not changed:return story,False
+    for n,frame in enumerate(slides,1):
+        frame["n"]=n
+    result["slides"]=slides
+    return result,True
+
+
 def repair_colloquial_passive_without_new_claims(story:dict)->tuple[dict,bool]:
     """Rewrite only the five known formal passive verb phrases, with no new facts.
 
@@ -415,6 +468,7 @@ def run_preview(day=None,budget_usd=0.018,output=OUT):
                 or x=="cinema: too many final periods"
                 or x=="cinema: missing conflict beat"
                 or re.fullmatch(r"frame \d+: accumulated scene text \d+ words, change background sooner",x)
+                or re.fullmatch(r"frame \d+: \d+ new words make this frame too dense",x)
                 or (x.startswith("cinema: frame ")
                     and x.endswith(" unnecessary publisher mention"))
                 for x in possible_cosmetic_issues)
@@ -423,6 +477,8 @@ def run_preview(day=None,budget_usd=0.018,output=OUT):
            (good or allowed_cosmetic_problem) else {})
     if allowed_cosmetic_problem:
         revised,copy_repaired=repair_unnecessary_publisher_mentions(story)
+        revised,dense_repaired=repair_dense_frame_as_progressive_reveal(
+            revised,possible_cosmetic_issues)
         if "cinema: too many final periods" in possible_cosmetic_issues:
             revised,period_repaired=repair_excess_terminal_dots(revised)
         else:period_repaired=False
@@ -441,6 +497,7 @@ def run_preview(day=None,budget_usd=0.018,output=OUT):
             status["editorial_scene_lock_repaired_without_text_changes"]=scene_repaired
             status["publisher_name_dropped_without_changing_source"]=copy_repaired
             status["trailing_punctuation_repaired"]=period_repaired
+            status["long_frames_repaired_by_same_scene_reveal"]=dense_repaired
             status["prior_machine_status"]=original
             status["story_scenes"]=len({s.get("scene_id") for s in story["slides"]})
             (output/"editorially_repaired_story.json").write_text(
