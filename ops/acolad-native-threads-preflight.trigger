@@ -1,1 +1,1 @@
-Read bot access booleans and channel GET only; verify distinct platform footers and no publish.\n
+Read bot access booleans and channel GET only; verify distinct platform footers and no publish.\n2026-11-08: verify native reply-to root delivery and immutable intents; no social posts.\n
